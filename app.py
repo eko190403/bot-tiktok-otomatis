@@ -5,7 +5,7 @@ import time
 from google import genai
 from google.genai import types
 from google.genai.errors import ClientError
-import requests
+import edge_tts
 from video_builder import create_tiktok_video
 
 # 1. Fungsi Membuat Konten Lengkap Berstruktur via Gemini (Dengan Proteksi Anti-429)
@@ -60,47 +60,14 @@ def generate_content():
         except Exception as e:
             raise e
 
-# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Universal Endpoint)
-def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
-    print("🎙️ Mengonversi script menjadi suara menggunakan endpoint default ElevenLabs...")
-    el_api_key = os.getenv("ELEVENLABS_API_KEY")
-    if not el_api_key:
-        raise ValueError("❌ Eror: ELEVENLABS_API_KEY tidak ditemukan di Secrets GitHub!")
-
-    # Menggunakan endpoint standar pradesain Rachel yang selalu dijamin aktif di semua akun gratis
-    voice_id = "21m00Tcm4TlvDq8ikWAM"
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": el_api_key
-    }
-    
-    data = {
-        "text": text,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.75
-        }
-    }
-    
-    response = requests.post(url, json=data, headers=headers)
-    
-    # JIKA ID RACHEL DIATAS DIBLOKIR JUGA, KITA BERBALIH KE PRESET GLOBAL SEBAGAI BACKUP
-    if response.status_code != 200:
-        print("⚠️ ID Suara spesifik gagal, mencoba menggunakan sistem fallback preset global...")
-        # Menggunakan endpoint text-to-speech tanpa ID kustom
-        url_backup = "https://api.elevenlabs.io/v1/text-to-speech/JBFqx7tV5nCYDE3BX93p" # ID default alternatif (Rachel v2)
-        response = requests.post(url_backup, json=data, headers=headers)
-        
-    if response.status_code != 200:
-        raise RuntimeError(f"❌ Eror ElevenLabs API Akhir: {response.text}")
-        
-    with open(output_audio, "wb") as f:
-        f.write(response.content)
-    print("✅ File audio premium vo.mp3 berhasil disimpan.")
+# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan Edge-TTS Gratis & Stabil (Suara Pria Ardi)
+async def generate_voiceover_edge(text, output_audio="vo.mp3"):
+    print("🎙️ Mengonversi script menjadi suara menggunakan Edge-TTS (id-ID-ArdiNeural)...")
+    # Menggunakan suara pria Ardi agar lebih berbobot untuk narasi fakta psikologi
+    voice = "id-ID-ArdiNeural" 
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(output_audio)
+    print("✅ File audio vo.mp3 berhasil disimpan.")
 
 # Alur Kerja Utama
 async def main():
@@ -111,7 +78,8 @@ async def main():
         with open("script.json", "w", encoding="utf-8") as f:
             json.dump(meta_data, f, ensure_ascii=False, indent=4)
             
-        generate_voiceover_elevenlabs(full_script)
+        # Panggil Edge-TTS dengan await karena bersifat asynchronous
+        await generate_voiceover_edge(full_script)
         
         print("🎬 Memulai proses perakitan video...")
         create_tiktok_video(keyword=hook.split()[0] if len(hook.split()) > 0 else "human")
@@ -119,7 +87,7 @@ async def main():
         if os.path.exists("script.json"):
             os.remove("script.json")
             
-        print("🎉 Selesai! Video dengan suara bawaan berhasil dirakit.")
+        print("🎉 Selesai! Video dengan struktur baru dan suara Edge-TTS berhasil dirakit.")
     except Exception as e:
         print(f"❌ Terjadi kesalahan sistem: {e}")
         raise e
