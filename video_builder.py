@@ -2,6 +2,7 @@ import os
 import requests
 import random
 from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
+from moviepy.video.fx import Loop # Import fungsi loop untuk mengatasi video kependekan
 
 # Fungsi Tambahan: Mencari dan men-download video secara otomatis dari Pexels
 def download_random_background(duration):
@@ -46,10 +47,18 @@ def create_tiktok_video(audio_path="vo.mp3", output_path="final_output.mp4"):
     if not os.path.exists("background.mp4"):
         raise FileNotFoundError("❌ File background.mp4 gagal diproses oleh downloader.")
 
-    # Memotong durasi di MoviePy v2+
-    video_clip = VideoFileClip("background.mp4").subclipped(0, duration)
+    video_clip = VideoFileClip("background.mp4")
     
-    # PERBAIKAN: Menghapus keyword 'newsize', langsung masukkan tuple resolusinya
+    # PERBAIKAN UTAMA: Jika durasi video mentah lebih pendek dari audio, lakukan loop (perpanjang)
+    if video_clip.duration < duration:
+        print(f"⚠️ Video Pexels terlalu pendek ({video_clip.duration}s). Melakukan looping agar pas dengan audio ({duration}s)...")
+        # Mengulang video hingga durasinya cukup untuk menutup suara audio
+        video_clip = video_clip.with_effects([Loop(duration=duration)])
+    else:
+        # Jika video sudah cukup panjang, potong pas sesuai durasi audio
+        video_clip = video_clip.subclipped(0, duration)
+    
+    # Sesuaikan resolusi ke format TikTok (9:16)
     video_clip = video_clip.resized((1080, 1920))
     
     final_video = video_clip.with_audio(audio_clip)
