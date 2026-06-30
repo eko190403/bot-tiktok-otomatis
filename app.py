@@ -44,22 +44,38 @@ def generate_content():
     print(f"🚀 CTA: {cta}")
     return hook, story, cta, full_script
 
-# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Default Voice ID)
+# 2. Fungsi Mengubah Teks Menjadi Suara Otomatis Deteksi Voice ID yang Aktif
 def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
-    print("🎙️ Mengonversi script menjadi suara premium (ElevenLabs - Adam)...")
+    print("🎙️ Menghubungkan ke ElevenLabs...")
     el_api_key = os.getenv("ELEVENLABS_API_KEY")
     if not el_api_key:
         raise ValueError("❌ Eror: ELEVENLABS_API_KEY tidak ditemukan di Secrets GitHub!")
 
-    # Menggunakan ID Suara 'Adam' (Pria, Deep, Narasi) yang dijamin ada di setiap akun ElevenLabs
-    voice_id = "pNInz6obpgmA5E3qJeWf" 
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    
     headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
         "xi-api-key": el_api_key
     }
+    
+    # Ambil daftar suara yang tersedia di akunmu secara real-time
+    print("🔍 Mengambil daftar Voice ID yang aktif di akun kamu...")
+    voices_response = requests.get("https://api.elevenlabs.io/v1/voices", headers=headers)
+    if voices_response.status_code != 200:
+        raise RuntimeError(f"❌ Gagal mengambil daftar suara: {voices_response.text}")
+        
+    voices_data = voices_response.json()
+    available_voices = voices_data.get("voices", [])
+    
+    if not available_voices:
+        raise ValueError("❌ Tidak ada suara yang tersedia di akun ElevenLabs kamu!")
+    
+    # Pilih suara pertama yang ditemukan di akun (Pasti valid & tidak akan 404)
+    selected_voice = available_voices[0]
+    voice_id = selected_voice.get("voice_id")
+    voice_name = selected_voice.get("name")
+    print(f"🎤 Menggunakan suara yang aktif: '{voice_name}' (ID: {voice_id})")
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers["Accept"] = "audio/mpeg"
+    headers["Content-Type"] = "application/json"
     
     data = {
         "text": text,
@@ -72,7 +88,7 @@ def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
     
     response = requests.post(url, json=data, headers=headers)
     if response.status_code != 200:
-        raise RuntimeError(f"❌ Eror ElevenLabs API: {response.text}")
+        raise RuntimeError(f"❌ Eror ElevenLabs API saat TTS: {response.text}")
         
     with open(output_audio, "wb") as f:
         f.write(response.content)
@@ -95,7 +111,7 @@ async def main():
         if os.path.exists("script.json"):
             os.remove("script.json")
             
-        print("🎉 Selesai! Video dengan suara premium berhasil dirakit.")
+        print("🎉 Selesai! Video dengan suara premium otomatis berhasil dirakit.")
     except Exception as e:
         print(f"❌ Terjadi kesalahan sistem: {e}")
         raise e
