@@ -3,12 +3,12 @@ import asyncio
 import json
 from google import genai
 from google.genai import types
-import edge_tts
+import requests
 from video_builder import create_tiktok_video
 
-# 1. Fungsi Membuat Konten Lengkap dengan Hook, Isi, dan CTA lewat Gemini
+# 1. Fungsi Membuat Konten Lengkap Berstruktur via Gemini
 def generate_content():
-    print("🧠 Meminta Gemini membuat konten TikTok yang berstruktur matang...")
+    print("🧠 Meminta Gemini membuat konten TikTok berstruktur...")
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("❌ Eror: GEMINI_API_KEY tidak ditemukan!")
@@ -37,7 +37,6 @@ def generate_content():
     story = data.get("story", "").strip()
     cta = data.get("cta", "Follow untuk info lainnya").strip()
     
-    # Gabungkan menjadi satu teks utuh untuk disuarakan oleh AI
     full_script = f"{hook}. {story} {cta}"
     
     print(f"🪝 Hook: {hook}")
@@ -45,35 +44,58 @@ def generate_content():
     print(f"🚀 CTA: {cta}")
     return hook, story, cta, full_script
 
-# 2. Fungsi Mengubah Teks Menjadi Suara
-async def generate_voiceover(text, output_audio="vo.mp3"):
-    print("🎙️ Mengonversi script utuh menjadi suara (Edge-TTS)...")
-    voice = "id-ID-GadisNeural" 
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(output_audio)
-    print("✅ File audio vo.mp3 berhasil disimpan.")
+# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Suara Roger)
+def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
+    print("🎙️ Mengonversi script menjadi suara premium (ElevenLabs - Roger)...")
+    el_api_key = os.getenv("ELEVENLABS_API_KEY")
+    if not el_api_key:
+        raise ValueError("❌ Eror: ELEVENLABS_API_KEY tidak ditemukan di Secrets GitHub!")
+
+    # ID Suara untuk 'Roger' (Laid-Back, Casual, Resonant)
+    voice_id = "CwhCBK57KNSreSiBMCLR" 
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": el_api_key
+    }
+    
+    data = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+            "stability": 0.45,
+            "similarity_boost": 0.75
+        }
+    }
+    
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code != 200:
+        raise RuntimeError(f"❌ Eror ElevenLabs API: {response.text}")
+        
+    with open(output_audio, "wb") as f:
+        f.write(response.content)
+    print("✅ File audio premium vo.mp3 berhasil disimpan.")
 
 # Alur Kerja Utama
 async def main():
     try:
         hook, story, cta, full_script = generate_content()
         
-        # Simpan komponen secara terpisah ke file JSON sementara agar bisa dibaca video_builder.py
         meta_data = {"hook": hook, "story": story, "cta": cta}
         with open("script.json", "w", encoding="utf-8") as f:
             json.dump(meta_data, f, ensure_ascii=False, indent=4)
-        print("💾 File script.json berhasil disimpan untuk pembuatan subtitle berstruktur.")
             
-        await generate_voiceover(full_script)
+        generate_voiceover_elevenlabs(full_script)
         
         print("🎬 Memulai proses perakitan video...")
-        # Gunakan keyword dari hook untuk mencari video background
         create_tiktok_video(keyword=hook.split()[0] if len(hook.split()) > 0 else "human")
         
         if os.path.exists("script.json"):
             os.remove("script.json")
             
-        print("🎉 Selesai! Video dengan Hook dan CTA berhasil dirakit sempurna.")
+        print("🎉 Selesai! Video dengan suara premium Roger berhasil dirakit.")
     except Exception as e:
         print(f"❌ Terjadi kesalahan sistem: {e}")
         raise e
