@@ -1,0 +1,35 @@
+name: Run TikTok Bot Auto-Pilot
+
+on:
+  schedule:
+    # Menggunakan format Cron Job. Contoh ini diatur jalan otomatis setiap jam 18:00 WIB (11:00 UTC)
+    - cron: '0 11 * * *'
+  workflow_dispatch: # Tombol rahasia agar kamu bisa klik "Jalankan Sekarang" secara manual
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Setup Python Environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies Super Cepat
+      run: |
+        python -m pip install --upgrade pip
+        pip install google-genai edge-tts moviepy playwright numpy
+
+    - name: Install Headless Browser Playwright
+      run: |
+        python -m playwright install chromium
+
+    - name: Eksekusi Bot Utama
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        python app.py
