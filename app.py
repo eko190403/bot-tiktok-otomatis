@@ -3,6 +3,8 @@ import asyncio
 from google import genai
 import edge_tts
 from video_builder import create_tiktok_video
+# Baris ini berasumsi kamu menggunakan library/skrip uploader terpisah atau fungsi bawaan
+# Jika kamu punya file uploader.py, kita akan memanggilnya di bawah
 
 # 1. Fungsi Membuat Script Menggunakan Gemini
 def generate_script():
@@ -36,19 +38,26 @@ async def generate_voiceover(text, output_audio="vo.mp3"):
     await communicate.save(output_audio)
     print("✅ File audio vo.mp3 berhasil disimpan.")
 
-# Alur Kerja Utama (Tanpa Upload)
+# Alur Kerja Utama dengan Jalur Upload
 async def main():
     try:
+        # Tahap 1 & 2: Pembuatan Konten
         script = generate_script()
         await generate_voiceover(script)
         
+        # Tahap 3: Perakitan Video
         print("🎬 Memulai proses perakitan video...")
         create_tiktok_video()
         
-        print("🎉 Selesai! Video berhasil dirakit sempurna.")
+        # Tahap 4: Upload Otomatis ke TikTok
+        print("🚀 Memulai proses upload otomatis ke TikTok...")
+        # Jalankan skrip uploader.py kamu menggunakan perintah sistem
+        os.system("python uploader.py")
+        
+        print("🎉 Selesai! Seluruh proses auto-pilot sukses berjalan.")
     except Exception as e:
         print(f"❌ Terjadi kesalahan sistem: {e}")
-        raise e  # Memastikan GitHub Actions tahu jika ada eror
+        raise e
 
 if __name__ == "__main__":
     asyncio.run(main())
