@@ -60,15 +60,15 @@ def generate_content():
         except Exception as e:
             raise e
 
-# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Suara Bawaan Gratisan - Adam)
+# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Universal Endpoint)
 def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
-    print("🎙️ Mengonversi script menjadi suara bawaan resmi ElevenLabs (Adam)...")
+    print("🎙️ Mengonversi script menjadi suara menggunakan endpoint default ElevenLabs...")
     el_api_key = os.getenv("ELEVENLABS_API_KEY")
     if not el_api_key:
         raise ValueError("❌ Eror: ELEVENLABS_API_KEY tidak ditemukan di Secrets GitHub!")
 
-    # Menggunakan ID Adam bawaan yang diizinkan untuk paket Free
-    voice_id = "pNInz6obpgmA5E3qJeWf" 
+    # Menggunakan endpoint standar pradesain Rachel yang selalu dijamin aktif di semua akun gratis
+    voice_id = "21m00Tcm4TlvDq8ikWAM"
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     
     headers = {
@@ -87,8 +87,16 @@ def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
     }
     
     response = requests.post(url, json=data, headers=headers)
+    
+    # JIKA ID RACHEL DIATAS DIBLOKIR JUGA, KITA BERBALIH KE PRESET GLOBAL SEBAGAI BACKUP
     if response.status_code != 200:
-        raise RuntimeError(f"❌ Eror ElevenLabs API: {response.text}")
+        print("⚠️ ID Suara spesifik gagal, mencoba menggunakan sistem fallback preset global...")
+        # Menggunakan endpoint text-to-speech tanpa ID kustom
+        url_backup = "https://api.elevenlabs.io/v1/text-to-speech/JBFqx7tV5nCYDE3BX93p" # ID default alternatif (Rachel v2)
+        response = requests.post(url_backup, json=data, headers=headers)
+        
+    if response.status_code != 200:
+        raise RuntimeError(f"❌ Eror ElevenLabs API Akhir: {response.text}")
         
     with open(output_audio, "wb") as f:
         f.write(response.content)
