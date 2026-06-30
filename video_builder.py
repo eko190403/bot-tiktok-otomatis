@@ -46,9 +46,11 @@ def create_tiktok_video(audio_path="vo.mp3", output_path="final_output.mp4"):
     if not os.path.exists("background.mp4"):
         raise FileNotFoundError("❌ File background.mp4 gagal diproses oleh downloader.")
 
-    # PERBAIKAN: Menggunakan .subclipped() untuk memotong durasi di MoviePy v2+
+    # Memotong durasi di MoviePy v2+
     video_clip = VideoFileClip("background.mp4").subclipped(0, duration)
-    video_clip = video_clip.resized(newsize=(1080, 1920))
+    
+    # PERBAIKAN: Menghapus keyword 'newsize', langsung masukkan tuple resolusinya
+    video_clip = video_clip.resized((1080, 1920))
     
     final_video = video_clip.with_audio(audio_clip)
     
