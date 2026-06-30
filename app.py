@@ -15,7 +15,6 @@ def generate_content():
         
     client = genai.Client(api_key=api_key)
     
-    # Kita paksa Gemini mengeluarkan output format JSON yang rapi
     prompt = (
         "Buat satu fakta psikologi singkat, menarik, dan mengejutkan tentang manusia.\n"
         "Berikan output dalam bentuk JSON dengan dua key:\n"
@@ -32,7 +31,6 @@ def generate_content():
         )
     )
     
-    # Parse hasil JSON dari Gemini
     data = json.loads(response.text.strip())
     script_text = data.get("script", "").strip()
     keyword_video = data.get("keyword", "urban").strip()
@@ -54,12 +52,21 @@ async def main():
     try:
         # Mengambil skrip dan keyword sekaligus
         script, keyword = generate_content()
+        
+        # PENTING: Simpan teks skrip ke file txt agar bisa dibaca oleh video_builder.py untuk subtitle
+        with open("script.txt", "w", encoding="utf-8") as f:
+            f.write(script)
+        print("💾 File script.txt berhasil disimpan untuk subtitle.")
+            
         await generate_voiceover(script)
         
         print("🎬 Memulai proses perakitan video...")
-        # Kita oper keyword-nya ke fungsi pembuat video
         create_tiktok_video(keyword=keyword)
         
+        # Hapus file script.txt setelah selesai digunakan agar bersih
+        if os.path.exists("script.txt"):
+            os.remove("script.txt")
+            
         print("🎉 Selesai! Video dengan latar belakang relevan berhasil dirakit.")
     except Exception as e:
         print(f"❌ Terjadi kesalahan sistem: {e}")
