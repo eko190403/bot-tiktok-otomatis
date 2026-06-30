@@ -1,12 +1,14 @@
 import os
 import asyncio
 import json
+import time
 from google import genai
 from google.genai import types
+from google.genai.errors import ClientError
 import requests
 from video_builder import create_tiktok_video
 
-# 1. Fungsi Membuat Konten Lengkap Berstruktur via Gemini
+# 1. Fungsi Membuat Konten Lengkap Berstruktur via Gemini (Dengan Proteksi Anti-429)
 def generate_content():
     print("🧠 Meminta Gemini membuat konten TikTok berstruktur...")
     api_key = os.getenv("GEMINI_API_KEY")
@@ -24,25 +26,39 @@ def generate_content():
         "Format JSON harus valid, bersih, dan menggunakan Bahasa Indonesia yang santai tapi tegas."
     )
     
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json"
-        )
-    )
+    max_retries = 3
+    retry_delay = 10  # Detik jeda sebelum mencoba ulang
     
-    data = json.loads(response.text.strip())
-    hook = data.get("hook", "FAKTA PSIKOLOGI").strip()
-    story = data.get("story", "").strip()
-    cta = data.get("cta", "Follow untuk info lainnya").strip()
-    
-    full_script = f"{hook}. {story} {cta}"
-    
-    print(f"🪝 Hook: {hook}")
-    print(f"📄 Story: {story}")
-    print(f"🚀 CTA: {cta}")
-    return hook, story, cta, full_script
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+            )
+            
+            data = json.loads(response.text.strip())
+            hook = data.get("hook", "FAKTA PSIKOLOGI").strip()
+            story = data.get("story", "").strip()
+            cta = data.get("cta", "Follow untuk info lainnya").strip()
+            
+            full_script = f"{hook}. {story} {cta}"
+            
+            print(f"🪝 Hook: {hook}")
+            print(f"📄 Story: {story}")
+            print(f"🚀 CTA: {cta}")
+            return hook, story, cta, full_script
+
+        except ClientError as ce:
+            if "429" in str(ce) and attempt < max_retries - 1:
+                print(f"⚠️ Kuota Gemini penuh (429). Mencoba ulang dalam {retry_delay} detik... (Percobaan {attempt + 1}/{max_retries})")
+                time.sleep(retry_delay)
+            else:
+                raise ce
+        except Exception as e:
+            raise e
 
 # 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Voice ID Roger)
 def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
@@ -51,7 +67,6 @@ def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
     if not el_api_key:
         raise ValueError("❌ Eror: ELEVENLABS_API_KEY tidak ditemukan di Secrets GitHub!")
 
-    # Menggunakan Voice ID Roger yang kamu berikan
     voice_id = "GrxM8OEUWBzyFR2xP2Qd" 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     
