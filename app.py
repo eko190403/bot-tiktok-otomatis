@@ -44,15 +44,15 @@ def generate_content():
     print(f"🚀 CTA: {cta}")
     return hook, story, cta, full_script
 
-# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Suara Roger)
+# 2. Fungsi Mengubah Teks Menjadi Suara Menggunakan ElevenLabs API (Default Voice ID)
 def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
-    print("🎙️ Mengonversi script menjadi suara premium (ElevenLabs - Roger)...")
+    print("🎙️ Mengonversi script menjadi suara premium (ElevenLabs - Adam)...")
     el_api_key = os.getenv("ELEVENLABS_API_KEY")
     if not el_api_key:
         raise ValueError("❌ Eror: ELEVENLABS_API_KEY tidak ditemukan di Secrets GitHub!")
 
-    # ID Suara untuk 'Roger' (Laid-Back, Casual, Resonant)
-    voice_id = "CwhCBK57KNSreSiBMCLR" 
+    # Menggunakan ID Suara 'Adam' (Pria, Deep, Narasi) yang dijamin ada di setiap akun ElevenLabs
+    voice_id = "pNInz6obpgmA5E3qJeWf" 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     
     headers = {
@@ -65,7 +65,7 @@ def generate_voiceover_elevenlabs(text, output_audio="vo.mp3"):
         "text": text,
         "model_id": "eleven_multilingual_v2",
         "voice_settings": {
-            "stability": 0.45,
+            "stability": 0.5,
             "similarity_boost": 0.75
         }
     }
@@ -95,7 +95,7 @@ async def main():
         if os.path.exists("script.json"):
             os.remove("script.json")
             
-        print("🎉 Selesai! Video dengan suara premium Roger berhasil dirakit.")
+        print("🎉 Selesai! Video dengan suara premium berhasil dirakit.")
     except Exception as e:
         print(f"❌ Terjadi kesalahan sistem: {e}")
         raise e
