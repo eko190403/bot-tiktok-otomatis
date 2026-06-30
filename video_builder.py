@@ -10,7 +10,6 @@ def download_random_background(duration):
     if not api_key:
         raise ValueError("❌ Eror: PEXELS_API_KEY tidak ditemukan di GitHub Secrets!")
 
-    # Cari video vertikal bertema alam/nature yang menenangkan
     url = "https://api.pexels.com/videos/search?query=nature&orientation=portrait&per_page=15"
     headers = {"Authorization": api_key}
     
@@ -20,12 +19,9 @@ def download_random_background(duration):
     if not videos:
         raise Exception("❌ Gagal mendapatkan daftar video dari Pexels.")
         
-    # Pilih satu video secara acak dari hasil pencarian
     selected_video = random.choice(videos)
-    
-    # Ambil link download video dengan kualitas HD/Mobile yang sesuai
     video_files = selected_video.get("video_files", [])
-    download_url = video_files[0].get("link") # Mengambil resolusi pertama yang tersedia
+    download_url = video_files[0].get("link")
     
     print("📥 Mengunduh video mentah dari server Pexels...")
     video_data = requests.get(download_url).content
@@ -44,13 +40,14 @@ def create_tiktok_video(audio_path="vo.mp3", output_path="final_output.mp4"):
     audio_clip = AudioFileClip(audio_path)
     duration = audio_clip.duration
     
-    # Kuncinya di sini: Bot download sendiri sebelum merakit
+    # Bot download sendiri sebelum merakit
     download_random_background(duration)
     
     if not os.path.exists("background.mp4"):
         raise FileNotFoundError("❌ File background.mp4 gagal diproses oleh downloader.")
 
-    video_clip = VideoFileClip("background.mp4").subclip(0, duration)
+    # PERBAIKAN: Menggunakan .subclipped() untuk memotong durasi di MoviePy v2+
+    video_clip = VideoFileClip("background.mp4").subclipped(0, duration)
     video_clip = video_clip.resized(newsize=(1080, 1920))
     
     final_video = video_clip.with_audio(audio_clip)
@@ -68,7 +65,6 @@ def create_tiktok_video(audio_path="vo.mp3", output_path="final_output.mp4"):
     video_clip.close()
     final_video.close()
     
-    # Hapus file mentah background agar tidak memenuhi penyimpanan server setelah selesai
     if os.path.exists("background.mp4"):
         os.remove("background.mp4")
         
