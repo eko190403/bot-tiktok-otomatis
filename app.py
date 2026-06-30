@@ -6,20 +6,26 @@ from google.genai import types
 import edge_tts
 from video_builder import create_tiktok_video
 
-# 1. Fungsi Membuat Script & Keyword Video Menggunakan Gemini
+# 1. Fungsi Membuat Script & Keyword Video Menggunakan Gemini (Tuntas & Jelas)
 def generate_content():
-    print("🧠 Meminta Gemini membuat script fakta psikologi dan mencari keyword video...")
+    print("🧠 Meminta Gemini membuat script fakta psikologi yang tuntas dan mencari keyword...")
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("❌ Eror: GEMINI_API_KEY tidak ditemukan!")
         
     client = genai.Client(api_key=api_key)
     
+    # Prompt diperketat agar pembahasan bulat, tuntas, dan logis
     prompt = (
-        "Buat satu fakta psikologi singkat, menarik, dan mengejutkan tentang manusia.\n"
+        "Buat satu fakta psikologi tentang perilaku atau otak manusia.\n"
+        "Ketentuan Script:\n"
+        "1. Harus padat, jelas, dan tuntas (tidak boleh menggantung atau terpotong di tengah kalimat).\n"
+        "2. Berikan struktur: sebutkan faktanya, lalu jelaskan alasan ilmiah singkatnya dalam maksimal 3 kalimat.\n"
+        "3. Langsung berikan isi materi tanpa salam pembuka atau penutup.\n"
+        "4. Gunakan Bahasa Indonesia yang mudah dipahami.\n\n"
         "Berikan output dalam bentuk JSON dengan dua key:\n"
-        "1. 'script': Isi fakta psikologinya (Bahasa Indonesia, maksimal 2 kalimat langsung ke inti).\n"
-        "2. 'keyword': Satu atau dua kata kunci dalam Bahasa Inggris yang paling menggambarkan suasana atau objek dari skrip tersebut untuk dicari di Pexels video API (contoh: 'sad person', 'thinking', 'running man', 'night city').\n\n"
+        "1. 'script': Isi fakta psikologi yang utuh dan tuntas.\n"
+        "2. 'keyword': Satu atau dua kata kunci dalam Bahasa Inggris yang paling menggambarkan suasana skrip tersebut untuk dicari di Pexels video API (contoh: 'confused person', 'sleeping dawn', 'crowded street').\n\n"
         "Format JSON harus valid dan bersih."
     )
     
@@ -50,10 +56,8 @@ async def generate_voiceover(text, output_audio="vo.mp3"):
 # Alur Kerja Utama
 async def main():
     try:
-        # Mengambil skrip dan keyword sekaligus
         script, keyword = generate_content()
         
-        # PENTING: Simpan teks skrip ke file txt agar bisa dibaca oleh video_builder.py untuk subtitle
         with open("script.txt", "w", encoding="utf-8") as f:
             f.write(script)
         print("💾 File script.txt berhasil disimpan untuk subtitle.")
@@ -63,11 +67,10 @@ async def main():
         print("🎬 Memulai proses perakitan video...")
         create_tiktok_video(keyword=keyword)
         
-        # Hapus file script.txt setelah selesai digunakan agar bersih
         if os.path.exists("script.txt"):
             os.remove("script.txt")
             
-        print("🎉 Selesai! Video dengan latar belakang relevan berhasil dirakit.")
+        print("🎉 Selesai! Video dengan pembahasan tuntas berhasil dirakit.")
     except Exception as e:
         print(f"❌ Terjadi kesalahan sistem: {e}")
         raise e
