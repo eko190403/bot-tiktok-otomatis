@@ -5,70 +5,49 @@ from moviepy import ImageClip
 from subtitle_engine.renderer import SubtitleRenderer
 from config import WIDTH, HEIGHT, FONT_PATH
 
-SUBTITLE_Y = int(HEIGHT * 0.62)
-MIN_WORD_DURATION = 0.18
-WORD_OVERLAP = 0.08
+MIN_WORD_DURATION = 0.15
+WORD_OVERLAP = 0.05
 
 class SubtitleEngineV2:
     def __init__(self):
         self.renderer = SubtitleRenderer(width=WIDTH, height=HEIGHT)
 
-    def generate_subtitle_clips(self, text: str, start_time: float, duration: float, font_size: int, style_type: str = "body", fps: int = 30, timestamps: list = None) -> list:
-        """Subtitle Engine V3: Menempatkan potongan stiker teks tepat di koordinat tengah bawah video."""
-        clean_source_words = text.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").split()
-        
-        if not clean_source_words:
+    def generate_subtitle_clips(self, text_or_words: list, font_size: int, style_type: str = "body") -> list:
+        """
+        Subtitle Engine V3.5: Menerima langsung list of dict kata dengan 
+        timestamp absolut hasil deteksi SSML Mark Edge-TTS.
+        """
+        if not text_or_words:
             return []
 
         clips = []
 
-        # MODE 1 : Pakai Whisper Timestamp
-        if timestamps:
-            for i, item in enumerate(timestamps):
-                word_start = item["start"]
-                word_duration = max(item["end"] - item["start"], MIN_WORD_DURATION) + WORD_OVERLAP
-                active_word = item["word"].upper()
+        for i, item in enumerate(text_or_words):
+            word_text = item["word"].upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").strip()
+            if not word_text:
+                continue
                 
-                frame = self.renderer.create_text_frame(
-                    word=active_word,
-                    font_path=FONT_PATH,
-                    font_size=font_size,
-                    style_type=style_type,
-                    current_index=i
-                )
-                
-                img_rgba = np.array(frame.convert("RGBA"))
-                
-                # Letakkan potongan kata secara pas di sumbu horizontal tengah dan vertikal SUBTITLE_Y
-                clip = (ImageClip(img_rgba, transparent=True)
-                        .with_start(word_start)
-                        .with_duration(word_duration)
-                        .with_position(("center", SUBTITLE_Y)))
-                
-                clips.append(clip)
-
-        # MODE 2 : Fallback Linier Otomatis
-        else:
-            base_duration = duration / len(clean_source_words)
-            for i, word in enumerate(clean_source_words):
-                word_start = start_time + (i * base_duration)
-                word_duration = max(base_duration, MIN_WORD_DURATION) + WORD_OVERLAP
-                
-                frame = self.renderer.create_text_frame(
-                    word=word,
-                    font_path=FONT_PATH,
-                    font_size=font_size,
-                    style_type=style_type,
-                    current_index=i
-                )
-                
-                img_rgba = np.array(frame.convert("RGBA"))
-                
-                clip = (ImageClip(img_rgba, transparent=True)
-                        .with_start(word_start)
-                        .with_duration(word_duration)
-                        .with_position(("center", SUBTITLE_Y)))
-                
-                clips.append(clip)
+            word_start = item["start"]
+            # Amankan durasi jika ada pembacaan super cepat
+            word_duration = max(item["end"] - item["start"], MIN_WORD_DURATION) + WORD_OVERLAP
+            
+            # Panggil renderer untuk membuat gambar stiker kata tunggal
+            frame = self.renderer.create_text_frame(
+                word=word_text,
+                font_path=FONT_PATH,
+                font_size=font_size,
+                style_type=style_type,
+                current_index=i
+            )
+            
+            img_rgba = np.array(frame.convert("RGBA"))
+            
+            # Letakkan stiker kata di posisi tengah bawah layar (koordinat relatif 0.65)
+            clip = (ImageClip(img_rgba, transparent=True)
+                    .with_start(word_start)
+                    .with_duration(word_duration)
+                    .with_position(("center", 0.65)))
+            
+            clips.append(clip)
 
         return clips
