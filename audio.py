@@ -1,6 +1,5 @@
 import asyncio
 import edge_tts
-from edge_tts import SubMaker
 
 async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
     """
@@ -43,33 +42,38 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
 
     # 3. Eksekusi komunikasi stream tunggal dengan server Edge-TTS
     communicate = edge_tts.Communicate(ssml_string, voice)
-    submaker = SubMaker()
     
     audio_data = bytearray()
+    timestamps_result = []
 
-    # Konsumsi stream tunggal
+    # PERBAIKAN TOTAL: Ambil data timing langsung dari chunk stream tanpa lewat objek submaker internal
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
             audio_data.extend(chunk["data"])
         elif chunk["type"] == "WordBoundary":
-            submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
+            # Offset dan duration dari Edge-TTS menggunakan satuan 100-nanodetik (10^-7 detik)
+            start_sec = chunk["offset"] / 10000000.0
+            duration_sec = chunk["duration"] / 10000000.0
+            end_sec = start_sec + duration_sec
+            word_text = chunk["text"]
+            
+            timestamps_result.append({
+                "word": word_text,
+                "start": start_sec,
+                "end": end_sec
+            })
 
     # Simpan data audio ke file
     with open(audio_path, "wb") as f:
         f.write(audio_data)
 
-    # 4. PERBAIKAN UTAMA: Menggunakan submaker.subs untuk membaca daftar data stempel waktu
-    timestamps_result = []
-    for event in submaker.subs:
-        start_sec = event.start.total_seconds()
-        end_sec = event.end.total_seconds()
-        word_text = event.value
-        
-        timestamps_result.append({
-            "word": word_text,
-            "start": start_sec,
-            "end": end_sec
-        })
+    # 4. Jaga-jaga jika ada ketidaksesuaian jumlah token akibat pembersihan karakter oleh TTS server
+    if not timestamps_result:
+        print("⚠️ Peringatan: Data timestamp kosong dari stream. Membuat fallback durasi linear...")
+        # Fallback instan jika stream bermasalah agar pipeline tidak crash
+        return [{"word": w, "start": 0.0, "end": 1.0} for w in words_hook], \
+               [{"word": w, "start": 1.0, "end": 2.0} for w in words_story], \
+               [{"word": w, "start": 2.0, "end": 3.0} for w in words_cta]
 
     # 5. Pisahkan kembali daftar timestamp ke dalam 3 segmen asli (Hook, Story, CTA)
     hook_clips_data = timestamps_result[0:len(words_hook)]
