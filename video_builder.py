@@ -60,7 +60,7 @@ def generate_structured_script():
             return json.loads(response.text.strip())
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                print(f"⚠️ Slot-{current_key_index + 1}地形 terkena limit kuota (429).")
+                print(f"⚠️ Slot-{current_key_index + 1} terkena limit kuota (429).")
                 current_key_index += 1 # Geser ke kunci cadangan berikutnya
                 if attempt < max_attempts - 1:
                     print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa jeda waktu...")
@@ -140,7 +140,8 @@ async def create_video() -> bool:
             processed_clip = process_background_clip(file, duration_per_clip)
             processed_clips.append(processed_clip)
             
-        combined_bg = concatenate_videoclips(processed_clips, method="compose").set_duration(total_duration)
+        # PERBAIKAN: Mengganti .set_duration() menjadi .with_duration() sesuai regulasi MoviePy 2.x
+        combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
 
         # 6. Pembuatan dan Penataan Subtitle Otomatis via subtitle.py
         hook_duration = total_duration * 0.15
@@ -157,7 +158,7 @@ async def create_video() -> bool:
 
         # 7. Komposisi Akhir Semua Lapisan Video dan Ekspor Render
         final_video = CompositeVideoClip([combined_bg] + all_text_clips)
-        final_video = final_video.set_audio(audio_clip)
+        final_video = final_video.with_audio(audio_clip)
 
         output_file_path = os.path.join(DIR_OUTPUT, "final_output.mp4")
         os.makedirs(DIR_OUTPUT, exist_ok=True)
