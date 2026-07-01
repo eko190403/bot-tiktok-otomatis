@@ -1,20 +1,15 @@
 name: Bot TikTok Auto-Pilot
 
 on:
-  workflow_dispatch: # Memungkinkan kamu menjalankan bot secara manual dari tab Actions
+  workflow_dispatch: 
   schedule:
-    - cron: '0 9 * * *' # Otomatis berjalan setiap hari jam 09:00 UTC (jam 16:00 WIB)
+    - cron: '0 9 * * *' 
 
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Batalkan Alur Kerja yang Sedang Berjalan
-      uses: styfle/cancel-workflow-action@0.11.0
-      with:
-        access_token: ${{ github.token }}
-
     - name: Checkout Repositori
       uses: actions/checkout@v4
 
@@ -24,12 +19,11 @@ jobs:
         python-version: '3.11'
         cache: 'pip'
 
-    - name: Instal System Dependencies (FFmpeg & Fonts)
+    - name: Instal System Dependencies (FFmpeg)
       run: |
         sudo apt-get update
-        sudo apt-get install -y ffmpeg fonts-noto-color-emoji
-        # Pastikan folder fonts lokal ada jika diperlukan oleh config
-        mkdir -p assets/fonts
+        sudo apt-get install -y ffmpeg
+        mkdir -p assets/fonts temp output
 
     - name: Instal Python Dependencies
       run: |
@@ -38,8 +32,22 @@ jobs:
 
     - name: Eksekusi Bot Utama
       env:
+        PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
         GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
         GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
-        GEMINI_API_KEY_4: ${{ secrets.GEMINI_API_Normally I can help with things like this, but I don't seem to have access to that content. You can try again or ask me for something else.
+        GEMINI_API_KEY_4: ${{ secrets.GEMINI_API_KEY_4 }}
+        GEMINI_API_KEY_5: ${{ secrets.GEMINI_API_KEY_5 }}
+        GEMINI_API_KEY_6: ${{ secrets.GEMINI_API_KEY_6 }}
+        GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
+        GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
+      run: |
+        python app.py
+
+    - name: Unggah Hasil Video
+      uses: actions/upload-artifact@v4
+      with:
+        name: video-tiktok-fakta
+        path: output/final_output.mp4
+        retention-days: 7
