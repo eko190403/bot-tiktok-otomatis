@@ -5,7 +5,12 @@ from moviepy import ImageClip
 from subtitle_engine.renderer import SubtitleRenderer
 from config import WIDTH, HEIGHT, FONT_PATH
 
-class SubtitleEngineV2:
+# Integrasi Konfigurasi Baru Subtitle Engine V3
+SUBTITLE_Y = int(HEIGHT * 0.62)
+MIN_WORD_DURATION = 0.18
+WORD_OVERLAP = 0.08
+
+class SubtitleEngineV2:  # Nama kelas dipertahankan agar tidak merusak import di video_builder
     def __init__(self):
         self.renderer = SubtitleRenderer(width=WIDTH, height=HEIGHT)
 
@@ -30,10 +35,10 @@ class SubtitleEngineV2:
             
         return "\n".join(lines)
 
-    def generate_subtitle_clips(self, text: str, start_time: float, duration: float, font_size: int, style_type: str = "body", fps: int = 30) -> list:
+    def generate_subtitle_clips(self, text: str, start_time: float, duration: float, font_size: int, style_type: str = "body", fps: int = 30, timestamps: list = None) -> list:
         """
-        Memecah kalimat menjadi teks per kata dengan akselerasi durasi aktif 
-        agar sinkronisasi terasa responsif dan tidak telat dibanding Voice Over.
+        Subtitle Engine V3: Mendukung penayangan berbasis Whisper Timestamp 
+        serta Fallback linear dengan proteksi overlapping durasi visual.
         """
         wrapped_text = self.wrap_text(text, max_chars_per_line=22)
         clean_source_words = text.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").split()
@@ -41,41 +46,71 @@ class SubtitleEngineV2:
         if not clean_source_words:
             return []
 
-        # Hitung durasi dasar per kata
-        base_duration_per_word = duration / len(clean_source_words)
-        
-        # OPTIMASI: Pangkas durasi tampil kata sebesar 25% agar teks muncul lebih sigap dan dinamis
-        active_duration = base_duration_per_word * 0.75
-        
         clips = []
 
-        for i, word in enumerate(clean_source_words):
-            # Posisi start waktu tetap berjalan konisten sesuai ketukan linear
-            word_start = start_time + (i * base_duration_per_word)
-            
-            base_frame = self.renderer.create_text_frame(
-                text=wrapped_text,
-                current_word_index=i,
-                font_path=FONT_PATH,
-                font_size=font_size,
-                style_type=style_type
-            )
-            
-            img_rgba = base_frame.convert("RGBA")
-            img_array = np.array(img_rgba)
-            
-            rgb_array = img_array[:, :, :3]
-            alpha_array = img_array[:, :, 3] / 255.0
+        # --------------------------
+        # MODE 1 : Pakai Whisper Timestamp (Masa Depan)
+        # --------------------------
+        if timestamps:
+            for i, item in enumerate(timestamps):
+                word_start = item["start"]
+                # Amankan durasi minimum kata pendek
+                word_duration = max(item["end"] - item["start"], MIN_WORD_DURATION)
+                # Tambahkan overlap transisi halus
+                word_duration += WORD_OVERLAP
+                
+                frame = self.renderer.create_text_frame(
+                    text=wrapped_text,
+                    current_word_index=i,
+                    font_path=FONT_PATH,
+                    font_size=font_size,
+                    style_type=style_type
+                )
+                
+                img = np.array(frame.convert("RGBA"))
+                rgb = img[:, :, :3]
+                alpha = img[:, :, 3] / 255.0
+                
+                clip = (ImageClip(rgb)
+                        .with_start(word_start)
+                        .with_duration(word_duration)
+                        .with_position(("center", SUBTITLE_Y)))
+                
+                mask = ImageClip(alpha, is_mask=True).with_duration(word_duration)
+                clip.mask = mask
+                clips.append(clip)
 
-            # Gunakan active_duration yang lebih pendek agar pergantian teks terasa cepat (snappy)
-            frame_clip = (ImageClip(rgb_array)
-                          .with_start(word_start)
-                          .with_duration(active_duration)
-                          .with_position(('center', 'center')))
-            
-            mask_clip = ImageClip(alpha_array, is_mask=True).with_duration(active_duration)
-            frame_clip.mask = mask_clip
-
-            clips.append(frame_clip)
+        # --------------------------
+        # MODE 2 : Fallback Linier Otomatis (Mode Sekarang)
+        # --------------------------
+        else:
+            base_duration = duration / len(clean_source_words)
+            for i, word in enumerate(clean_source_words):
+                word_start = start_time + (i * base_duration)
+                # Amankan durasi minimum kata pendek
+                word_duration = max(base_duration, MIN_WORD_DURATION)
+                # Tambahkan overlap transisi halus
+                word_duration += WORD_OVERLAP
+                
+                frame = self.renderer.create_text_frame(
+                    text=wrapped_text,
+                    current_word_index=i,
+                    font_path=FONT_PATH,
+                    font_size=font_size,
+                    style_type=style_type
+                )
+                
+                img = np.array(frame.convert("RGBA"))
+                rgb = img[:, :, :3]
+                alpha = img[:, :, 3] / 255.0
+                
+                clip = (ImageClip(rgb)
+                        .with_start(word_start)
+                        .with_duration(word_duration)
+                        .with_position(("center", SUBTITLE_Y)))
+                
+                mask = ImageClip(alpha, is_mask=True).with_duration(word_duration)
+                clip.mask = mask
+                clips.append(clip)
 
         return clips
