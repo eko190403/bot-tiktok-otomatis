@@ -61,11 +61,12 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         end_sec = event.end.total_seconds()
         word_text = event.value
         
+        # PERBAIKAN: Menggunakan penutup kurung kurawal } yang benar di baris ini
         timestamps_result.append({
             "word": word_text,
             "start": start_sec,
             "end": end_sec
-        )
+        })
 
     # 5. Pisahkan kembali daftar timestamp ke dalam 3 segmen asli (Hook, Story, CTA)
     hook_clips_data = timestamps_result[0:len(words_hook)]
