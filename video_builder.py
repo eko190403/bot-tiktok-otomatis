@@ -9,7 +9,7 @@ from config import GEMINI_KEYS, DIR_OUTPUT, FONT_SIZE_HOOK, FONT_SIZE_BODY
 from downloader import download_video_clips
 from effects import process_background_clip
 from subtitle_engine.orchestrator import SubtitleEngineV2
-from audio import generate_voiceover_with_timestamps # Menggunakan fungsi SSML Mark baru
+from audio import generate_voiceover_with_timestamps
 
 current_key_index = 0
 
@@ -84,10 +84,10 @@ async def create_video() -> bool:
         keywords = extract_keywords_from_script(story)
         video_files = download_video_clips(keywords, target_count=4)
         
-        # 3. PROSES UTAMA: Generate Audio & Tangkap Eksklusif SSML Timestamps per Segmen
+        # 3. Generate Audio & Tangkap List Timestamp Terpadu Berbasis Seksi
         vo_file_path = "temp/vo.mp3"
         os.makedirs("temp", exist_ok=True)
-        hook_ts, story_ts, cta_ts = await generate_voiceover_with_timestamps(hook, story, cta, vo_file_path)
+        all_timestamps = await generate_voiceover_with_timestamps(hook, story, cta, vo_file_path)
         
         from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip
         
@@ -103,22 +103,27 @@ async def create_video() -> bool:
             
         combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
 
-        # 5. Render Subtitle Menggunakan Data Detektor Waktu Asli Hasil SSML Mark
+        # 5. INTEGRASI FIX: Memecah list data absolut menggunakan filter penanda seksi rekomendasi kamu
+        hook_words = [x for x in all_timestamps if x["section"] == "hook"]
+        story_words = [x for x in all_timestamps if x["section"] == "story"]
+        cta_words = [x for x in all_timestamps if x["section"] == "cta"]
+
         engine_v3 = SubtitleEngineV2()
         all_text_clips = []
 
-        all_text_clips.extend(engine_v3.generate_subtitle_clips(hook_ts, font_size=FONT_SIZE_HOOK, style_type="hook"))
-        all_text_clips.extend(engine_v3.generate_subtitle_clips(story_ts, font_size=FONT_SIZE_BODY, style_type="body"))
-        all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_ts, font_size=FONT_SIZE_BODY, style_type="cta"))
+        # Kirim potongan list kata langsung ke generator tanpa hitung durasi manual lagi
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(hook_words, font_size=FONT_SIZE_HOOK, style_type="hook"))
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(story_words, font_size=FONT_SIZE_BODY, style_type="body"))
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_words, font_size=FONT_SIZE_BODY, style_type="cta"))
 
-        # 6. Final Komposisi Overlay
+        # 6. Final Komposisi Lapisan Overlay
         final_video = CompositeVideoClip([combined_bg] + all_text_clips, use_bgclip=True)
         final_video = final_video.with_audio(audio_clip)
 
         output_file_path = os.path.join(DIR_OUTPUT, "final_output.mp4")
         os.makedirs(DIR_OUTPUT, exist_ok=True)
         
-        print("🔄 Memulai proses ekspor video dengan sinkronisasi SSML absolut...")
+        print("🔄 Memulai proses ekspor video dengan sinkronisasi seksi absolut...")
         final_video.write_videofile(output_file_path, fps=30, codec="libx264", audio_codec="aac", threads=4)
         
         # Clean Up
@@ -130,7 +135,7 @@ async def create_video() -> bool:
             if os.path.exists(file): os.remove(file)
         if os.path.exists(vo_file_path): os.remove(vo_file_path)
             
-        print("🎉 Sukses Besar! Sinkronisasi video tingkat milidetik selesai.")
+        print("🎉 Sukses Besar! Sinkronisasi video bermode seksi selesai.")
         return True
         
     except Exception as e:
