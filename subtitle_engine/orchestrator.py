@@ -14,7 +14,7 @@ class SubtitleEngineV2:
         self.renderer = SubtitleRenderer(width=WIDTH, height=HEIGHT)
 
     def generate_subtitle_clips(self, text: str, start_time: float, duration: float, font_size: int, style_type: str = "body", fps: int = 30, timestamps: list = None) -> list:
-        """Subtitle Engine V3: Mengirimkan kata tunggal langsung ke renderer untuk menjamin visual muncul tepat waktu."""
+        """Subtitle Engine V3: Merender klip teks RGBA utuh tanpa masking terpisah untuk jaminan visual muncul di layar."""
         clean_source_words = text.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").split()
         
         if not clean_source_words:
@@ -37,17 +37,15 @@ class SubtitleEngineV2:
                     current_index=i
                 )
                 
-                img = np.array(frame.convert("RGBA"))
-                rgb = img[:, :, :3]
-                alpha = img[:, :, 3] / 255.0
+                # PERBAIKAN: Ambil matriks RGBA utuh (tetap mempertahankan channel alpha 0-255)
+                img_rgba = np.array(frame.convert("RGBA"))
                 
-                clip = (ImageClip(rgb)
+                # Buat clip dengan transparansi bawaan langsung
+                clip = (ImageClip(img_rgba, transparent=True)
                         .with_start(word_start)
                         .with_duration(word_duration)
                         .with_position(("center", SUBTITLE_Y)))
                 
-                mask = ImageClip(alpha, is_mask=True).with_duration(word_duration)
-                clip.mask = mask
                 clips.append(clip)
 
         # MODE 2 : Fallback Linier Otomatis
@@ -65,17 +63,15 @@ class SubtitleEngineV2:
                     current_index=i
                 )
                 
-                img = np.array(frame.convert("RGBA"))
-                rgb = img[:, :, :3]
-                alpha = img[:, :, 3] / 255.0
+                # PERBAIKAN: Ambil matriks RGBA utuh (tetap mempertahankan channel alpha 0-255)
+                img_rgba = np.array(frame.convert("RGBA"))
                 
-                clip = (ImageClip(rgb)
+                # Buat clip dengan transparansi bawaan langsung
+                clip = (ImageClip(img_rgba, transparent=True)
                         .with_start(word_start)
                         .with_duration(word_duration)
                         .with_position(("center", SUBTITLE_Y)))
                 
-                mask = ImageClip(alpha, is_mask=True).with_duration(word_duration)
-                clip.mask = mask
                 clips.append(clip)
 
         return clips
