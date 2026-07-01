@@ -6,10 +6,10 @@ from google import genai
 from google.genai import types
 
 # Import konfigurasi global dan modul pendukung terpisah
-from config import GEMINI_KEYS, DIR_OUTPUT
+from config import GEMINI_KEYS, DIR_OUTPUT, FONT_SIZE_HOOK, FONT_SIZE_BODY
 from downloader import download_video_clips
 from effects import process_background_clip
-from subtitle import render_subtitles_for_section
+from subtitle_engine.orchestrator import SubtitleEngineV2
 from audio import generate_voiceover_edge
 
 # Indeks global untuk melacak API Key yang sedang aktif
@@ -38,7 +38,6 @@ def generate_structured_script():
     global current_key_index
     print("🧠 Gemini sedang merancang naskah berstruktur dengan optimasi tanda baca...")
     
-    # PERBAIKAN PROMPT: Menambahkan aturan tanda baca yang ketat agar suara tidak terlalu cepat
     prompt = (
         "Buat satu konten fakta psikologi manusia yang siap pakai untuk TikTok Shorts.\n"
         "Konten harus terbagi menjadi 3 bagian utuh dalam format JSON:\n"
@@ -148,18 +147,20 @@ async def create_video() -> bool:
             
         combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
 
-        # 6. Pembuatan dan Penataan Subtitle Otomatis via subtitle.py
+        # 6. Pembuatan dan Penataan Subtitle Otomatis via Subtitle Engine v2 (Pillow PNG Overlay)
         hook_duration = total_duration * 0.15
         cta_duration = total_duration * 0.15
         story_duration = total_duration - hook_duration - cta_duration
 
+        engine_v2 = SubtitleEngineV2()
         all_text_clips = []
-        # Render Teks Hook
-        all_text_clips.extend(render_subtitles_for_section(hook, 0, hook_duration, style="hook"))
-        # Render Teks Story
-        all_text_clips.extend(render_subtitles_for_section(story, hook_duration, story_duration, style="body"))
-        # Render Teks CTA
-        all_text_clips.extend(render_subtitles_for_section(cta, hook_duration + story_duration, cta_duration, style="cta"))
+
+        # Render Teks Hook (Orange Pop)
+        all_text_clips.extend(engine_v2.generate_subtitle_clips(hook, 0, hook_duration, font_size=FONT_SIZE_HOOK, style_type="hook"))
+        # Render Teks Story (Karaoke Highlight Auto-Warna Word-by-Word)
+        all_text_clips.extend(engine_v2.generate_subtitle_clips(story, hook_duration, story_duration, font_size=FONT_SIZE_BODY, style_type="body"))
+        # Render Teks CTA (Cyan Pop)
+        all_text_clips.extend(engine_v2.generate_subtitle_clips(cta, hook_duration + story_duration, cta_duration, font_size=FONT_SIZE_BODY, style_type="cta"))
 
         # 7. Komposisi Akhir Semua Lapisan Video dan Ekspor Render
         final_video = CompositeVideoClip([combined_bg] + all_text_clips)
