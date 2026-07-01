@@ -4,7 +4,6 @@ import time
 import asyncio
 from google import genai
 from google.genai import types
-from google.genai.errors import ClientError
 from moviepy import AudioFileClip, CompositeVideoClip, concatenate_videoclips
 
 # Import konfigurasi global dan modul pendukung terpisah
@@ -18,7 +17,7 @@ from audio import generate_voiceover_edge
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 def generate_structured_script():
-    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON berstruktur untuk TikTok."""
+    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON berstruktur untuk TikTok (Anti-429 Kuat)."""
     if not client:
         raise ValueError("❌ GEMINI_API_KEY belum dikonfigurasi di variabel lingkungan.")
         
@@ -41,12 +40,14 @@ def generate_structured_script():
                 config=types.GenerateContentConfig(response_mime_type="application/json")
             )
             return json.loads(response.text.strip())
-        except ClientError as ce:
-            if "429" in str(ce) and attempt < max_retries - 1:
-                print(f"⚠️ Kuota Gemini penuh (429). Menunggu 10 detik sebelum coba lagi...")
-                time.sleep(10)
-            else:
-                raise ce
+        except Exception as e:
+            # Menangkap semua jenis error 429 harian / rate limit secara universal
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                if attempt < max_retries - 1:
+                    print(f"⚠️ Kuota Gemini penuh/sibuk (429). Menunggu 15 detik sebelum mencoba kembali... (Percobaan {attempt + 1}/{max_retries})")
+                    time.sleep(15)
+                    continue
+            raise e
 
 def extract_keywords_from_script(script_text: str) -> list:
     """Fungsi Tahap 2: AI membaca isi skrip cerita dan mengekstrak kata kunci pencarian video."""
@@ -61,16 +62,22 @@ def extract_keywords_from_script(script_text: str) -> list:
         f"Berikan hasil dalam format JSON array bertipe string. Contoh: [\"mind\", \"thinking\", \"human\", \"dark\"]"
     )
     
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
-        return json.loads(response.text.strip())
-    except Exception as e:
-        print(f"⚠️ Gagal mengekstrak keyword kustom: {e}. Menggunakan keyword fallback.")
-        return ["mind", "abstract", "human", "moody"]
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json")
+            )
+            return json.loads(response.text.strip())
+        except Exception as e:
+            if ("429" in str(e) or "RESOURCE_EXHAUSTED" in str(e)) and attempt < max_retries - 1:
+                print(f"⚠️ Kuota Gemini sibuk saat ekstraksi keyword. Menunggu 15 detik...")
+                time.sleep(15)
+                continue
+            print(f"⚠️ Gagal mengekstrak keyword kustom: {e}. Menggunakan keyword fallback.")
+            return ["mind", "abstract", "human", "moody"]
 
 async def create_video() -> bool:
     """Orchestrator Utama Pipeline Perakitan Video TikTok."""
