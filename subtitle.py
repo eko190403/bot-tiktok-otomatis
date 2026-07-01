@@ -38,7 +38,6 @@ def render_subtitles_for_section(text: str, start_time: float, duration: float, 
 
     for i, chunk in enumerate(chunks):
         current_start = start_time + (i * chunk_duration)
-        current_end = start_time + ((i + 1) * chunk_duration)
         
         current_color = color
         if style == "body" and i % 2 == 0:
@@ -55,7 +54,12 @@ def render_subtitles_for_section(text: str, start_time: float, duration: float, 
             size=(WIDTH - 150, None)
         )
         
-        txt_clip = txt_clip.set_start(current_start).set_end(current_end).set_position(('center', HEIGHT * 0.45))
+        # PERBAIKAN MoviePy 2.x: Menggunakan .with_start(), .with_duration(), dan .with_position()
+        txt_clip = (txt_clip
+                    .with_start(current_start)
+                    .with_duration(chunk_duration)
+                    .with_position(('center', HEIGHT * 0.45)))
+        
         clips.append(txt_clip)
         
     return clips
