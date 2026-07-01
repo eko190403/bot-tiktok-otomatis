@@ -66,13 +66,12 @@ def generate_structured_script():
             return json.loads(response.text.strip())
         except Exception as e:
             err_msg = str(e)
-            # PERBAIKAN UTAMA: Jika terkena limit (429) ATAU server overload (503/UNAVAILABLE), paksa lompat ke key cadangan
             if "429" in err_msg or "503" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "UNAVAILABLE" in err_msg:
                 print(f"⚠️ Slot-{current_key_index + 1} bermasalah ({err_msg[:80]}).")
                 current_key_index += 1
                 if attempt < max_attempts - 1:
                     print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa mematikan sistem...")
-                    time.sleep(1)  # Jeda aman 1 detik sebelum hit ulang
+                    time.sleep(1)
                     continue
             raise e
 
@@ -169,7 +168,8 @@ async def create_video() -> bool:
         all_text_clips.extend(engine_v3.generate_subtitle_clips(cta, hook_duration + story_duration, cta_duration, font_size=FONT_SIZE_BODY, style_type="cta"))
 
         # 7. Komposisi Akhir dan Ekspor Render Video
-        final_video = CompositeVideoClip([combined_bg] + all_text_clips)
+        # PERBAIKAN UTAMA: Menggunakan use_bgclip=True agar MoviePy memadukan alpha transparansi lapisan PNG di atas background
+        final_video = CompositeVideoClip([combined_bg] + all_text_clips, use_bgclip=True)
         final_video = final_video.with_audio(audio_clip)
 
         output_file_path = os.path.join(DIR_OUTPUT, "final_output.mp4")
