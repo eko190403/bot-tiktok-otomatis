@@ -32,11 +32,10 @@ def get_next_client():
     return genai.Client(api_key=active_key)
 
 def generate_structured_script():
-    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON dengan variasi topik multi-tema secara acak."""
+    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON dengan proteksi failover ketat (429 & 503)."""
     global current_key_index
     print("🧠 Gemini sedang merancang naskah berstruktur dengan variasi topik otomatis...")
     
-    # PERBAIKAN: Mengubah prompt agar Gemini mengacak topik edukasi pendek demi menghindari konten monoton
     prompt = (
         "Buat satu konten edukasi pendek yang siap pakai untuk TikTok Shorts.\n"
         "Pilih secara acak SALAH SATU dari tema besar berikut untuk setiap kali generate:\n"
@@ -55,7 +54,7 @@ def generate_structured_script():
         "Format JSON harus valid, bersih, tanpa markdown."
     )
     
-    max_attempts = max(3, len(GEMINI_KEYS))
+    max_attempts = max(5, len(GEMINI_KEYS) * 2)
     for attempt in range(max_attempts):
         try:
             client = get_next_client()
@@ -66,16 +65,19 @@ def generate_structured_script():
             )
             return json.loads(response.text.strip())
         except Exception as e:
-            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                print(f"⚠️ Slot-{current_key_index + 1} terkena limit kuota (429).")
+            err_msg = str(e)
+            # PERBAIKAN UTAMA: Jika terkena limit (429) ATAU server overload (503/UNAVAILABLE), paksa lompat ke key cadangan
+            if "429" in err_msg or "503" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "UNAVAILABLE" in err_msg:
+                print(f"⚠️ Slot-{current_key_index + 1} bermasalah ({err_msg[:80]}).")
                 current_key_index += 1
                 if attempt < max_attempts - 1:
-                    print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa jeda waktu...")
+                    print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa mematikan sistem...")
+                    time.sleep(1)  # Jeda aman 1 detik sebelum hit ulang
                     continue
             raise e
 
 def extract_keywords_from_script(script_text: str) -> list:
-    """Fungsi Tahap 2: AI mengekstrak kata kunci visual untuk pencarian latar belakang."""
+    """Fungsi Tahap 2: AI mengekstrak kata kunci visual dengan sistem proteksi failover."""
     global current_key_index
     print("🧠 AI sedang menganalisis isi cerita untuk mengekstrak keyword visual...")
     
@@ -86,7 +88,7 @@ def extract_keywords_from_script(script_text: str) -> list:
         f"Berikan hasil dalam format JSON array bertipe string. Contoh: [\"mind\", \"thinking\", \"human\", \"dark\"]"
     )
     
-    max_attempts = max(3, len(GEMINI_KEYS))
+    max_attempts = max(5, len(GEMINI_KEYS) * 2)
     for attempt in range(max_attempts):
         try:
             client = get_next_client()
@@ -97,11 +99,13 @@ def extract_keywords_from_script(script_text: str) -> list:
             )
             return json.loads(response.text.strip())
         except Exception as e:
-            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                print(f"⚠️ Slot-{current_key_index + 1} terkena limit saat ekstraksi keyword.")
+            err_msg = str(e)
+            if "429" in err_msg or "503" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "UNAVAILABLE" in err_msg:
+                print(f"⚠️ Slot-{current_key_index + 1} bermasalah saat ekstraksi keyword.")
                 current_key_index += 1
                 if attempt < max_attempts - 1:
-                    print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa jeda waktu...")
+                    print("🔄 Otomatis beralih ke API Key cadangan berikutnya...")
+                    time.sleep(1)
                     continue
             print(f"⚠️ Gagal mengekstrak keyword kustom: {e}. Menggunakan keyword fallback.")
             return ["mind", "abstract", "human", "moody"]
@@ -149,7 +153,7 @@ async def create_video() -> bool:
             
         combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
 
-        # 6. Pembuatan Subtitle Otomatis via Subtitle Engine V3 (Safe Area 62%, Anti-Kedip, Pas Ketukan)
+        # 6. Pembuatan Subtitle Otomatis via Subtitle Engine V3 (Transparansi RGBA Utuh Stabil)
         hook_duration = total_duration * 0.15
         cta_duration = total_duration * 0.15
         story_duration = total_duration - hook_duration - cta_duration
