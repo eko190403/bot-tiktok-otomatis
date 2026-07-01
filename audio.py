@@ -41,8 +41,8 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     
     ssml_string = f"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='id-ID'><voice name='{voice}'>{' '.join(ssml_parts)}</voice></speak>"
 
-    # 3. Eksekusi komunikasi dengan server Edge-TTS menggunakan SubMaker untuk mencatat offset waktu
-    communicate = edge_tts.Communicate(ssml_string, voice, is_ssml=True)
+    # 3. PERBAIKAN UTAMA: Hapus parameter is_ssml=True karena otomatis terdeteksi dari string <speak>
+    communicate = edge_tts.Communicate(ssml_string, voice)
     submaker = SubMaker()
     
     # Simpan file audio mentah
@@ -61,7 +61,6 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         end_sec = event.end.total_seconds()
         word_text = event.value
         
-        # PERBAIKAN: Menggunakan penutup kurung kurawal } yang benar di baris ini
         timestamps_result.append({
             "word": word_text,
             "start": start_sec,
