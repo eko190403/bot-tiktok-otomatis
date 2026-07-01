@@ -152,23 +152,30 @@ async def create_video() -> bool:
             
         combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
 
-        # 6. Pembuatan Subtitle Otomatis via Subtitle Engine V3 (Transparansi RGBA Utuh Stabil)
-        hook_duration = total_duration * 0.15
-        cta_duration = total_duration * 0.15
-        story_duration = total_duration - hook_duration - cta_duration
+        # 6. PERBAIKAN SINKRONISASI: Hitung bobot durasi segmen berdasarkan jumlah karakter teks (Proporsional)
+        len_hook = len(hook)
+        len_story = len(story)
+        len_cta = len(cta)
+        total_len = len_hook + len_story + len_cta
+
+        # Distribusikan total duration secara adil sesuai panjang teks asli
+        hook_duration = (len_hook / total_len) * total_duration
+        story_duration = (len_story / total_len) * total_duration
+        cta_duration = (len_cta / total_len) * total_duration
 
         engine_v3 = SubtitleEngineV2()
         all_text_clips = []
 
-        # Render Teks Hook
+        # Render Teks Hook dengan start_time linear terhitung
         all_text_clips.extend(engine_v3.generate_subtitle_clips(hook, 0, hook_duration, font_size=FONT_SIZE_HOOK, style_type="hook"))
-        # Render Teks Story (Karaoke Highlight Word-by-Word)
+        
+        # Render Teks Story tepat setelah Hook selesai
         all_text_clips.extend(engine_v3.generate_subtitle_clips(story, hook_duration, story_duration, font_size=FONT_SIZE_BODY, style_type="body"))
-        # Render Teks CTA
+        
+        # Render Teks CTA tepat setelah Story selesai
         all_text_clips.extend(engine_v3.generate_subtitle_clips(cta, hook_duration + story_duration, cta_duration, font_size=FONT_SIZE_BODY, style_type="cta"))
 
         # 7. Komposisi Akhir dan Ekspor Render Video
-        # PERBAIKAN UTAMA: Menggunakan use_bgclip=True agar MoviePy memadukan alpha transparansi lapisan PNG di atas background
         final_video = CompositeVideoClip([combined_bg] + all_text_clips, use_bgclip=True)
         final_video = final_video.with_audio(audio_clip)
 
@@ -197,7 +204,7 @@ async def create_video() -> bool:
         if os.path.exists(vo_file_path):
             os.remove(vo_file_path)
             
-        print("🎉 Sukses Besar! Perakitan video multi-tema selesai.")
+        print("🎉 Sukses Besar! Perakitan video sinkron selesai.")
         return True
         
     except Exception as e:
