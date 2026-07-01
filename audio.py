@@ -3,79 +3,63 @@ import edge_tts
 
 async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
     """
-    Membuat audio menggunakan SSML Mark untuk mendapatkan stempel waktu 
-    kata-per-kata yang presisi langsung dari stream tunggal Edge-TTS.
+    Membuat audio dari teks bersih murni dan menangkap timestamp 
+    kata-per-kata secara real-time langsung dari event WordBoundary bawaan.
     """
-    # 1. Bersihkan kata dan susun array kata global untuk pencocokan indeks event
+    # 1. Bersihkan kata untuk kebutuhan pemisahan array indeks nanti
     words_hook = hook.split()
     words_story = story.split()
     words_cta = cta.split()
     
-    all_words = words_hook + words_story + words_cta
-    
-    # 2. Bangun teks berformat SSML dengan injeksi tag <mark> di setiap kata
-    ssml_parts = []
-    word_counter = 0
-    
-    # Bungkus bagian Hook
-    ssml_parts.append("<p>")
-    for word in words_hook:
-        ssml_parts.append(f'<mark name="{word_counter}"/>{word}')
-        word_counter += 1
-    ssml_parts.append("</p>")
-    
-    # Bungkus bagian Story
-    ssml_parts.append("<p>")
-    for word in words_story:
-        ssml_parts.append(f'<mark name="{word_counter}"/>{word}')
-        word_counter += 1
-    ssml_parts.append("</p>")
-    
-    # Bungkus bagian CTA
-    ssml_parts.append("<p>")
-    for word in words_cta:
-        ssml_parts.append(f'<mark name="{word_counter}"/>{word}')
-        word_counter += 1
-    ssml_parts.append("</p>")
-    
-    ssml_string = f"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='id-ID'><voice name='{voice}'>{' '.join(ssml_parts)}</voice></speak>"
+    # Gabungkan menjadi satu kalimat polos utuh agar dibaca natural oleh TTS
+    full_clean_text = f"{hook}. {story} {cta}"
 
-    # 3. Eksekusi komunikasi stream tunggal dengan server Edge-TTS
-    communicate = edge_tts.Communicate(ssml_string, voice)
+    # 2. Kirim teks bersih murni ke server Edge-TTS (Tanpa SSML)
+    communicate = edge_tts.Communicate(full_clean_text, voice)
     
     audio_data = bytearray()
-    timestamps_result = []
+    raw_timestamps = []
 
-    # PERBAIKAN TOTAL: Ambil data timing langsung dari chunk stream tanpa lewat objek submaker internal
+    # 3. Konsumsi stream tunggal: Kumpulkan audio dan catat data timing kata asli
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
             audio_data.extend(chunk["data"])
         elif chunk["type"] == "WordBoundary":
-            # Offset dan duration dari Edge-TTS menggunakan satuan 100-nanodetik (10^-7 detik)
+            # Konversi satuan waktu dari server ke detik desimal
             start_sec = chunk["offset"] / 10000000.0
             duration_sec = chunk["duration"] / 10000000.0
             end_sec = start_sec + duration_sec
-            word_text = chunk["text"]
+            word_text = chunk["text"].strip()
             
-            timestamps_result.append({
+            raw_timestamps.append({
                 "word": word_text,
                 "start": start_sec,
                 "end": end_sec
             })
 
-    # Simpan data audio ke file
+    # Simpan data audio murni ke file temp
     with open(audio_path, "wb") as f:
         f.write(audio_data)
 
-    # 4. Jaga-jaga jika ada ketidaksesuaian jumlah token akibat pembersihan karakter oleh TTS server
+    # 4. Filter dan bersihkan data timestamp dari noise karakter kosong atau tanda baca
+    timestamps_result = []
+    for item in raw_timestamps:
+        cleaned_word = item["word"].replace(".", "").replace(",", "").replace("?", "").replace("!", "").strip()
+        if cleaned_word:
+            timestamps_result.append({
+                "word": cleaned_word,
+                "start": item["start"],
+                "end": item["end"]
+            })
+
+    # 5. Jika pembacaan gagal/kosong, buatkan penanganan cadangan linear agar tidak crash
     if not timestamps_result:
-        print("⚠️ Peringatan: Data timestamp kosong dari stream. Membuat fallback durasi linear...")
-        # Fallback instan jika stream bermasalah agar pipeline tidak crash
+        print("⚠️ Data timestamp kosong. Menggunakan pembagian linear...")
         return [{"word": w, "start": 0.0, "end": 1.0} for w in words_hook], \
                [{"word": w, "start": 1.0, "end": 2.0} for w in words_story], \
                [{"word": w, "start": 2.0, "end": 3.0} for w in words_cta]
 
-    # 5. Pisahkan kembali daftar timestamp ke dalam 3 segmen asli (Hook, Story, CTA)
+    # 6. Distribusikan stempel waktu secara presisi berdasarkan pembagian jumlah kata asli segmen
     hook_clips_data = timestamps_result[0:len(words_hook)]
     story_clips_data = timestamps_result[len(words_hook):len(words_hook)+len(words_story)]
     cta_clips_data = timestamps_result[len(words_hook)+len(words_story):]
