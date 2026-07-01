@@ -17,7 +17,6 @@ class SubtitleEngineV2:
         current_length = 0
 
         for word in words:
-            # +1 untuk spasi
             if current_length + len(word) + 1 > max_chars_per_line and current_line:
                 lines.append(" ".join(current_line))
                 current_line = [word]
@@ -32,13 +31,8 @@ class SubtitleEngineV2:
         return "\n".join(lines)
 
     def generate_subtitle_clips(self, text: str, start_time: float, duration: float, font_size: int, style_type: str = "body", fps: int = 30) -> list:
-        """
-        Memecah kalimat menjadi teks berbaris rapi (Auto-Wrap) dengan efek karaoke highlight per kata.
-        """
-        # 1. Atur teks agar otomatis turun baris jika terlalu panjang (Maksimal 22 karakter per baris)
+        """Memecah kalimat menjadi teks berbaris rapi (Auto-Wrap) dengan efek karaoke highlight per kata."""
         wrapped_text = self.wrap_text(text, max_chars_per_line=22)
-        
-        # Bersihkan naskah asli dari tanda baca untuk pencarian indeks kata yang akurat
         clean_source_words = text.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").split()
         
         if not clean_source_words:
@@ -50,9 +44,8 @@ class SubtitleEngineV2:
         for i, word in enumerate(clean_source_words):
             word_start = start_time + (i * duration_per_word)
             
-            # 2. Render gambar PNG dengan teks yang sudah di-wrap, namun indeks kata yang aktif tetap berjalan tepat
             base_frame = self.renderer.create_text_frame(
-                text=wrapped_text,  # Gunakan teks berformat baris baru '\n'
+                text=wrapped_text,
                 current_word_index=i,
                 font_path=FONT_PATH,
                 font_size=font_size,
