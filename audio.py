@@ -1,28 +1,75 @@
-import os
+import asyncio
 import edge_tts
-from moviepy import AudioFileClip
+from edge_tts import SubMaker
 
-async def generate_voiceover_edge(text: str, output_path: str = "temp/vo.mp3"):
-    """Mengonversi teks menjadi audio menggunakan Edge-TTS (Suara Pria Ardi)."""
-    print("🎙️ Mengonversi script menjadi suara Edge-TTS (id-ID-ArdiNeural)...")
-    voice = "id-ID-ArdiNeural"
+async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
+    """
+    Membuat audio menggunakan SSML Mark untuk mendapatkan stempel waktu 
+    kata-per-kata yang presisi langsung dari engine Edge-TTS.
+    """
+    # 1. Bersihkan kata dan susun array kata global untuk pencocokan indeks event
+    words_hook = hook.split()
+    words_story = story.split()
+    words_cta = cta.split()
     
-    # Pastikan folder temp tersedia
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    all_words = words_hook + words_story + words_cta
     
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(output_path)
-    print("✅ File audio Voice Over berhasil disimpan.")
+    # 2. Bangun teks berformat SSML dengan injeksi tag <mark> di setiap kata
+    ssml_parts = []
+    word_counter = 0
+    
+    # Bungkus bagian Hook
+    ssml_parts.append("<p>")
+    for word in words_hook:
+        ssml_parts.append(f'<mark name="{word_counter}"/>{word}')
+        word_counter += 1
+    ssml_parts.append("</p>")
+    
+    # Bungkus bagian Story
+    ssml_parts.append("<p>")
+    for word in words_story:
+        ssml_parts.append(f'<mark name="{word_counter}"/>{word}')
+        word_counter += 1
+    ssml_parts.append("</p>")
+    
+    # Bungkus bagian CTA
+    ssml_parts.append("<p>")
+    for word in words_cta:
+        ssml_parts.append(f'<mark name="{word_counter}"/>{word}')
+        word_counter += 1
+    ssml_parts.append("</p>")
+    
+    ssml_string = f"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='id-ID'><voice name='{voice}'>{' '.join(ssml_parts)}</voice></speak>"
 
-def mix_background_music(vo_path: str, bgm_path: str = None, volume_bgm: float = 0.1) -> AudioFileClip:
-    """Menggabungkan VO dengan BGM dan mengatur level volume audio."""
-    if not os.path.exists(vo_path):
-        raise FileNotFoundError(f"❌ File VO tidak ditemukan di: {vo_path}")
-        
-    vo_clip = AudioFileClip(vo_path)
+    # 3. Eksekusi komunikasi dengan server Edge-TTS menggunakan SubMaker untuk mencatat offset waktu
+    communicate = edge_tts.Communicate(ssml_string, voice, is_ssml=True)
+    submaker = SubMaker()
     
-    if bgm_path and os.path.exists(bgm_path):
-        # Logika pencampuran audio jika file BGM tersedia di masa mendatang
-        pass
+    # Simpan file audio mentah
+    await communicate.save(audio_path)
+    
+    # Ambil data timing mentah dari stream websocket
+    async for chunk in communicate.stream():
+        if chunk["type"] == "WordBoundary":
+            submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
+
+    # 4. Konversi data SubMaker menjadi struktur data list timestamp absolut
+    timestamps_result = []
+    for event in submaker.events:
+        # Konversi waktu dari mikrodetik ke detik desimal
+        start_sec = event.start.total_seconds()
+        end_sec = event.end.total_seconds()
+        word_text = event.value
         
-    return vo_clip
+        timestamps_result.append({
+            "word": word_text,
+            "start": start_sec,
+            "end": end_sec
+        )
+
+    # 5. Pisahkan kembali daftar timestamp ke dalam 3 segmen asli (Hook, Story, CTA)
+    hook_clips_data = timestamps_result[0:len(words_hook)]
+    story_clips_data = timestamps_result[len(words_hook):len(words_hook)+len(words_story)]
+    cta_clips_data = timestamps_result[len(words_hook)+len(words_story):]
+
+    return hook_clips_data, story_clips_data, cta_clips_data
