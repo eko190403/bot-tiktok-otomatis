@@ -16,6 +16,11 @@ DIR_ASSETS = "assets"
 DIR_TEMP = "temp"
 DIR_OUTPUT = "output"
 
-# API Keys
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# API Keys - Mendukung rotasi otomatis dari GEMINI_API_KEY_1 sampai GEMINI_API_KEY_8
+GEMINI_KEYS = []
+for i in range(1, 9): # Mengubah range ke 9 agar mencakup kunci ke-6, 7, dan 8
+    key = os.getenv(f"GEMINI_API_KEY_{i}") or os.getenv("GEMINI_API_KEY")
+    if key and key not in GEMINI_KEYS:
+        GEMINI_KEYS.append(key)
+
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
