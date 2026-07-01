@@ -47,20 +47,20 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     
     audio_data = bytearray()
 
-    # PERBAIKAN UTAMA: Konsumsi stream hanya SEKALI. Kumpulkan data audio dan data timing bersamaan.
+    # Konsumsi stream tunggal
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
             audio_data.extend(chunk["data"])
         elif chunk["type"] == "WordBoundary":
             submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
 
-    # Simpan kumpulan buffer audio mentah ke dalam file tujuan
+    # Simpan data audio ke file
     with open(audio_path, "wb") as f:
         f.write(audio_data)
 
-    # 4. Konversi data SubMaker menjadi struktur data list timestamp absolut
+    # 4. PERBAIKAN UTAMA: Menggunakan submaker.subs untuk membaca daftar data stempel waktu
     timestamps_result = []
-    for event in submaker.events:
+    for event in submaker.subs:
         start_sec = event.start.total_seconds()
         end_sec = event.end.total_seconds()
         word_text = event.value
