@@ -12,8 +12,8 @@ def apply_slow_zoom(clip, speed=0.04):
 
 def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     """Memotong, meresize, dan menerapkan efek visual pada satu klip."""
-    # Perbaikan MoviePy 2.x: Menggunakan .sub_clip() bukan .subclip()
-    clip = VideoFileClip(file_path).sub_clip(0, duration).set_audio(None)
+    # Perbaikan Final MoviePy 2.x: Menggunakan .sliced() untuk memotong durasi klip video
+    clip = VideoFileClip(file_path).sliced(0, duration).with_audio(None)
     clip = clip.fx(vfx.Resize, width=WIDTH, height=HEIGHT)
     clip = apply_slow_zoom(clip)
     return clip
