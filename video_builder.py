@@ -4,24 +4,40 @@ import time
 import asyncio
 from google import genai
 from google.genai import types
-from moviepy import AudioFileClip, CompositeVideoClip, concatenate_videoclips
 
 # Import konfigurasi global dan modul pendukung terpisah
-from config import GEMINI_API_KEY, DIR_OUTPUT
+from config import GEMINI_KEYS, DIR_OUTPUT
 from downloader import download_video_clips
 from effects import process_background_clip
 from subtitle import render_subtitles_for_section
 from audio import generate_voiceover_edge
 
-# Inisialisasi Google GenAI Client
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+# Indeks global untuk melacak API Key yang sedang aktif
+current_key_index = 0
+
+def get_next_client():
+    """Mengambil Google GenAI Client berikutnya dari daftar rotasi jika terjadi limit kuota."""
+    global current_key_index
+    if not GEMINI_KEYS:
+        raise ValueError("❌ Tidak ada GEMINI_API_KEY yang ditemukan di GitHub Secrets.")
+        
+    # Pastikan indeks tidak overflow
+    if current_key_index >= len(GEMINI_KEYS):
+        print("🔄 Semua API Key di dalam daftar sudah dicoba. Mengulang kembali dari kunci pertama...")
+        current_key_index = 0
+        
+    active_key = GEMINI_KEYS[current_key_index]
+    # Sembunyikan sebagian karakter token di log demi keamanan
+    masked_key = f"{active_key[:8]}...{active_key[-4:]}" if len(active_key) > 12 else "INVALID_KEY"
+    print(f"🔑 Menggunakan API Key Slot-{current_key_index + 1} ({masked_key})")
+    
+    return genai.Client(api_key=active_key)
 
 def generate_structured_script():
-    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON berstruktur untuk TikTok (Delay 50 Detik)."""
-    if not client:
-        raise ValueError("❌ GEMINI_API_KEY belum dikonfigurasi di variabel lingkungan.")
-        
+    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON dengan sistem Auto-Rotasi Kunci."""
+    global current_key_index
     print("🧠 Gemini sedang merancang naskah berstruktur (Hook, Story, CTA)...")
+    
     prompt = (
         "Buat satu konten fakta psikologi manusia yang siap pakai untuk TikTok Shorts.\n"
         "Konten harus terbagi menjadi 3 bagian utuh dalam format JSON:\n"
@@ -31,9 +47,11 @@ def generate_structured_script():
         "Format JSON harus valid, bersih, tanpa markdown."
     )
     
-    max_retries = 3
-    for attempt in range(max_retries):
+    # Mencoba sebanyak jumlah kunci yang kita miliki
+    max_attempts = max(3, len(GEMINI_KEYS))
+    for attempt in range(max_attempts):
         try:
+            client = get_next_client()
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=prompt,
@@ -42,18 +60,18 @@ def generate_structured_script():
             return json.loads(response.text.strip())
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                if attempt < max_retries - 1:
-                    print(f"⚠️ Kuota Gemini penuh (429). Menunggu 50 detik agar limitasi ter-reset otomatis... (Percobaan {attempt + 1}/{max_retries})")
-                    time.sleep(50)
+                print(f"⚠️ Slot-{current_key_index + 1}地形 terkena limit kuota (429).")
+                current_key_index += 1 # Geser ke kunci cadangan berikutnya
+                if attempt < max_attempts - 1:
+                    print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa jeda waktu...")
                     continue
             raise e
 
 def extract_keywords_from_script(script_text: str) -> list:
-    """Fungsi Tahap 2: AI membaca isi skrip cerita dan mengekstrak kata kunci pencarian video (Delay 50 Detik)."""
-    if not client:
-        return ["human", "thinking", "mind"]
-        
+    """Fungsi Tahap 2: AI mengekstrak kata kunci visual dengan sistem Auto-Rotasi Kunci."""
+    global current_key_index
     print("🧠 AI sedang menganalisis isi cerita untuk mengekstrak keyword visual...")
+    
     prompt = (
         f"Baca naskah video berikut dan berikan 4 kata kunci (keyword) dalam bahasa Inggris "
         f"yang paling cocok untuk mencari video latar belakang yang estetis di Pexels.\n"
@@ -61,9 +79,10 @@ def extract_keywords_from_script(script_text: str) -> list:
         f"Berikan hasil dalam format JSON array bertipe string. Contoh: [\"mind\", \"thinking\", \"human\", \"dark\"]"
     )
     
-    max_retries = 3
-    for attempt in range(max_retries):
+    max_attempts = max(3, len(GEMINI_KEYS))
+    for attempt in range(max_attempts):
         try:
+            client = get_next_client()
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=prompt,
@@ -72,9 +91,10 @@ def extract_keywords_from_script(script_text: str) -> list:
             return json.loads(response.text.strip())
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                if attempt < max_retries - 1:
-                    print(f"⚠️ Kuota Gemini penuh saat ekstraksi keyword. Menunggu 50 detik...")
-                    time.sleep(50)
+                print(f"⚠️ Slot-{current_key_index + 1} terkena limit saat ekstraksi keyword.")
+                current_key_index += 1
+                if attempt < max_attempts - 1:
+                    print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa jeda waktu...")
                     continue
             print(f"⚠️ Gagal mengekstrak keyword kustom: {e}. Menggunakan keyword fallback.")
             return ["mind", "abstract", "human", "moody"]
@@ -100,10 +120,13 @@ async def create_video() -> bool:
         # 3. Pengunduhan Klip Video yang Relevan via downloader.py
         video_files = download_video_clips(keywords, target_count=4)
         
-        # 4. Pembuatan Audio Narasi Sempurna via audio.py (Gunakan await langsung)
+        # 4. Pembuatan Audio Narasi Sempurna via audio.py
         vo_file_path = "temp/vo.mp3"
         os.makedirs("temp", exist_ok=True)
         await generate_voiceover_edge(full_text, vo_file_path)
+        
+        # Mengimpor kelas video editor secara aman di dalam fungsi runtime
+        from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip
         
         audio_clip = AudioFileClip(vo_file_path)
         total_duration = audio_clip.duration
@@ -112,7 +135,7 @@ async def create_video() -> bool:
         clip_count = len(video_files)
         duration_per_clip = total_duration / clip_count
         
-        print("🎬 Memotong klip dan menyuntikkan efek Zoom In dinamis (MoviePy 2.x)...")
+        print("🎬 Memotong klip dan menyuntikkan efek Zoom In dinamis...")
         for file in video_files:
             processed_clip = process_background_clip(file, duration_per_clip)
             processed_clips.append(processed_clip)
@@ -162,7 +185,7 @@ async def create_video() -> bool:
         if os.path.exists(vo_file_path):
             os.remove(vo_file_path)
             
-        print("🎉 Sukses Besar! Perakitan video modular tingkat tinggi selesai.")
+        print("🎉 Sukses Besar! Perakitan video modular selesai.")
         return True
         
     except Exception as e:
