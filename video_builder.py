@@ -5,7 +5,7 @@ import asyncio
 from google import genai
 from google.genai import types
 from google.genai.errors import ClientError
-from moviepy.editor import AudioFileClip, CompositeVideoClip, concatenate_videoclips
+from moviepy import AudioFileClip, CompositeVideoClip, concatenate_videoclips
 
 # Import konfigurasi global dan modul pendukung terpisah
 from config import GEMINI_API_KEY, DIR_OUTPUT
