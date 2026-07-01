@@ -72,7 +72,7 @@ def extract_keywords_from_script(script_text: str) -> list:
         print(f"⚠️ Gagal mengekstrak keyword kustom: {e}. Menggunakan keyword fallback.")
         return ["mind", "abstract", "human", "moody"]
 
-def create_video() -> bool:
+async def create_video() -> bool:
     """Orchestrator Utama Pipeline Perakitan Video TikTok."""
     processed_clips = []
     audio_clip = None
@@ -93,10 +93,10 @@ def create_video() -> bool:
         # 3. Pengunduhan Klip Video yang Relevan via downloader.py
         video_files = download_video_clips(keywords, target_count=4)
         
-        # 4. Pembuatan Audio Narasi Sempurna via audio.py (Edge-TTS Async)
+        # 4. Pembuatan Audio Narasi Sempurna via audio.py (Gunakan await langsung)
         vo_file_path = "temp/vo.mp3"
         os.makedirs("temp", exist_ok=True)
-        asyncio.run(generate_voiceover_edge(full_text, vo_file_path))
+        await generate_voiceover_edge(full_text, vo_file_path)
         
         audio_clip = AudioFileClip(vo_file_path)
         total_duration = audio_clip.duration
@@ -113,20 +113,19 @@ def create_video() -> bool:
         combined_bg = concatenate_videoclips(processed_clips, method="compose").set_duration(total_duration)
 
         # 6. Pembuatan dan Penataan Subtitle Otomatis via subtitle.py
-        # Alokasi waktu: Hook awal (15%), CTA akhir (15%), Story tengah (70%)
         hook_duration = total_duration * 0.15
         cta_duration = total_duration * 0.15
         story_duration = total_duration - hook_duration - cta_duration
 
         all_text_clips = []
-        # Render Teks Hook (Oranye)
+        # Render Teks Hook
         all_text_clips.extend(render_subtitles_for_section(hook, 0, hook_duration, style="hook"))
-        # Render Teks Story (Selang-seling Kuning/Putih)
+        # Render Teks Story
         all_text_clips.extend(render_subtitles_for_section(story, hook_duration, story_duration, style="body"))
-        # Render Teks CTA (Cyan)
+        # Render Teks CTA
         all_text_clips.extend(render_subtitles_for_section(cta, hook_duration + story_duration, cta_duration, style="cta"))
 
-        # 7. Komposisi Akhir Semua Lapasan Video dan Ekspor Render
+        # 7. Komposisi Akhir Semua Lapisan Video dan Ekspor Render
         final_video = CompositeVideoClip([combined_bg] + all_text_clips)
         final_video = final_video.set_audio(audio_clip)
 
@@ -142,14 +141,14 @@ def create_video() -> bool:
             threads=4
         )
         
-        # 8. Penutupan Object untuk Menghindari Memory Leak di Server
+        # 8. Penutupan Object untuk Menghindari Memory Leak
         audio_clip.close()
         final_video.close()
         combined_bg.close()
         for clip in processed_clips:
             clip.close()
             
-        # Bersihkan file mentahan pasca render sukses
+        # Bersihkan file mentahan
         for file in video_files:
             if os.path.exists(file):
                 os.remove(file)
@@ -161,7 +160,6 @@ def create_video() -> bool:
         
     except Exception as e:
         print(f"❌ Gagal mengeksekusi pipeline di video_builder: {e}")
-        # Safeguard penutupan resource jika terjadi crash di tengah jalan
         if audio_clip: audio_clip.close()
         if final_video: final_video.close()
         if combined_bg: combined_bg.close()
