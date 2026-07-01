@@ -14,7 +14,7 @@ class SubtitleEngineV2:
         self.renderer = SubtitleRenderer(width=WIDTH, height=HEIGHT)
 
     def generate_subtitle_clips(self, text: str, start_time: float, duration: float, font_size: int, style_type: str = "body", fps: int = 30, timestamps: list = None) -> list:
-        """Subtitle Engine V3: Merender klip teks RGBA utuh tanpa masking terpisah untuk jaminan visual muncul di layar."""
+        """Subtitle Engine V3: Menempatkan potongan stiker teks tepat di koordinat tengah bawah video."""
         clean_source_words = text.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").split()
         
         if not clean_source_words:
@@ -37,10 +37,9 @@ class SubtitleEngineV2:
                     current_index=i
                 )
                 
-                # PERBAIKAN: Ambil matriks RGBA utuh (tetap mempertahankan channel alpha 0-255)
                 img_rgba = np.array(frame.convert("RGBA"))
                 
-                # Buat clip dengan transparansi bawaan langsung
+                # Letakkan potongan kata secara pas di sumbu horizontal tengah dan vertikal SUBTITLE_Y
                 clip = (ImageClip(img_rgba, transparent=True)
                         .with_start(word_start)
                         .with_duration(word_duration)
@@ -63,10 +62,8 @@ class SubtitleEngineV2:
                     current_index=i
                 )
                 
-                # PERBAIKAN: Ambil matriks RGBA utuh (tetap mempertahankan channel alpha 0-255)
                 img_rgba = np.array(frame.convert("RGBA"))
                 
-                # Buat clip dengan transparansi bawaan langsung
                 clip = (ImageClip(img_rgba, transparent=True)
                         .with_start(word_start)
                         .with_duration(word_duration)
