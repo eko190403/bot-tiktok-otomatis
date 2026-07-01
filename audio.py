@@ -5,7 +5,7 @@ from edge_tts import SubMaker
 async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
     """
     Membuat audio menggunakan SSML Mark untuk mendapatkan stempel waktu 
-    kata-per-kata yang presisi langsung dari engine Edge-TTS.
+    kata-per-kata yang presisi langsung dari stream tunggal Edge-TTS.
     """
     # 1. Bersihkan kata dan susun array kata global untuk pencocokan indeks event
     words_hook = hook.split()
@@ -41,22 +41,26 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     
     ssml_string = f"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='id-ID'><voice name='{voice}'>{' '.join(ssml_parts)}</voice></speak>"
 
-    # 3. PERBAIKAN UTAMA: Hapus parameter is_ssml=True karena otomatis terdeteksi dari string <speak>
+    # 3. Eksekusi komunikasi stream tunggal dengan server Edge-TTS
     communicate = edge_tts.Communicate(ssml_string, voice)
     submaker = SubMaker()
     
-    # Simpan file audio mentah
-    await communicate.save(audio_path)
-    
-    # Ambil data timing mentah dari stream websocket
+    audio_data = bytearray()
+
+    # PERBAIKAN UTAMA: Konsumsi stream hanya SEKALI. Kumpulkan data audio dan data timing bersamaan.
     async for chunk in communicate.stream():
-        if chunk["type"] == "WordBoundary":
+        if chunk["type"] == "audio":
+            audio_data.extend(chunk["data"])
+        elif chunk["type"] == "WordBoundary":
             submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
+
+    # Simpan kumpulan buffer audio mentah ke dalam file tujuan
+    with open(audio_path, "wb") as f:
+        f.write(audio_data)
 
     # 4. Konversi data SubMaker menjadi struktur data list timestamp absolut
     timestamps_result = []
     for event in submaker.events:
-        # Konversi waktu dari mikrodetik ke detik desimal
         start_sec = event.start.total_seconds()
         end_sec = event.end.total_seconds()
         word_text = event.value
