@@ -30,7 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install google-genai numpy requests playwright edge-tts
         pip install "pillow<10.0.0"
-        pip install "moviepy<2.0.0"
+        pip install "moviepy>=2.0.0"
         playwright install chromium
 
     - name: Eksekusi Bot Utama
@@ -44,5 +44,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: tiktok-video-hasil-render
-        path: final_output.mp4
+        path: output/final_output.mp4
         retention-days: 1
