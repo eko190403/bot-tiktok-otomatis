@@ -43,6 +43,11 @@ def render_subtitles_for_section(text: str, start_time: float, duration: float, 
         if style == "body" and i % 2 == 0:
             current_color = "yellow"
 
+        # PERBAIKAN: Menentukan ukuran tinggi bounding box pasti (font_size * 2) 
+        # agar stroke tebal hitam di atas/bawah tidak tercekik dan terpotong.
+        box_width = WIDTH - 150
+        box_height = int(font_size * 2)
+
         txt_clip = TextClip(
             text=chunk, 
             font=FONT_PATH, 
@@ -51,10 +56,10 @@ def render_subtitles_for_section(text: str, start_time: float, duration: float, 
             stroke_color="black", 
             stroke_width=STROKE_WIDTH, 
             method="caption", 
-            size=(WIDTH - 150, None)
+            size=(box_width, box_height)
         )
         
-        # PERBAIKAN MoviePy 2.x: Menggunakan .with_start(), .with_duration(), dan .with_position()
+        # Penyelarasan timeline & posisi vertikal tengah video
         txt_clip = (txt_clip
                     .with_start(current_start)
                     .with_duration(chunk_duration)
