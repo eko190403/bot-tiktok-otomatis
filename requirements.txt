@@ -1,0 +1,4 @@
+google-genai
+moviepy
+edge-tts
+asyncio
