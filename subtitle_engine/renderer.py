@@ -2,6 +2,7 @@ import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from subtitle_engine.highlighter import KeywordHighlighter
 from subtitle_engine.styles import SubtitleStyles
+from config import HEIGHT  # Diperlukan untuk sinkronisasi batas y-axis
 
 class SubtitleRenderer:
     def __init__(self, width: int = 1080, height: int = 1920):
@@ -11,7 +12,7 @@ class SubtitleRenderer:
         self.styles = SubtitleStyles()
 
     def create_text_frame(self, text: str, current_word_index: int, font_path: str, font_size: int, style_type: str = "body") -> Image.Image:
-        """Merender satu frame PNG transparan yang HANYA berisi satu kata aktif yang sedang diucapkan."""
+        """Merender satu frame PNG transparan berisi satu kata aktif yang diletakkan pas pada koordinat vertikal V3."""
         base_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
         
         try:
@@ -28,16 +29,19 @@ class SubtitleRenderer:
             
         active_word = flat_words[current_word_index]
 
-        # 1. Kalkulasi ukuran HANYA untuk kata aktif yang sedang muncul
+        # 1. Kalkulasi ukuran teks untuk kata aktif
         temp_draw = ImageDraw.Draw(base_canvas)
         bbox = temp_draw.textbbox((0, 0), active_word, font=font)
         text_w = bbox[2] - bbox[0]
+        text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
         
+        # Sumbu X tetap di tengah layar secara horizontal
         start_x = (self.width - text_w) // 2
-        start_y = (self.height - text_h) // 2
+        # PERBAIKAN V3: Sumbu Y dikunci pas pada area koordinat baru (62% dari tinggi layar)
+        start_y = int(HEIGHT * 0.62) - (text_h // 2)
 
-        # 2. Gambar Background Rounded Box yang ukurannya pas mengikuti panjang kata aktif
+        # 2. Gambar Background Rounded Box (Padding presisi mengikuti kata aktif)
         box_padding_x = self.styles.BOX_PADDING_X
         box_padding_y = self.styles.BOX_PADDING_Y
         
@@ -57,7 +61,7 @@ class SubtitleRenderer:
         )
         base_canvas = Image.alpha_composite(base_canvas, box_canvas)
 
-        # 3. Gambar Lapisan Drop Shadow Blur untuk kata aktif
+        # 3. Gambar Lapisan Drop Shadow Blur
         shadow_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
         shadow_draw = ImageDraw.Draw(shadow_canvas)
         off_x, off_y = self.styles.SHADOW_OFFSET
@@ -73,14 +77,15 @@ class SubtitleRenderer:
         shadow_canvas = shadow_canvas.filter(ImageFilter.GaussianBlur(self.styles.SHADOW_BLUR_RADIUS))
         base_canvas = Image.alpha_composite(base_canvas, shadow_canvas)
 
-        # 4. Gambar Satu Teks Kata Utama
+        # 4. Gambar Teks Kata Utama (Highlight Otomatis Warna)
         text_draw = ImageDraw.Draw(base_canvas)
         
-        # Cek apakah kata aktif ini termasuk keyword yang harus di-highlight warna khusus
+        # Deteksi otomatis warna berdasarkan daftar kata kunci sensitif
         word_color = self.highlighter.get_word_color(active_word, default_color=style_cfg["default_color"])
-        # Jika text biasa (body) dan bukan keyword khusus, beri variasi warna selang-seling biar menarik
+        
+        # Variasi warna selang-seling untuk teks biasa (body) non-keyword
         if style_type == "body" and word_color == style_cfg["default_color"] and current_word_index % 2 == 0:
-            word_color = "#FFCC00" # Variasi kuning
+            word_color = "#FFCC00"
 
         text_draw.text(
             (start_x, start_y), 
