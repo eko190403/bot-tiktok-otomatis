@@ -34,20 +34,24 @@ def get_next_client():
     return genai.Client(api_key=active_key)
 
 def generate_structured_script():
-    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON dengan sistem Auto-Rotasi Kunci."""
+    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON dengan instruksi intonasi tanda baca ketat."""
     global current_key_index
-    print("🧠 Gemini sedang merancang naskah berstruktur (Hook, Story, CTA)...")
+    print("🧠 Gemini sedang merancang naskah berstruktur dengan optimasi tanda baca...")
     
+    # PERBAIKAN PROMPT: Menambahkan aturan tanda baca yang ketat agar suara tidak terlalu cepat
     prompt = (
         "Buat satu konten fakta psikologi manusia yang siap pakai untuk TikTok Shorts.\n"
         "Konten harus terbagi menjadi 3 bagian utuh dalam format JSON:\n"
         "1. 'hook': Kalimat pembuka singkat penarik perhatian di 3 detik pertama (Contoh: 'FAKTA PSIKOLOGI YANG HARUS KAMU TAHU...').\n"
         "2. 'story': Isi fakta psikologinya (Bahasa Indonesia, 2-3 kalimat, padat, jelas, dan tuntas).\n"
         "3. 'cta': Kalimat ajakan di akhir video untuk memicu komentar/follow (Contoh: 'Komen jika kamu pernah merasakannya').\n\n"
+        "ATURAN ATURAN PENTING UNTUK INTERPRETASI SUARA (TEXT-TO-SPEECH):\n"
+        "- Wajib gunakan tanda koma (,) di tengah kalimat jika ada pergantian ide agar robot TTS mengambil jeda napas pendek.\n"
+        "- Wajib gunakan tanda titik (.) di akhir kalimat agar robot TTS berhenti sejenak sebelum masuk ke kalimat berikutnya.\n"
+        "- Jangan buat kalimat yang terlalu panjang tanpa jeda tanda baca agar suara tidak terdengar terburu-buru atau kehabisan napas.\n\n"
         "Format JSON harus valid, bersih, tanpa markdown."
     )
     
-    # Mencoba sebanyak jumlah kunci yang kita miliki
     max_attempts = max(3, len(GEMINI_KEYS))
     for attempt in range(max_attempts):
         try:
@@ -61,7 +65,7 @@ def generate_structured_script():
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                 print(f"⚠️ Slot-{current_key_index + 1} terkena limit kuota (429).")
-                current_key_index += 1 # Geser ke kunci cadangan berikutnya
+                current_key_index += 1
                 if attempt < max_attempts - 1:
                     print("🔄 Otomatis beralih ke API Key cadangan berikutnya tanpa jeda waktu...")
                     continue
@@ -112,6 +116,8 @@ async def create_video() -> bool:
         hook = script_data.get("hook", "FAKTA PSIKOLOGI").strip()
         story = script_data.get("story", "").strip()
         cta = script_data.get("cta", "Follow untuk info lainnya").strip()
+        
+        # Penggabungan teks dengan memastikan ada jeda spasi dan tanda baca yang jelas antarsegmen
         full_text = f"{hook}. {story} {cta}"
         
         # 2. Ekstraksi Kata Kunci Kontekstual Berbasis AI
@@ -140,7 +146,6 @@ async def create_video() -> bool:
             processed_clip = process_background_clip(file, duration_per_clip)
             processed_clips.append(processed_clip)
             
-        # PERBAIKAN: Mengganti .set_duration() menjadi .with_duration() sesuai regulasi MoviePy 2.x
         combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
 
         # 6. Pembuatan dan Penataan Subtitle Otomatis via subtitle.py
