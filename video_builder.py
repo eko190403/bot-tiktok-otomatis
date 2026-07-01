@@ -17,7 +17,7 @@ from audio import generate_voiceover_edge
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 def generate_structured_script():
-    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON berstruktur untuk TikTok (Anti-429 Kuat)."""
+    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON berstruktur untuk TikTok (Delay 50 Detik)."""
     if not client:
         raise ValueError("❌ GEMINI_API_KEY belum dikonfigurasi di variabel lingkungan.")
         
@@ -41,16 +41,15 @@ def generate_structured_script():
             )
             return json.loads(response.text.strip())
         except Exception as e:
-            # Menangkap semua jenis error 429 harian / rate limit secara universal
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                 if attempt < max_retries - 1:
-                    print(f"⚠️ Kuota Gemini penuh/sibuk (429). Menunggu 15 detik sebelum mencoba kembali... (Percobaan {attempt + 1}/{max_retries})")
-                    time.sleep(15)
+                    print(f"⚠️ Kuota Gemini penuh (429). Menunggu 50 detik agar limitasi ter-reset otomatis... (Percobaan {attempt + 1}/{max_retries})")
+                    time.sleep(50)
                     continue
             raise e
 
 def extract_keywords_from_script(script_text: str) -> list:
-    """Fungsi Tahap 2: AI membaca isi skrip cerita dan mengekstrak kata kunci pencarian video."""
+    """Fungsi Tahap 2: AI membaca isi skrip cerita dan mengekstrak kata kunci pencarian video (Delay 50 Detik)."""
     if not client:
         return ["human", "thinking", "mind"]
         
@@ -72,10 +71,11 @@ def extract_keywords_from_script(script_text: str) -> list:
             )
             return json.loads(response.text.strip())
         except Exception as e:
-            if ("429" in str(e) or "RESOURCE_EXHAUSTED" in str(e)) and attempt < max_retries - 1:
-                print(f"⚠️ Kuota Gemini sibuk saat ekstraksi keyword. Menunggu 15 detik...")
-                time.sleep(15)
-                continue
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                if attempt < max_retries - 1:
+                    print(f"⚠️ Kuota Gemini penuh saat ekstraksi keyword. Menunggu 50 detik...")
+                    time.sleep(50)
+                    continue
             print(f"⚠️ Gagal mengekstrak keyword kustom: {e}. Menggunakan keyword fallback.")
             return ["mind", "abstract", "human", "moody"]
 
