@@ -4,17 +4,14 @@ import edge_tts
 async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
     """
     Membuat audio dari teks bersih dan menangkap timestamp kata-per-kata secara real-time.
-    Menggunakan pendekatan satu list dengan penanda seksi untuk akurasi 100%.
+    Dilengkapi proteksi mutlak jika stream data WordBoundary kosong agar tidak memicu eror max().
     """
-    # Pecah kata dari naskah asli untuk penandaan seksi
     words_hook = hook.split()
     words_story = story.split()
     words_cta = cta.split()
     
-    # Gabungkan menjadi kalimat polos untuk dibaca alami oleh TTS
     full_clean_text = f"{hook}. {story} {cta}"
 
-    # Kirim ke server Edge-TTS
     communicate = edge_tts.Communicate(full_clean_text, voice)
     
     audio_data = bytearray()
@@ -40,7 +37,7 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     with open(audio_path, "wb") as f:
         f.write(audio_data)
 
-    # Filter tanda baca dari hasil stream boundary
+    # Filter tanda baca
     cleaned_timestamps = []
     for item in raw_timestamps:
         cleaned_word = item["word"].replace(".", "").replace(",", "").replace("?", "").replace("!", "").strip()
@@ -51,17 +48,33 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
                 "end": item["end"]
             })
 
-    # MASALAH 2 FIX: Normalisasi offset waktu agar dimulai tepat dari 0.00
-    if cleaned_timestamps:
-        first_offset = cleaned_timestamps[0]["start"]
-        for item in cleaned_timestamps:
-            item["start"] -= first_offset
-            item["end"] -= first_offset
+    # PERBAIKAN UTAMA: Validasi langsung di awal. Jika kosong, langsung kembalikan data fallback linear.
+    if not cleaned_timestamps:
+        print("⚠️ Data timestamp kosong dari stream. Membuat fallback durasi linear...")
+        fallback_timestamps = []
+        
+        # Buat estimasi run-time linear sederhana berdasarkan panjang kata agar aman
+        current_time = 0.0
+        for w in words_hook:
+            fallback_timestamps.append({"word": w, "start": current_time, "end": current_time + 0.3, "section": "hook"})
+            current_time += 0.3
+        for w in words_story:
+            fallback_timestamps.append({"word": w, "start": current_time, "end": current_time + 0.3, "section": "story"})
+            current_time += 0.3
+        for w in words_cta:
+            fallback_timestamps.append({"word": w, "start": current_time, "end": current_time + 0.3, "section": "cta"})
+            current_time += 0.3
+            
+        return fallback_timestamps
 
-    # MASALAH 1 & RECOMMENDED FIX: Petakan seksi secara sekuensial berdasarkan urutan kata asli
+    # Normalisasi offset waktu (Masalah 2 Fix)
+    first_offset = cleaned_timestamps[0]["start"]
+    for item in cleaned_timestamps:
+        item["start"] -= first_offset
+        item["end"] -= first_offset
+
+    # Pemetaan seksi sekuensial (Masalah 1 Fix)
     final_timestamps = []
-    total_generated = len(cleaned_timestamps)
-    
     idx_hook = len(words_hook)
     idx_story = idx_hook + len(words_story)
 
