@@ -21,33 +21,37 @@ def get_next_client():
     if not GEMINI_KEYS:
         raise ValueError("❌ Tidak ada GEMINI_API_KEY yang ditemukan di GitHub Secrets.")
         
-    # Pastikan indeks tidak overflow
     if current_key_index >= len(GEMINI_KEYS):
         print("🔄 Semua API Key di dalam daftar sudah dicoba. Mengulang kembali dari kunci pertama...")
         current_key_index = 0
         
     active_key = GEMINI_KEYS[current_key_index]
-    # Sembunyikan sebagian karakter token di log demi keamanan
     masked_key = f"{active_key[:8]}...{active_key[-4:]}" if len(active_key) > 12 else "INVALID_KEY"
     print(f"🔑 Menggunakan API Key Slot-{current_key_index + 1} ({masked_key})")
     
     return genai.Client(api_key=active_key)
 
 def generate_structured_script():
-    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON dengan instruksi intonasi tanda baca ketat."""
+    """Fungsi Tahap 1: Meminta Gemini membuat naskah JSON dengan variasi topik multi-tema secara acak."""
     global current_key_index
-    print("🧠 Gemini sedang merancang naskah berstruktur dengan optimasi tanda baca...")
+    print("🧠 Gemini sedang merancang naskah berstruktur dengan variasi topik otomatis...")
     
+    # PERBAIKAN: Mengubah prompt agar Gemini mengacak topik edukasi pendek demi menghindari konten monoton
     prompt = (
-        "Buat satu konten fakta psikologi manusia yang siap pakai untuk TikTok Shorts.\n"
+        "Buat satu konten edukasi pendek yang siap pakai untuk TikTok Shorts.\n"
+        "Pilih secara acak SALAH SATU dari tema besar berikut untuk setiap kali generate:\n"
+        "1. Fakta Psikologi Manusia (Unik, jarang diketahui, atau mind-blowing).\n"
+        "2. Filosofi Stoikisme / Trik Mental (Cara mengatasi stres, tetap tenang, seni tidak peduli).\n"
+        "3. Dark Psychology / Bahasa Tubuh (Cara membaca pikiran orang, tanda orang bohong, proteksi manipulasi).\n"
+        "4. Produktivitas & Mindset Orang Sukses (Trik berhenti menunda/prokrastinasi, kebiasaan fokus pagi hari).\n\n"
         "Konten harus terbagi menjadi 3 bagian utuh dalam format JSON:\n"
-        "1. 'hook': Kalimat pembuka singkat penarik perhatian di 3 detik pertama (Contoh: 'FAKTA PSIKOLOGI YANG HARUS KAMU TAHU...').\n"
-        "2. 'story': Isi fakta psikologinya (Bahasa Indonesia, 2-3 kalimat, padat, jelas, dan tuntas).\n"
-        "3. 'cta': Kalimat ajakan di akhir video untuk memicu komentar/follow (Contoh: 'Komen jika kamu pernah merasakannya').\n\n"
-        "ATURAN ATURAN PENTING UNTUK INTERPRETASI SUARA (TEXT-TO-SPEECH):\n"
+        "1. 'hook': Kalimat pembuka singkat penarik perhatian di 3 detik pertama (Gunakan huruf kapital, contoh: 'RAHASIA MENTAL YANG JARANG ORANG TAHU...').\n"
+        "2. 'story': Isi materi/penjelasannya (Bahasa Indonesia, 2-3 kalimat, padat, jelas, dan tuntas).\n"
+        "3. 'cta': Kalimat ajakan di akhir video untuk memicu komentar/follow (Contoh: 'Komen jika kamu butuh trik seperti ini lagi').\n\n"
+        "ATURAN PENTING UNTUK INTERPRETASI SUARA (TEXT-TO-SPEECH):\n"
         "- Wajib gunakan tanda koma (,) di tengah kalimat jika ada pergantian ide agar robot TTS mengambil jeda napas pendek.\n"
         "- Wajib gunakan tanda titik (.) di akhir kalimat agar robot TTS berhenti sejenak sebelum masuk ke kalimat berikutnya.\n"
-        "- Jangan buat kalimat yang terlalu panjang tanpa jeda tanda baca agar suara tidak terdengar terburu-buru atau kehabisan napas.\n\n"
+        "- Jangan buat kalimat yang terlalu panjang tanpa jeda tanda baca agar suara tidak terdengar terburu-buru.\n\n"
         "Format JSON harus valid, bersih, tanpa markdown."
     )
     
@@ -71,7 +75,7 @@ def generate_structured_script():
             raise e
 
 def extract_keywords_from_script(script_text: str) -> list:
-    """Fungsi Tahap 2: AI mengekstrak kata kunci visual dengan sistem Auto-Rotasi Kunci."""
+    """Fungsi Tahap 2: AI mengekstrak kata kunci visual untuk pencarian latar belakang."""
     global current_key_index
     print("🧠 AI sedang menganalisis isi cerita untuk mengekstrak keyword visual...")
     
@@ -103,20 +107,19 @@ def extract_keywords_from_script(script_text: str) -> list:
             return ["mind", "abstract", "human", "moody"]
 
 async def create_video() -> bool:
-    """Orchestrator Utama Pipeline Perakitan Video TikTok."""
+    """Orchestrator Utama Pipeline Perakitan Video TikTok Shorts."""
     processed_clips = []
     audio_clip = None
     combined_bg = None
     final_video = None
     
     try:
-        # 1. Pembuatan Naskah Teks Konten
+        # 1. Pembuatan Naskah Teks Konten Bervariasi
         script_data = generate_structured_script()
-        hook = script_data.get("hook", "FAKTA PSIKOLOGI").strip()
+        hook = script_data.get("hook", "FAKTA MENARIK").strip()
         story = script_data.get("story", "").strip()
         cta = script_data.get("cta", "Follow untuk info lainnya").strip()
         
-        # Penggabungan teks dengan memastikan ada jeda spasi dan tanda baca yang jelas antarsegmen
         full_text = f"{hook}. {story} {cta}"
         
         # 2. Ekstraksi Kata Kunci Kontekstual Berbasis AI
@@ -125,12 +128,11 @@ async def create_video() -> bool:
         # 3. Pengunduhan Klip Video yang Relevan via downloader.py
         video_files = download_video_clips(keywords, target_count=4)
         
-        # 4. Pembuatan Audio Narasi Sempurna via audio.py
+        # 4. Pembuatan Audio Narasi via audio.py
         vo_file_path = "temp/vo.mp3"
         os.makedirs("temp", exist_ok=True)
         await generate_voiceover_edge(full_text, vo_file_path)
         
-        # Mengimpor kelas video editor secara aman di dalam fungsi runtime
         from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip
         
         audio_clip = AudioFileClip(vo_file_path)
@@ -147,22 +149,22 @@ async def create_video() -> bool:
             
         combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
 
-        # 6. Pembuatan dan Penataan Subtitle Otomatis via Subtitle Engine v2 (Pillow PNG Overlay)
+        # 6. Pembuatan Subtitle Otomatis via Subtitle Engine V3 (Safe Area 62%, Anti-Kedip, Pas Ketukan)
         hook_duration = total_duration * 0.15
         cta_duration = total_duration * 0.15
         story_duration = total_duration - hook_duration - cta_duration
 
-        engine_v2 = SubtitleEngineV2()
+        engine_v3 = SubtitleEngineV2()
         all_text_clips = []
 
-        # Render Teks Hook (Orange Pop)
-        all_text_clips.extend(engine_v2.generate_subtitle_clips(hook, 0, hook_duration, font_size=FONT_SIZE_HOOK, style_type="hook"))
-        # Render Teks Story (Karaoke Highlight Auto-Warna Word-by-Word)
-        all_text_clips.extend(engine_v2.generate_subtitle_clips(story, hook_duration, story_duration, font_size=FONT_SIZE_BODY, style_type="body"))
-        # Render Teks CTA (Cyan Pop)
-        all_text_clips.extend(engine_v2.generate_subtitle_clips(cta, hook_duration + story_duration, cta_duration, font_size=FONT_SIZE_BODY, style_type="cta"))
+        # Render Teks Hook
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(hook, 0, hook_duration, font_size=FONT_SIZE_HOOK, style_type="hook"))
+        # Render Teks Story (Karaoke Highlight Word-by-Word)
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(story, hook_duration, story_duration, font_size=FONT_SIZE_BODY, style_type="body"))
+        # Render Teks CTA
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(cta, hook_duration + story_duration, cta_duration, font_size=FONT_SIZE_BODY, style_type="cta"))
 
-        # 7. Komposisi Akhir Semua Lapisan Video dan Ekspor Render
+        # 7. Komposisi Akhir dan Ekspor Render Video
         final_video = CompositeVideoClip([combined_bg] + all_text_clips)
         final_video = final_video.with_audio(audio_clip)
 
@@ -178,21 +180,20 @@ async def create_video() -> bool:
             threads=4
         )
         
-        # 8. Penutupan Object untuk Menghindari Memory Leak
+        # 8. Pembersihan Memori & Objek
         audio_clip.close()
         final_video.close()
         combined_bg.close()
         for clip in processed_clips:
             clip.close()
             
-        # Bersihkan file mentahan
         for file in video_files:
             if os.path.exists(file):
                 os.remove(file)
         if os.path.exists(vo_file_path):
             os.remove(vo_file_path)
             
-        print("🎉 Sukses Besar! Perakitan video modular selesai.")
+        print("🎉 Sukses Besar! Perakitan video multi-tema selesai.")
         return True
         
     except Exception as e:
