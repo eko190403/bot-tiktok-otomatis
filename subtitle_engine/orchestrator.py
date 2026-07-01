@@ -5,9 +5,9 @@ from moviepy import ImageClip
 from subtitle_engine.renderer import SubtitleRenderer
 from config import WIDTH, HEIGHT, FONT_PATH
 
-# MASALAH 4 FIX: Nilai batas aman sesuai saran teruji kamu
-MIN_WORD_DURATION = 0.20
-WORD_OVERLAP = 0.03
+# Batas minimum durasi visual stiker agar nyaman dibaca mata
+MIN_WORD_DURATION = 0.25
+MAX_GAP_SUSTAIN = 0.40  # Jeda maksimal (detik) untuk menahan teks sebelum dianggap sebagai jeda napas
 
 class SubtitleEngineV2:
     def __init__(self):
@@ -15,22 +15,36 @@ class SubtitleEngineV2:
 
     def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body") -> list:
         """
-        Subtitle Engine V3.8: Menerima list kata spesifik dari seksi tertentu, 
-        menerapkan batas durasi minimum, dan merender posisi stiker secara relatif.
+        Subtitle Engine V4.0: Menggunakan teknik Chain-Timing di mana kata aktif akan 
+        ditahan di layar sampai kata berikutnya muncul agar transisi subtitle natural dan tidak terlalu cepat.
         """
         if not section_words:
             return []
 
         clips = []
+        total_words = len(section_words)
 
         for i, item in enumerate(section_words):
             word_text = item["word"].upper()
             word_start = item["start"]
+            raw_end = item["end"]
             
-            # Menerapkan durasi minimum dan overlap natural hasil rekomendasi kamu
-            word_duration = max(item["end"] - item["start"], MIN_WORD_DURATION) + WORD_OVERLAP
+            # PERBAIKAN UTAMA: Hitung durasi secara berantai (Chain-Timing)
+            if i < total_words - 1:
+                next_word_start = section_words[i + 1]["start"]
+                # Jika jarak ke kata berikutnya sangat dekat, tahan kata ini sampai kata berikutnya muncul
+                if next_word_start - word_start <= MAX_GAP_SUSTAIN:
+                    word_duration = next_word_start - word_start
+                else:
+                    word_duration = max(raw_end - word_start, MIN_WORD_DURATION)
+            else:
+                # Untuk kata terakhir di dalam seksi
+                word_duration = max(raw_end - word_start, MIN_WORD_DURATION) + 0.1
+
+            # Pastikan durasi tidak pernah lebih kecil dari batas minimal pandang mata
+            word_duration = max(word_duration, MIN_WORD_DURATION)
             
-            # Render stiker kata tunggal
+            # Render stiker grafis kata tunggal
             frame = self.renderer.create_text_frame(
                 word=word_text,
                 font_path=FONT_PATH,
@@ -41,7 +55,7 @@ class SubtitleEngineV2:
             
             img_rgba = np.array(frame.convert("RGBA"))
             
-            # Kunci stiker di area aman 65% tinggi video
+            # Tempelkan ke video dengan durasi berantai yang halus
             clip = (ImageClip(img_rgba, transparent=True)
                     .with_start(word_start)
                     .with_duration(word_duration)
