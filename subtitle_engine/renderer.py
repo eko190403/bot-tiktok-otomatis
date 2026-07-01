@@ -2,7 +2,6 @@ import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from subtitle_engine.highlighter import KeywordHighlighter
 from subtitle_engine.styles import SubtitleStyles
-from config import HEIGHT
 
 class SubtitleRenderer:
     def __init__(self, width: int = 1080, height: int = 1920):
@@ -12,9 +11,7 @@ class SubtitleRenderer:
         self.styles = SubtitleStyles()
 
     def create_text_frame(self, word: str, font_path: str, font_size: int, style_type: str = "body", current_index: int = 0) -> Image.Image:
-        """Merender satu frame PNG transparan berisi SATU kata aktif tepat pada koordinat Y-V3."""
-        base_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
-        
+        """Merender gambar mini transparan yang dipotong pas seukuran kata aktif (Bukan ukuran layar penuh)."""
         try:
             font = ImageFont.truetype(font_path, font_size)
         except IOError:
@@ -24,44 +21,47 @@ class SubtitleRenderer:
         active_word = word.upper().strip()
 
         if not active_word:
-            return base_canvas
+            # Kembalikan gambar kosong 1x1 jika tidak ada kata
+            return Image.new("RGBA", (1, 1), (0, 0, 0, 0))
 
-        # 1. Kalkulasi ukuran teks untuk kata tunggal
-        text_draw = ImageDraw.Draw(base_canvas)
-        bbox = text_draw.textbbox((0, 0), active_word, font=font)
+        # 1. Ukur dimensi kata aktif seketat mungkin
+        temp_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+        temp_draw = ImageDraw.Draw(temp_img)
+        bbox = temp_draw.textbbox((0, 0), active_word, font=font)
+        
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
-        
-        start_x = (self.width - text_w) // 2
-        start_y = int(HEIGHT * 0.62) - (text_h // 2)
 
-        # 2. Gambar Background Rounded Box murni seukuran kata aktif
-        box_padding_x = self.styles.BOX_PADDING_X
-        box_padding_y = self.styles.BOX_PADDING_Y
+        # 2. Tentukan ukuran total kanvas mini (ditambah padding ruang napas box & shadow)
+        padding_x = self.styles.BOX_PADDING_X + 20
+        padding_y = self.styles.BOX_PADDING_Y + 20
         
-        box_x0 = start_x - box_padding_x
-        box_y0 = start_y - box_padding_y
-        box_x1 = start_x + text_w + box_padding_x
-        box_y1 = start_y + text_h + box_padding_y + 10
+        canvas_w = text_w + (padding_x * 2)
+        canvas_h = text_h + (padding_y * 2) + 10
+
+        # Buat kanvas mini khusus seukuran kata
+        word_canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
         
-        box_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
-        box_draw = ImageDraw.Draw(box_canvas)
+        # Koordinat lokal teks di dalam kanvas mini
+        text_x = padding_x
+        text_y = padding_y
+
+        # 3. Gambar Background Rounded Box di kanvas mini
+        box_draw = ImageDraw.Draw(word_canvas)
         box_fill = (self.styles.BOX_COLOR[0], self.styles.BOX_COLOR[1], self.styles.BOX_COLOR[2], 114)
-        
         box_draw.rounded_rectangle(
-            [box_x0, box_y0, box_x1, box_y1], 
+            [text_x - self.styles.BOX_PADDING_X, text_y - self.styles.BOX_PADDING_Y, 
+             text_x + text_w + self.styles.BOX_PADDING_X, text_y + text_h + self.styles.BOX_PADDING_Y + 10], 
             radius=self.styles.BOX_ROUNDED_RADIUS, 
             fill=box_fill
         )
-        base_canvas = Image.alpha_composite(base_canvas, box_canvas)
 
-        # 3. Gambar Lapisan Drop Shadow Blur
-        shadow_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
+        # 4. Gambar Lapisan Drop Shadow Blur di kanvas mini
+        shadow_canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
         shadow_draw = ImageDraw.Draw(shadow_canvas)
         off_x, off_y = self.styles.SHADOW_OFFSET
-        
         shadow_draw.text(
-            (start_x + off_x, start_y + off_y), 
+            (text_x + off_x, text_y + off_y), 
             active_word, 
             font=font, 
             fill=self.styles.SHADOW_COLOR,
@@ -69,18 +69,17 @@ class SubtitleRenderer:
             stroke_fill=self.styles.SHADOW_COLOR
         )
         shadow_canvas = shadow_canvas.filter(ImageFilter.GaussianBlur(self.styles.SHADOW_BLUR_RADIUS))
-        base_canvas = Image.alpha_composite(base_canvas, shadow_canvas)
+        word_canvas = Image.alpha_composite(word_canvas, shadow_canvas)
 
-        # 4. Gambar Teks Utama Utama (Highlight Warna)
-        word_draw = ImageDraw.Draw(base_canvas)
+        # 5. Gambar Teks Utama (Highlight Warna)
+        main_draw = ImageDraw.Draw(word_canvas)
         word_color = self.highlighter.get_word_color(active_word, default_color=style_cfg["default_color"])
         
-        # Variasi warna selang-seling untuk body teks biasa
         if style_type == "body" and word_color == style_cfg["default_color"] and current_index % 2 == 0:
             word_color = "#FFCC00"
 
-        word_draw.text(
-            (start_x, start_y), 
+        main_draw.text(
+            (text_x, text_y), 
             active_word, 
             font=font, 
             fill=word_color,
@@ -88,4 +87,4 @@ class SubtitleRenderer:
             stroke_fill=self.styles.STROKE_COLOR
         )
             
-        return base_canvas
+        return word_canvas
