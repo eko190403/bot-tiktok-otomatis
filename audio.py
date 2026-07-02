@@ -1,93 +1,322 @@
 import asyncio
 import edge_tts
 import unicodedata
+import re
+import os
+import tempfile
+import logging
+from dataclasses import dataclass
 
-async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
-    """
-    Membuat audio dari teks bersih dan menangkap timestamp kata-per-kata secara real-time.
-    Seksi ditentukan menggunakan metode Persentase Durasi Akurat (Anti-Crash Kata Kembar).
-    """
-    full_clean_text = f"{hook}. {story} {cta}"
-    communicate = edge_tts.Communicate(full_clean_text, voice)
-    
-    audio_data = bytearray()
-    raw_timestamps = []
+logger = logging.getLogger("video_pipeline")
+TICKS_PER_SECOND = 10_000_000
 
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            audio_data.extend(chunk["data"])
-        elif chunk["type"] == "WordBoundary":
-            start_sec = chunk["offset"] / 10000000.0
-            duration_sec = chunk["duration"] / 10000000.0
-            end_sec = start_sec + duration_sec
-            word_text = chunk["text"].strip()
-            
-            raw_timestamps.append({
-                "word": word_text,
-                "start": start_sec,
-                "end": end_sec,
-                "duration": duration_sec
-            })
+# Konstanta Arah Backtracking
+DIR_DIAGONAL = 1
+DIR_UP = 2
+DIR_LEFT = 3
 
-    with open(audio_path, "wb") as f:
-        f.write(audio_data)
+# Kamus Normalisasi Fonetik Bahasa Indonesia untuk Mengunci Akurasi TTS
+PHONETIC_DICTIONARY = {
+    "KARNA": "KARENA",
+    "NGGAK": "TIDAK",
+    "NGAK": "TIDAK",
+    "GAK": "TIDAK",
+    "ENGGAK": "TIDAK",
+    "TAU": "TAHU",
+    "GITU": "BEGITU",
+    "UDAH": "SUDAH",
+    "TDK": "TIDAK",
+    "DGN": "DENGAN",
+    "YG": "YANG",
+    "KRNA": "KARENA",
+    "JELASIN": "MENJELASKAN",
+    "MANDANG": "MEMANDANG",
+    "SKIP": "LEWATI"
+}
 
-    cleaned_timestamps = []
-    for item in raw_timestamps:
-        raw_word = item["word"]
-        
-        cleaned_chars = []
-        for ch in raw_word:
-            cat = unicodedata.category(ch)
-            if cat.startswith('L') or cat.startswith('N') or cat == 'Zs':
-                cleaned_chars.append(ch)
-        display_word = "".join(cleaned_chars).upper().strip()
-        
-        if display_word:
-            cleaned_timestamps.append({
-                "word": raw_word,          
-                "display": display_word,    
-                "start": item["start"],
-                "end": item["end"],
-                "duration": item["duration"]
-            })
+@dataclass(slots=True)
+class WordTimestamp:
+    word: str
+    display: str
+    start: float
+    end: float
+    duration: float
+    section: str
+    confidence: float
 
-    if not cleaned_timestamps:
+@dataclass
+class SyncMetadata:
+    matched: int
+    total: int
+    accuracy: float
+    missed: int
+    failed_tokens: list
+
+def normalize_token(text: str) -> str:
+    if not text:
+        return ""
+    text = unicodedata.normalize("NFKC", text)
+    cleaned_chars = []
+    for ch in text:
+        cat = unicodedata.category(ch)
+        if cat.startswith('L') or cat.startswith('N') or cat == 'Zs' or ch in ["-", "'"]:
+            cleaned_chars.append(ch)
+    return "".join(cleaned_chars).upper().strip()
+
+def apply_phonetic_normalization(token: str) -> str:
+    """TAHAP 1: Menyelaraskan variasi ucapan TTS Indonesia ke bentuk baku kamus target."""
+    return PHONETIC_DICTIONARY.get(token, token)
+
+def fast_levenshtein_similarity(s1: str, s2: str) -> float:
+    if s1 == s2:
+        return 1.0
+    if not s1 or not s2:
+        return 0.0
+    if len(s1) < len(s2):
+        s1, s2 = s2, s1
+    distances = range(len(s2) + 1)
+    for i2, c2 in enumerate(s2):
+        distances_ = [i2+1]
+        for i1, c1 in enumerate(s1):
+            if c1 == c2:
+                distances_.append(distances[i1])
+            else:
+                distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
+        distances = distances_
+    return 1.0 - (distances[-1] / max(len(s1), len(s2)))
+
+def pipeline_repair_tokens(source_seq: list, target_tokens: list) -> list:
+    """TAHAP 2: Perbaikan Token Linear dengan Kamus Target Terbaku."""
+    if not source_seq:
         return []
-
-    # Normalisasi offset waktu
-    first_offset = cleaned_timestamps[0]["start"]
-    for item in cleaned_timestamps:
-        item["start"] -= first_offset
-        item["end"] -= first_offset
-
-    # TOTAL DURASI UTAMA AUDIO
-    total_voice_duration = cleaned_timestamps[-1]["end"]
-
-    # PERBAIKAN MUTLAK: Pembagian Seksi Menggunakan Alokasi Waktu Linier
-    final_timestamps = []
+    target_set = {t["token"] for t in target_tokens}
+    repaired = []
+    i = 0
+    N = len(source_seq)
     
-    # Menentukan batasan detik secara proporsional
-    hook_end_boundary = total_voice_duration * 0.18  # 18% awal untuk Hook
-    story_end_boundary = total_voice_duration * 0.88 # Hingga 88% untuk isi Story, sisanya CTA
-
-    for item in cleaned_timestamps:
-        word_start = item["start"]
-        
-        if word_start <= hook_end_boundary:
-            section = "hook"
-        elif word_start <= story_end_boundary:
-            section = "story"
-        else:
-            section = "cta"
+    while i < N:
+        # Multi-Token Merge (2-4 kata pecah dari Edge-TTS)
+        merged_found = False
+        for window in range(4, 1, -1):
+            if i + window <= N:
+                sub_tokens = source_seq[i:i+window]
+                combined_display = "".join(t["display"] for t in sub_tokens)
+                combined_phonetic = apply_phonetic_normalization(combined_display)
+                
+                if combined_display in target_set or combined_phonetic in target_set:
+                    repaired.append({
+                        "word": "".join(t["word"] for t in sub_tokens),
+                        "display": combined_phonetic,
+                        "start": sub_tokens[0]["start"],
+                        "end": sub_tokens[-1]["end"],
+                        "duration": sum(t["duration"] for t in sub_tokens)
+                    })
+                    i += window
+                    merged_found = True
+                    break
+        if merged_found:
+            continue
             
-        final_timestamps.append({
-            "word": item["word"],
-            "display": item["display"],
-            "start": item["start"],
-            "end": item["end"],
-            "duration": item["duration"],
-            "section": section
-        })
+        # Split Token Berbasis Urutan Target Konten
+        curr = source_seq[i]
+        split_found = False
+        for tgt in target_set:
+            if len(tgt) < len(curr["display"]) and curr["display"].startswith(tgt):
+                remainder = curr["display"][len(tgt):]
+                if remainder in target_set or apply_phonetic_normalization(remainder) in target_set:
+                    mid = curr["start"] + (curr["duration"] / 2)
+                    repaired.append({
+                        "word": curr["word"][:len(tgt)], "display": tgt,
+                        "start": curr["start"], "end": mid, "duration": curr["duration"] / 2
+                    })
+                    repaired.append({
+                        "word": curr["word"][len(tgt):], "display": apply_phonetic_normalization(remainder),
+                        "start": mid, "end": curr["end"], "duration": curr["duration"] / 2
+                    })
+                    split_found = True
+                    break
+        if split_found:
+            i += 1
+            continue
+            
+        repaired.append(curr)
+        i += 1
+    return repaired
 
-    return final_timestamps
+async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural") -> tuple[list[WordTimestamp], SyncMetadata]:
+    full_clean_text = " ".join(x.strip() for x in [hook, story, cta] if x.strip())
+    audio_data = bytearray()
+    raw_boundaries = []
+
+    try:
+        communicate = edge_tts.Communicate(full_clean_text, voice)
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_data.extend(chunk["data"])
+            elif chunk["type"] == "WordBoundary":
+                raw_boundaries.append({
+                    "word": chunk["text"].strip(),
+                    "start": chunk["offset"] / TICKS_PER_SECOND,
+                    "duration": chunk["duration"] / TICKS_PER_SECOND
+                })
+    except Exception as e:
+        logger.exception("Edge-TTS communication failed")
+        raise RuntimeError(f"API Jaringan Edge-TTS Gagal: {e}") from e
+
+    if not raw_boundaries or not audio_data:
+        raise RuntimeError("Gagal menghasilkan metadata WordBoundary dari teks.")
+
+    # Atomic Write
+    temp_fd = None
+    temp_audio_path = None
+    try:
+        target_dir = os.path.dirname(audio_path)
+        if target_dir: os.makedirs(target_dir, exist_ok=True)
+        temp_fd, temp_audio_path = tempfile.mkstemp(suffix=".tmp", dir=target_dir if target_dir else ".")
+        with os.fdopen(temp_fd, "wb") as f: f.write(audio_data)
+        temp_fd = None
+        os.replace(temp_audio_path, audio_path)
+    except Exception as e:
+        logger.error("Failed to write audio file: %s", e)
+        if temp_fd is not None: os.close(temp_fd)
+        if temp_audio_path and os.path.exists(temp_audio_path): os.remove(temp_audio_path)
+        raise
+
+    # Ekstraksi Awal & Aplikasi Normalisasi Fonetik Sumber
+    first_offset = raw_boundaries[0]["start"]
+    raw_source_seq = []
+    for b in raw_boundaries:
+        disp = normalize_token(b["word"])
+        if disp:
+            raw_source_seq.append({
+                "word": b["word"], 
+                "display": apply_phonetic_normalization(disp), # Normalisasi Awal
+                "start": b["start"] - first_offset,
+                "end": (b["start"] - first_offset) + b["duration"],
+                "duration": b["duration"]
+            })
+
+    def tokenize(text_source: str) -> list[str]:
+        raw_tokens = re.findall(r"[^\W_]+(?:[-'][^\W_]+)*", text_source, flags=re.UNICODE)
+        return [apply_phonetic_normalization(normalize_token(w)) for w in raw_tokens if normalize_token(w)]
+
+    target_seq = []
+    for tk in tokenize(hook): target_seq.append({"token": tk, "section": "hook"})
+    for tk in tokenize(story): target_seq.append({"token": tk, "section": "story"})
+    for tk in tokenize(cta): target_seq.append({"token": tk, "section": "cta"})
+
+    # Jalankan Perbaikan Token
+    source_seq = pipeline_repair_tokens(raw_source_seq, target_seq)
+    N, M = len(source_seq), len(target_seq)
+
+    if N == 0 or M == 0:
+        return [], SyncMetadata(0, M, 0.0, M, [])
+
+    # =====================================================================
+    # TAHAP 3 & 4: PRE-CALCULATED MATRIKS SIMILARITY & INTEGER DP ALIGNMENT
+    # =====================================================================
+    # Skala Integer untuk Efisiensi CPU Maksimal (Poin 6)
+    # Match = 0, Insert = 10, Delete = 10, Max Substitution = 15
+    COST_INSERT = 10
+    COST_DELETE = 10
+    
+    similarity_matrix = [[0.0] * M for _ in range(N)]
+    dp = [[0] * (M + 1) for _ in range(N + 1)]
+    trace = [[0] * (M + 1) for _ in range(N + 1)]
+
+    # 1. Forward-Pass: Hitung matriks kemiripan satu kali saja (Poin 2)
+    for i in range(N):
+        for j in range(M):
+            similarity_matrix[i][j] = fast_levenshtein_similarity(source_seq[i]["display"], target_seq[j]["token"])
+
+    for i in range(1, N + 1):
+        dp[i][0] = i * COST_INSERT
+        trace[i][0] = DIR_UP
+    for j in range(1, M + 1):
+        dp[0][j] = j * COST_DELETE
+        trace[0][j] = DIR_LEFT
+
+    # 2. Eksekusi Matriks Jalur Terpendek Menggunakan Operasi Integer
+    for i in range(1, N + 1):
+        for j in range(1, M + 1):
+            sim = similarity_matrix[i-1][j-1]
+            sub_cost = int((1.0 - sim) * 15)
+
+            cost_diag = dp[i-1][j-1] + sub_cost
+            cost_up = dp[i-1][j] + COST_INSERT
+            cost_left = dp[i][j-1] + COST_DELETE
+
+            min_cost = min(cost_diag, cost_up, cost_left)
+            dp[i][j] = min_cost
+
+            if min_cost == cost_diag:
+                trace[i][j] = DIR_DIAGONAL
+            elif min_cost == cost_up:
+                trace[i][j] = DIR_UP
+            else:
+                trace[i][j] = DIR_LEFT
+
+    # Backtracking Cepat Berbasis Memori Matriks Similarity (Tanpa Kalkulasi Ulang)
+    i, j = N, M
+    alignment_map = {}
+    
+    while i > 0 or j > 0:
+        direction = trace[i][j]
+        if direction == DIR_DIAGONAL:
+            sim_score = similarity_matrix[i-1][j-1]
+            t_word = target_seq[j-1]["token"]
+            
+            # Poin 3: Batas Ambang Dinamis Mengikuti Panjang Kata Asli
+            len_t = len(t_word)
+            threshold = 0.90 if len_t <= 3 else (0.75 if len_t <= 6 else 0.60)
+            
+            if sim_score >= threshold:
+                alignment_map[i-1] = j-1
+            i -= 1
+            j -= 1
+        elif direction == DIR_UP:
+            i -= 1
+        else:
+            j -= 1
+
+    # =====================================================================
+    # TAHAP 5: MULTI-FACTOR CONFIDENCE SCORING & REKONSTRUKSI
+    # =====================================================================
+    final_timestamps = []
+    matched_targets = set()
+
+    for idx, src in enumerate(source_seq):
+        if idx in alignment_map:
+            tgt_idx = alignment_map[idx]
+            section = target_seq[tgt_idx]["section"]
+            matched_targets.add(tgt_idx)
+            
+            # Poin 5: Multi-Factor Confidence (Kombinasi Jarak Teks + Penalti Penyelarasan Global)
+            base_sim = similarity_matrix[idx][tgt_idx]
+            alignment_penalty = 0.15 if abs(idx - tgt_idx) > 3 else 0.0
+            calculated_conf = max(0.0, base_sim - alignment_penalty)
+        else:
+            section = final_timestamps[-1].section if final_timestamps else "hook"
+            calculated_conf = 0.0
+
+        final_timestamps.append(
+            WordTimestamp(
+                word=src["word"], display=src["display"],
+                start=src["start"], end=src["end"], duration=src["duration"],
+                section=section, confidence=round(calculated_conf, 2)
+            )
+        )
+
+    matched_count = len(matched_targets)
+    failed_tokens = [
+        {"token": t["token"], "section": t["section"], "expected_pointer": idx}
+        for idx, t in enumerate(target_seq) if idx not in matched_targets
+    ]
+
+    metadata = SyncMetadata(
+        matched=matched_count, total=M,
+        accuracy=matched_count / M if M > 0 else 1.0,
+        missed=M - matched_count, failed_tokens=failed_tokens
+    )
+
+    return final_timestamps, metadata
