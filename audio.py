@@ -124,6 +124,61 @@ def lockdown_timeline(timestamps: List[WordTimestamp], audio_duration: float) ->
     return clamped
 
 
+def validate_timeline_invariants(
+    timestamps: List[WordTimestamp],
+    audio_duration: float,
+    min_duration: float = 0.05,
+    strict: bool = False,
+) -> List[WordTimestamp]:
+    """
+    GERBANG TUNGGAL untuk menegakkan invariant timeline sebelum dipakai render.
+    Ini satu-satunya tempat aturan berikut didefinisikan secara eksplisit:
+
+      1. start monotonic non-decreasing antar kata berurutan
+      2. end >= start + min_duration (tidak ada subtitle berdurasi nol/negatif)
+      3. tidak ada overlap (start[i] >= end[i-1])
+      4. semua end <= audio_duration (tidak overflow melewati panjang audio)
+
+    Jika strict=False (default): pelanggaran dicatat sebagai warning lalu
+    diperbaiki otomatis via lockdown_timeline().
+    Jika strict=True: pelanggaran yang ditemukan langsung raise ValueError
+    (dipakai kalau ingin fail-fast, misal saat testing/debugging).
+    """
+    violations = []
+    for i, ts in enumerate(timestamps):
+        if ts.end < ts.start + min_duration - 1e-6:
+            violations.append(f"idx={i} ('{ts.display}'): end({ts.end}) < start({ts.start})+{min_duration}")
+        if i > 0 and ts.start < timestamps[i - 1].end - 1e-6:
+            violations.append(
+                f"idx={i} ('{ts.display}'): overlap — start({ts.start}) < prev_end({timestamps[i - 1].end})"
+            )
+        if ts.end > audio_duration + 1e-3:
+            violations.append(f"idx={i} ('{ts.display}'): end({ts.end}) > audio_duration({audio_duration})")
+
+    if not violations:
+        return timestamps
+
+    summary = "; ".join(violations[:5]) + (f" ... (+{len(violations) - 5} lagi)" if len(violations) > 5 else "")
+    msg = f"⚠️ {len(violations)} pelanggaran invariant timeline terdeteksi: {summary}"
+
+    if strict:
+        raise ValueError(msg)
+
+    logger.warning(msg)
+    fixed = lockdown_timeline(timestamps, audio_duration)
+
+    # Verifikasi ulang sekali setelah auto-fix — kalau masih ada pelanggaran, itu bug baru.
+    still_broken = [
+        i for i, ts in enumerate(fixed)
+        if ts.end < ts.start + min_duration - 1e-6
+        or (i > 0 and ts.start < fixed[i - 1].end - 1e-6)
+    ]
+    if still_broken:
+        logger.error(f"❌ Invariant MASIH dilanggar setelah auto-fix pada index: {still_broken}")
+
+    return fixed
+
+
 # --- DP ALIGNMENT (Needleman-Wunsch style global alignment) ---
 
 def _similarity(a: str, b: str) -> float:
