@@ -6,6 +6,7 @@ import time
 import re
 from dataclasses import asdict
 
+import librosa
 from google import genai
 from google.genai import types
 
@@ -36,7 +37,7 @@ RENDER_TIMEOUT_FACTOR = 15.0
 from downloader import download_video_clips
 from effects import process_background_clip
 from subtitle_engine.orchestrator import SubtitleEngineV2
-from audio import generate_voiceover_with_timestamps
+from audio import generate_voiceover_with_timestamps, validate_timeline_invariants
 from audio_sync_optimizer import optimize_subtitle_timing
 
 try:
@@ -56,6 +57,7 @@ EV_DOWNLOAD_FAIL      = "VP201"
 EV_SUBTITLE_REJECT    = "VP300"
 EV_SUBTITLE_WARN      = "VP301"
 EV_SUBTITLE_OPTIMIZED = "VP302"
+EV_TIMELINE_VALIDATED = "VP303"
 EV_RENDER_START       = "VP400"
 EV_RENDER_TIMEOUT     = "VP401"
 EV_RENDER_FAIL        = "VP402"
@@ -274,6 +276,22 @@ async def create_video() -> bool:
             logger.info("[%s] Subtitle timing berhasil dioptimalkan untuk sinkronisasi akurat", EV_SUBTITLE_OPTIMIZED)
         except Exception as opt_error:
             logger.warning("[%s] Optimasi timing gagal, melanjutkan dengan timing original: %s", EV_SUBTITLE_OPTIMIZED, opt_error)
+        # ==================================================================================
+
+        # ================= GERBANG VALIDASI INVARIANT TIMELINE (FINAL) =================
+        # Satu-satunya titik terakhir yang menegakkan aturan timing sebelum dipakai render,
+        # terlepas dari apakah optimize_subtitle_timing() di atas berhasil atau gagal (fallback).
+        try:
+            audio_duration_for_validation = librosa.get_duration(path=vo_file_path)
+            all_timestamps_dataclass = validate_timeline_invariants(
+                all_timestamps_dataclass, audio_duration_for_validation
+            )
+            logger.info("[%s] Timeline lolos gerbang validasi invariant.", EV_TIMELINE_VALIDATED)
+        except Exception as validate_error:
+            logger.warning(
+                "[%s] Validasi invariant timeline gagal dieksekusi, melanjutkan tanpa validasi tambahan: %s",
+                EV_TIMELINE_VALIDATED, validate_error
+            )
         # ==================================================================================
 
         if not video_files:
