@@ -84,7 +84,7 @@ async def create_video() -> bool:
         keywords = extract_keywords_from_script(story)
         video_files = download_video_clips(keywords, target_count=4)
         
-        # 3. Generate Audio & Tangkap List Timestamp Terpadu Berbasis Seksi
+        # 3. Generate Audio & Tangkap List Timestamp Terpadu
         vo_file_path = "temp/vo.mp3"
         os.makedirs("temp", exist_ok=True)
         all_timestamps = await generate_voiceover_with_timestamps(hook, story, cta, vo_file_path)
@@ -96,14 +96,20 @@ async def create_video() -> bool:
 
         # 4. Potong & Zoom Background
         clip_count = len(video_files)
-        duration_per_clip = total_duration / clip_count
+        # Berikan padding durasi ekstra 2 detik per klip agar totalnya tidak defisit/kurang
+        duration_per_clip = (total_duration / clip_count) + 2.0
+        
         for file in video_files:
             processed_clip = process_background_clip(file, duration_per_clip)
             processed_clips.append(processed_clip)
             
-        combined_bg = concatenate_videoclips(processed_clips, method="compose").with_duration(total_duration)
+        # Gabungkan semua klip background
+        raw_combined_bg = concatenate_videoclips(processed_clips, method="compose")
+        
+        # PERBAIKAN UTAMA: Potong ujung gabungan video tepat seukuran durasi total audio agar tidak freezing/berhenti duluan
+        combined_bg = raw_combined_bg.subclip(0, total_duration)
 
-        # 5. INTEGRASI FIX: Memecah list data absolut menggunakan filter penanda seksi rekomendasi kamu
+        # 5. Memecah list data absolut menggunakan filter penanda seksi
         hook_words = [x for x in all_timestamps if x["section"] == "hook"]
         story_words = [x for x in all_timestamps if x["section"] == "story"]
         cta_words = [x for x in all_timestamps if x["section"] == "cta"]
@@ -111,7 +117,7 @@ async def create_video() -> bool:
         engine_v3 = SubtitleEngineV2()
         all_text_clips = []
 
-        # Kirim potongan list kata langsung ke generator tanpa hitung durasi manual lagi
+        # Kirim potongan list kata langsung ke generator
         all_text_clips.extend(engine_v3.generate_subtitle_clips(hook_words, font_size=FONT_SIZE_HOOK, style_type="hook"))
         all_text_clips.extend(engine_v3.generate_subtitle_clips(story_words, font_size=FONT_SIZE_BODY, style_type="body"))
         all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_words, font_size=FONT_SIZE_BODY, style_type="cta"))
@@ -123,19 +129,20 @@ async def create_video() -> bool:
         output_file_path = os.path.join(DIR_OUTPUT, "final_output.mp4")
         os.makedirs(DIR_OUTPUT, exist_ok=True)
         
-        print("🔄 Memulai proses ekspor video dengan sinkronisasi seksi absolut...")
+        print(f"🔄 Memulai proses ekspor video dengan durasi penuh {total_duration:.2f} detik...")
         final_video.write_videofile(output_file_path, fps=30, codec="libx264", audio_codec="aac", threads=4)
         
         # Clean Up
         audio_clip.close()
         final_video.close()
         combined_bg.close()
+        raw_combined_bg.close()
         for clip in processed_clips: clip.close()
         for file in video_files: 
             if os.path.exists(file): os.remove(file)
         if os.path.exists(vo_file_path): os.remove(vo_file_path)
             
-        print("🎉 Sukses Besar! Sinkronisasi video bermode seksi selesai.")
+        print("🎉 Sukses Besar! Masalah video membeku selesai ditangani.")
         return True
         
     except Exception as e:
