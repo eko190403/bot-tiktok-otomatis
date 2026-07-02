@@ -12,33 +12,25 @@ from effects import process_background_clip
 from subtitle_engine.orchestrator import SubtitleEngineV2
 from audio import generate_voiceover_with_timestamps
 
-# =====================================================================
-# REKOMENDASI POIN 7: GEMINI CLIENT POOL (Mencegah State Global & Race Condition)
-# =====================================================================
 class GeminiClientPool:
     def __init__(self, api_keys: list):
         if not api_keys:
             raise ValueError("❌ Tidak ada GEMINI_API_KEY yang ditemukan di GitHub Secrets.")
         self.api_keys = api_keys
         self.current_index = 0
-        self.lock = asyncio.Lock()  # Mengunci proses rotasi agar aman jika dijalankan oleh multi-worker
+        self.lock = asyncio.Lock()
 
     async def get_client_and_rotate(self):
-        """Mengambil client GenAI dan langsung memutar slot API Key berikutnya dengan aman."""
         async with self.lock:
             active_key = self.api_keys[self.current_index]
             masked_key = f"{active_key[:8]}...{active_key[-4:]}" if len(active_key) > 12 else "INVALID_KEY"
             print(f"🔑 [Pool Slot-{self.current_index + 1}] Menggunakan API Key: {masked_key}")
-            
-            # Rotasi indeks untuk pemanggilan berikutnya
             self.current_index = (self.current_index + 1) % len(self.api_keys)
             return genai.Client(api_key=active_key)
 
-# Inisialisasi pool secara terpusat sejak awal runtime aplikasi
 client_pool = GeminiClientPool(GEMINI_KEYS)
 
 async def generate_structured_script():
-    """Meminta Gemini membuat naskah JSON dengan perlindungan rotasi pool otomatis."""
     print("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
     prompt = (
         "Buat satu konten edukasi pendek untuk TikTok Shorts dalam format JSON.\n"
@@ -66,7 +58,6 @@ async def generate_structured_script():
             raise e
 
 async def extract_keywords_from_script(script_text: str) -> list:
-    """AI mengekstrak keyword visual untuk pencarian latar belakang di Pexels."""
     prompt = f"Berikan 4 kata kunci visual bahasa Inggris dalam bentuk JSON array untuk mencari video latar belakang naskah ini: \"{script_text}\""
     for attempt in range(5):
         try:
@@ -82,14 +73,8 @@ async def extract_keywords_from_script(script_text: str) -> list:
             continue
     return ["mind", "abstract", "human"]
 
-# =====================================================================
-# REKOMENDASI POIN 1 & 2: DEDICATED CLEANUP & SAFE CLOSE FUNCTION
-# =====================================================================
 def safe_close_resources(resources: dict, files_to_delete: list):
-    """Fungsi tunggal terpusat untuk membebaskan memory RAM dan menghapus berkas temp secara aman."""
     print("🧹 Memulai pembersihan resource dan file temporer secara aman...")
-    
-    # Tutup objek klip video/audio MoviePy jika objek tersebut berhasil diinisialisasi
     for name, obj in resources.items():
         if obj is not None:
             try:
@@ -98,7 +83,6 @@ def safe_close_resources(resources: dict, files_to_delete: list):
             except Exception as ce:
                 print(f"⚠️ Gagal menutup resource '{name}': {ce}")
 
-    # Bersihkan file sampah mentah di disk lokal server
     for file_path in files_to_delete:
         if file_path and os.path.exists(file_path):
             try:
@@ -108,12 +92,11 @@ def safe_close_resources(resources: dict, files_to_delete: list):
                 print(f"⚠️ Gagal menghapus berkas {file_path}: {fe}")
 
 async def create_video() -> bool:
-    """Orchestrator Perakitan Video TikTok Shorts Otomatis Skala Produksi Massal."""
-    # Kamus pelacak instans objek untuk keperluan blok finally terpusat
     moviepy_resources = {
         "audio_clip": None,
         "processed_clips": [],
         "raw_combined_bg": None,
+        "looped_bg": None,
         "combined_bg": None,
         "final_video": None
     }
@@ -129,53 +112,57 @@ async def create_video() -> bool:
         
         # 2. Ekstrak Kata Kunci Visual Konten
         keywords = await extract_keywords_from_script(story)
-        
         os.makedirs("temp", exist_ok=True)
         
-        # =====================================================================
-        # REKOMENDASI POIN 5: PARALLEL PROCESSING CONCURRENCY (Gather Tasks)
-        # =====================================================================
         print("⚡ Menjalankan download background dan TTS secara bersamaan (Paralel)...")
-        
-        # Bungkus downloader sinkronus ke dalam pembungkus thread non-blocking agar bisa berjalan paralel
         loop = asyncio.get_event_loop()
         download_task = loop.run_in_executor(None, download_video_clips, keywords, 4)
         audio_task = generate_voiceover_with_timestamps(hook, story, cta, vo_file_path)
         
-        # Eksekusi kedua proses berat (Jaringan & TTS Stream) secara bersamaan!
         video_files, all_timestamps = await asyncio.gather(download_task, audio_task)
 
-        # =====================================================================
-        # REKOMENDASI POIN 3: MUTLAK VALIDASI HASIL DOWNLOAD (Anti ZeroDivisionError)
-        # =====================================================================
         if not video_files:
             raise RuntimeError("❌ Eror Batas: Tidak ada video latar belakang yang berhasil diunduh dari Pexels.")
             
         from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip
+        import moviepy.video.fx as vfx
         
         moviepy_resources["audio_clip"] = AudioFileClip(vo_file_path)
         total_duration = moviepy_resources["audio_clip"].duration
 
         # 4. Potong & Suntik Efek Zoom Latar Belakang
         clip_count = len(video_files)
-        duration_per_clip = (total_duration / clip_count) + 2.0
+        duration_per_clip = (total_duration / clip_count) + 3.0 # Tambah margin durasi per klip mentah
         
         for file in video_files:
             processed_clip = process_background_clip(file, duration_per_clip)
             moviepy_resources["processed_clips"].append(processed_clip)
             
-        # Gabungkan klip background
+        # Gabungkan semua klip background
         moviepy_resources["raw_combined_bg"] = concatenate_videoclips(
             moviepy_resources["processed_clips"], method="compose"
         )
-        moviepy_resources["combined_bg"] = moviepy_resources["raw_combined_bg"].subclipped(0, total_duration)
+        
+        # FIX LOGIKA UTAMA: Deteksi defisit durasi visual video secara proaktif
+        bg_duration = moviepy_resources["raw_combined_bg"].duration
+        print(f"📊 Evaluasi Durasi -> Audio: {total_duration:.2f}s | Gabungan Video Mentah: {bg_duration:.2f}s")
+        
+        if bg_duration < total_duration:
+            print("⚠️ Video mentah terlalu pendek! Mengaktifkan pengulangan visual (Looping Filter)...")
+            # Hitung jumlah perulangan yang dibutuhkan
+            loop_factor = int(total_duration / bg_duration) + 1
+            # Lakukan looping menggunakan fungsi bawaan MoviePy
+            moviepy_resources["looped_bg"] = moviepy_resources["raw_combined_bg"].with_effects([vfx.Loop(n=loop_factor)])
+            moviepy_resources["combined_bg"] = moviepy_resources["looped_bg"].subclipped(0, total_duration)
+        else:
+            # Jika durasi video sudah cukup, langsung potong tegas aman
+            moviepy_resources["combined_bg"] = moviepy_resources["raw_combined_bg"].subclipped(0, total_duration)
 
-        # 5. Filter Pemecahan Teks Berdasarkan Tag Seksi Progresif V4.8
+        # 5. Filter Pemecahan Teks Berdasarkan Tag Seksi Progresif
         hook_words = [x for x in all_timestamps if x["section"] == "hook"]
         story_words = [x for x in all_timestamps if x["section"] == "story"]
         cta_words = [x for x in all_timestamps if x["section"] == "cta"]
 
-        # REKOMENDASI POIN 4: Untuk optimasi batch massal, engine diinisialisasi di sini
         engine_v3 = SubtitleEngineV2()
         all_text_clips = []
 
@@ -197,7 +184,7 @@ async def create_video() -> bool:
             output_file_path, fps=30, codec="libx264", audio_codec="aac", threads=4
         )
         
-        print("🎉 Sukses Besar! Pipeline berjalan mulus dengan standarisasi arsitektur produksi massal.")
+        print("🎉 Sukses Besar! Sistem Looping adaptif mengunci kestabilan pipeline otomatis.")
         return True
         
     except Exception as e:
@@ -205,19 +192,15 @@ async def create_video() -> bool:
         return False
         
     finally:
-        # =====================================================================
-        # REKOMENDASI POIN 1 & 2 FIXED: Blok Finally Terpusat (Bebas Leak RAM)
-        # =====================================================================
-        # Buat daftar gabungan klip yang diproses di dalam list terpisah agar aman di-looping
         clips_to_close = {}
         if moviepy_resources["audio_clip"]: clips_to_close["audio_clip"] = moviepy_resources["audio_clip"]
         if moviepy_resources["raw_combined_bg"]: clips_to_close["raw_combined_bg"] = moviepy_resources["raw_combined_bg"]
+        if moviepy_resources["looped_bg"]: clips_to_close["looped_bg"] = moviepy_resources["looped_bg"]
         if moviepy_resources["combined_bg"]: clips_to_close["combined_bg"] = moviepy_resources["combined_bg"]
         if moviepy_resources["final_video"]: clips_to_close["final_video"] = moviepy_resources["final_video"]
         
         for idx, cp in enumerate(moviepy_resources["processed_clips"]):
             clips_to_close[f"processed_clip_{idx}"] = cp
 
-        # Panggil fungsi pembersih tunggal
         files_cleanup = video_files + [vo_file_path]
         safe_close_resources(clips_to_close, files_cleanup)
