@@ -1,4 +1,9 @@
 google-genai
 moviepy
 edge-tts
-asyncio
+
+librosa==0.10.2.post1
+numpy
+scipy
+soundfile
+audioread
