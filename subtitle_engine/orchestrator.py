@@ -6,16 +6,9 @@ from moviepy import ImageClip
 from subtitle_engine.renderer import SubtitleRenderer
 from config import WIDTH, HEIGHT, FONT_PATH
 
-# CONFIGURATION ENGINE V5.0 (Bebas Magic Numbers)
-DEBUG_SUBTITLE = False
-MIN_WORD_DURATION = 0.15
-
-# 1. Poin Prioritas 2 & 3: Threshold Jeda Alami Suara (Napas/Tanda Baca)
-NATURAL_BREAK_THRESHOLD = 0.45  # Jeda > 0.45 detik dianggap baris baru (bukan max_words)
-
-# 2. Poin Prioritas 3 & 4: Optimalisasi Offset & Hold Time
-VISUAL_OFFSET = 0.040           # Subtitle muncul 40ms lebih awal sebelum suara (Mata siap)
-PHRASE_HOLD_TIME = 0.250        # Tahan frasa 250ms setelah kata terakhir selesai
+MAX_WORDS_PHRASE = 4
+MAX_CHARS_PHRASE = 28
+NATURAL_GAP_LIMIT = 0.40 # Jeda hening pembicaraan (detik)
 
 class SubtitleEngineV2:
     def __init__(self):
@@ -23,32 +16,45 @@ class SubtitleEngineV2:
 
     def _group_words_into_rhythm_phrases(self, words: list) -> list:
         """
-        Rhythm Analyzer & Phrase Builder (V5.0): Memecah kelompok frasa 
-        murni berdasarkan jeda napas/waktu hening asli, bukan jumlah kata kaku.
+        Smart Phrase Builder (V5.2): Memecah baris sensitif koma, 
+        titik, panjang teks, dan waktu hening (Poin 2 & 3 Fix).
         """
         phrases = []
         current_phrase = []
-        
+        current_char_count = 0
+
         for idx, item in enumerate(words):
             word_text = item["word"]
+            word_len = len(word_text)
             
-            # Cek deteksi jeda hening alami (Napas) dari END kata ini ke START kata berikutnya
+            current_phrase.append(item)
+            current_char_count += word_len + 1
+            
+            # Perbaikan Jeda Alami Aman: Menggunakan next.start - current.start untuk antisipasi overlap suara
             is_natural_pause = False
             if idx < len(words) - 1:
-                silence_delta = words[idx + 1]["start"] - item["end"]
-                if silence_delta > NATURAL_BREAK_THRESHOLD:
+                gap_delta = words[idx + 1]["start"] - item["start"]
+                if gap_delta > (item["duration"] + NATURAL_GAP_LIMIT):
                     is_natural_pause = True
 
-            # Cek pemisahan kontekstual berdasarkan tanda baca asli
-            is_punctuation_stop = word_text.endswith((".", "!", "?"))
+            # Pemotongan Cerdas Berbasis Tanda Baca Asli (Koma & Titik dipertahankan)
+            is_punctuation_split = False
+            if word_text.endswith((".", "!", "?")):
+                is_punctuation_split = True
+            elif word_text.endswith((",", ";", ":")) and len(current_phrase) >= 2:
+                is_punctuation_split = True
+
+            should_split = (
+                len(current_phrase) >= MAX_WORDS_PHRASE or
+                current_char_count >= MAX_CHARS_PHRASE or
+                is_natural_pause or
+                is_punctuation_split
+            )
             
-            # Masukkan kata ke dalam antrean grup aktif saat ini
-            current_phrase.append(item)
-            
-            # Jika terdeteksi nafas atau akhir kalimat, potong menjadi satu frasa utuh
-            if (is_natural_pause or is_punctuation_stop) and idx < len(words) - 1:
+            if should_split and idx < len(words) - 1:
                 phrases.append(current_phrase)
                 current_phrase = []
+                current_char_count = 0
                 
         if current_phrase:
             phrases.append(current_phrase)
@@ -56,16 +62,12 @@ class SubtitleEngineV2:
 
     def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body") -> list:
         """
-        Subtitle Engine V5.0 (Timing Optimizer):
-        Menerapkan koordinat waktu absolut berbasis durasi asli dan offset antisipasi.
+        Timing Optimizer Mesin Utama V5.2 + Easing Animation Loop.
         """
         if not section_words:
             return []
 
-        # Duplikasi aman agar data asal di video_builder tidak termutasi
         raw_words = copy.deepcopy(section_words)
-        
-        # Pecah baris berdasarkan ritme ketukan suara (Bukan berdasarkan 4 kata lagi!)
         grouped_phrases = self._group_words_into_rhythm_phrases(raw_words)
         clips = []
 
@@ -74,65 +76,71 @@ class SubtitleEngineV2:
             if phrase_len == 0:
                 continue
 
-            # Tentukan batas waktu tampil total untuk kelompok frasa ini di layar
-            # Frasa mulai dari kata pertama dikurangi offset visual (muncul duluan)
-            phrase_display_start = max(0.0, phrase[0]["start"] - VISUAL_OFFSET)
+            # Konfigurasi Offset adaptif berbasis tempo (Poin 5 Adaptif Offset Fix)
+            avg_duration = sum(w["duration"] for w in phrase) / phrase_len
+            visual_offset = min(0.050, avg_duration * 0.20) # Maksimal 50ms antisipasi
+            hold_padding = 0.250 # Tahan 250ms di akhir frasa (Hold Time)
+
+            phrase_display_start = max(0.0, phrase[0]["start"] - visual_offset)
+            phrase_display_end = phrase[-1]["end"] + hold_padding
             
-            # Frasa berakhir setelah kata terakhir selesai ditambah waktu tahan (Hold Time)
-            phrase_display_end = phrase[-1]["end"] + PHRASE_HOLD_TIME
-            
-            # Jika bukan frasa terakhir, jangan sampai menabrak batas frasa berikutnya
             if p_idx < len(grouped_phrases) - 1:
-                next_phrase_start = grouped_phrases[p_idx + 1][0]["start"] - VISUAL_OFFSET
+                next_phrase_start = grouped_phrases[p_idx + 1][0]["start"] - visual_offset
                 phrase_display_end = min(phrase_display_end, next_phrase_start)
 
-            # Hitung total durasi tayang block frasa utuh ini di layar
-            phrase_total_duration = max(0.1, phrase_display_end - phrase_display_start)
-
-            # Proses perancangan waktu highlight kata aktif secara internal di dalam frasa
+            # Proses Rantai Waktu Subtitle Kata Dinamis
             for i, item in enumerate(phrase):
-                # Poin Prioritas 1: RUMUS EMAS DURATION ASLI (Display end mengikuti duration asli Edge-TTS)
-                word_raw_duration = item["end"] - item["start"]
+                # PERBAIKAN BUG TINGKAT TINGGI: Gunakan properti item["duration"] murni asli Edge-TTS (BUG 1 FIX)
+                highlight_start = max(phrase_display_start, item["start"] - visual_offset)
+                highlight_end = item["start"] - visual_offset + item["duration"]
                 
-                # Gunakan durasi asli, jika terlalu pendek baru gunakan batas minimal aman
-                word_duration_base = max(word_raw_duration, MIN_WORD_DURATION)
-                
-                # Hitung kapan sorotan kuning aktif dimulai dan berakhir (Disuntik offset awal)
-                highlight_start = max(phrase_display_start, item["start"] - VISUAL_OFFSET)
-                highlight_end = item["start"] - VISUAL_OFFSET + word_duration_base
-                
-                # Khusus untuk kata terakhir di dalam frasa, tahan warna aktifnya hingga frasa selesai/hilang
                 if i == phrase_len - 1:
                     highlight_end = phrase_display_end
                 else:
-                    # Cegah highlight kata menabrak batas waktu start kata berikutnya
-                    next_word_target_start = phrase[i + 1]["start"] - VISUAL_OFFSET
-                    highlight_end = min(highlight_end, next_word_target_start)
+                    next_word_target = phrase[i + 1]["start"] - visual_offset
+                    highlight_end = min(highlight_end, next_word_target)
 
-                word_clip_duration = max(MIN_WORD_DURATION, highlight_end - highlight_start)
+                word_total_duration = max(0.15, highlight_end - highlight_start)
 
-                if DEBUG_SUBTITLE:
-                    print(f"📌 [Engine V5.0]: {item['word']} | Tampil: {highlight_start:.2f}s | Durasi: {word_clip_duration:.2f}s")
-
-                # Panggil renderer progresif (Kirim seluruh list frasa dan tandai indeks yang aktif)
-                frame = self.renderer.create_progressive_frame(
-                    words_list=phrase,
-                    active_index=i,
-                    font_path=FONT_PATH,
-                    font_size=font_size,
-                    style_type=style_type
-                )
+                # =============================================================
+                # PERBAIKAN POIN 4 EASING SCALE: Pecah 1 kata menjadi Sub-Frame Easing (60ms)
+                # =============================================================
+                frame_fps = 30.0
+                frame_time = 1.0 / frame_fps  # ~0.033 detik (33ms per frame)
                 
-                img_rgba = np.array(frame.convert("RGBA"))
-                
-                # PERBAIKAN POIN PRIORITAS 5: Hapus .fade_in() total untuk menjamin perubahan instans karaoke!
-                clip = (ImageClip(img_rgba)
-                        .with_start(highlight_start)
-                        .with_duration(word_clip_duration)
-                        .with_position((0, 0)))
-                
-                clips.append(clip)
+                # Tahap Easing Array: 1.00 -> 1.04 -> 1.08 -> 1.10 (Target Skala Emas 1.10)
+                easing_scales = [1.04, 1.08, 1.10]
+                current_time_pointer = highlight_start
 
-        # Bersihkan seluruh memori cache setelah seksi selesai agar RAM lega
+                for s_idx, scale in enumerate(easing_scales):
+                    if word_total_duration > (s_idx * frame_time):
+                        frame = self.renderer.create_progressive_frame(
+                            words_list=phrase, active_index=i, font_path=FONT_PATH,
+                            font_size=font_size, scale_factor=scale, style_type=style_type
+                        )
+                        img_rgba = np.array(frame.convert("RGBA"))
+                        
+                        clip = (ImageClip(img_rgba)
+                                .with_start(current_time_pointer)
+                                .with_duration(frame_time)
+                                .with_position((0, 0)))
+                        clips.append(clip)
+                        current_time_pointer += frame_time
+                
+                # Sisa Durasi Kata Mengunci Skala Penuh 1.10 (Tahan Diam)
+                remaining_duration = highlight_end - current_time_pointer
+                if remaining_duration > 0:
+                    frame = self.renderer.create_progressive_frame(
+                        words_list=phrase, active_index=i, font_path=FONT_PATH,
+                        font_size=font_size, scale_factor=1.10, style_type=style_type
+                    )
+                    img_rgba = np.array(frame.convert("RGBA"))
+                    
+                    clip = (ImageClip(img_rgba)
+                            .with_start(current_time_pointer)
+                            .with_duration(remaining_duration)
+                            .with_position((0, 0)))
+                    clips.append(clip)
+
         self.renderer.clear_cache()
         return clips
