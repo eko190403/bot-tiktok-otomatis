@@ -1,16 +1,13 @@
 import asyncio
 import edge_tts
 import unicodedata
+import string
 
 async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
     """
     Membuat audio dari teks bersih dan menangkap timestamp kata-per-kata secara real-time.
-    Mengalokasikan display_word bersih sejak awal untuk mengeliminasi pemanggilan berulang di renderer.
+    Seksi ditentukan menggunakan metode pencarian teks bersih (Anti-Overlapping Index).
     """
-    words_hook = hook.split()
-    words_story = story.split()
-    words_cta = cta.split()
-    
     full_clean_text = f"{hook}. {story} {cta}"
     communicate = edge_tts.Communicate(full_clean_text, voice)
     
@@ -36,12 +33,10 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     with open(audio_path, "wb") as f:
         f.write(audio_data)
 
-    # PEMBERSIHAN DINI: Buat properti "display" bersih universal sejak awal (Poin 2 Fix)
     cleaned_timestamps = []
     for item in raw_timestamps:
         raw_word = item["word"]
         
-        # Saring karakter non-huruf/non-angka menggunakan Unicode Category
         cleaned_chars = []
         for ch in raw_word:
             cat = unicodedata.category(ch)
@@ -51,8 +46,8 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         
         if display_word:
             cleaned_timestamps.append({
-                "word": raw_word,          # Dipertahankan untuk pengecekan tanda baca frasa
-                "display": display_word,    # Teks visual super bersih siap pakai untuk renderer
+                "word": raw_word,          
+                "display": display_word,    
                 "start": item["start"],
                 "end": item["end"],
                 "duration": item["duration"]
@@ -67,16 +62,27 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         item["start"] -= first_offset
         item["end"] -= first_offset
 
-    # Pemetaan seksi sekuensial
+    # PERBAIKAN TOTAL: Segmentasi Berbasis Teks Bersih
     final_timestamps = []
-    limit_hook = len(words_hook)
-    limit_story = limit_hook + len(words_story)
+    
+    # Buat versi huruf kecil tanpa tanda baca untuk pencarian akurat
+    def clean_str(t):
+        return t.lower().translate(str.maketrans('', '', string.punctuation)).split()
 
-    for idx, item in enumerate(cleaned_timestamps):
-        if idx < limit_hook:
+    hook_words_list = clean_str(hook)
+    story_words_list = clean_str(story)
+
+    for item in cleaned_timestamps:
+        word_clean = item["display"].lower()
+        
+        # Cek keberadaan kata di dalam teks aslinya secara berurutan
+        if word_clean in hook_words_list:
             section = "hook"
-        elif idx < limit_story:
+            # Hapus kata yang sudah dipakai agar tidak tertukar jika ada kata kembar
+            hook_words_list.remove(word_clean)
+        elif word_clean in story_words_list:
             section = "story"
+            story_words_list.remove(word_clean)
         else:
             section = "cta"
             
