@@ -16,8 +16,7 @@ class SubtitleEngineV2:
 
     def _group_words_into_rhythm_phrases(self, words: list) -> list:
         """
-        Smart Phrase Builder (V5.2): Memecah baris sensitif koma, 
-        titik, panjang teks, dan waktu hening (Poin 2 & 3 Fix).
+        Smart Phrase Builder (V5.3): Perbaikan Bug Logika Batas Array Kosong.
         """
         phrases = []
         current_phrase = []
@@ -30,14 +29,12 @@ class SubtitleEngineV2:
             current_phrase.append(item)
             current_char_count += word_len + 1
             
-            # Perbaikan Jeda Alami Aman: Menggunakan next.start - current.start untuk antisipasi overlap suara
             is_natural_pause = False
             if idx < len(words) - 1:
                 gap_delta = words[idx + 1]["start"] - item["start"]
                 if gap_delta > (item["duration"] + NATURAL_GAP_LIMIT):
                     is_natural_pause = True
 
-            # Pemotongan Cerdas Berbasis Tanda Baca Asli (Koma & Titik dipertahankan)
             is_punctuation_split = False
             if word_text.endswith((".", "!", "?")):
                 is_punctuation_split = True
@@ -51,7 +48,8 @@ class SubtitleEngineV2:
                 is_punctuation_split
             )
             
-            if should_split and idx < len(words) - 1:
+            # PERBAIKAN BUG: Hapus validasi idx untuk memastikan semua kata masuk ke list frasa
+            if should_split:
                 phrases.append(current_phrase)
                 current_phrase = []
                 current_char_count = 0
@@ -76,10 +74,9 @@ class SubtitleEngineV2:
             if phrase_len == 0:
                 continue
 
-            # Konfigurasi Offset adaptif berbasis tempo (Poin 5 Adaptif Offset Fix)
             avg_duration = sum(w["duration"] for w in phrase) / phrase_len
-            visual_offset = min(0.050, avg_duration * 0.20) # Maksimal 50ms antisipasi
-            hold_padding = 0.250 # Tahan 250ms di akhir frasa (Hold Time)
+            visual_offset = min(0.050, avg_duration * 0.20)
+            hold_padding = 0.250
 
             phrase_display_start = max(0.0, phrase[0]["start"] - visual_offset)
             phrase_display_end = phrase[-1]["end"] + hold_padding
@@ -88,9 +85,7 @@ class SubtitleEngineV2:
                 next_phrase_start = grouped_phrases[p_idx + 1][0]["start"] - visual_offset
                 phrase_display_end = min(phrase_display_end, next_phrase_start)
 
-            # Proses Rantai Waktu Subtitle Kata Dinamis
             for i, item in enumerate(phrase):
-                # PERBAIKAN BUG TINGKAT TINGGI: Gunakan properti item["duration"] murni asli Edge-TTS (BUG 1 FIX)
                 highlight_start = max(phrase_display_start, item["start"] - visual_offset)
                 highlight_end = item["start"] - visual_offset + item["duration"]
                 
@@ -102,13 +97,9 @@ class SubtitleEngineV2:
 
                 word_total_duration = max(0.15, highlight_end - highlight_start)
 
-                # =============================================================
-                # PERBAIKAN POIN 4 EASING SCALE: Pecah 1 kata menjadi Sub-Frame Easing (60ms)
-                # =============================================================
                 frame_fps = 30.0
-                frame_time = 1.0 / frame_fps  # ~0.033 detik (33ms per frame)
+                frame_time = 1.0 / frame_fps
                 
-                # Tahap Easing Array: 1.00 -> 1.04 -> 1.08 -> 1.10 (Target Skala Emas 1.10)
                 easing_scales = [1.04, 1.08, 1.10]
                 current_time_pointer = highlight_start
 
@@ -127,7 +118,6 @@ class SubtitleEngineV2:
                         clips.append(clip)
                         current_time_pointer += frame_time
                 
-                # Sisa Durasi Kata Mengunci Skala Penuh 1.10 (Tahan Diam)
                 remaining_duration = highlight_end - current_time_pointer
                 if remaining_duration > 0:
                     frame = self.renderer.create_progressive_frame(
