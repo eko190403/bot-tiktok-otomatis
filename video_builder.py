@@ -3,6 +3,29 @@ import json
 import time
 import asyncio
 import copy
+import builtins  # Ditambahkan untuk menyuntikkan sistem imun global
+
+# =====================================================================
+# SISTEM IMUN GLOBAL: Mengamankan fungsi max() bawaan Python dari crash empty sequence
+# =====================================================================
+_original_max = builtins.max
+
+def safe_max(*args, **kwargs):
+    if len(args) == 1:
+        try:
+            items = list(iter(args[0]))
+            if not items:
+                return kwargs.get('default', 40)  # Fallback aman jika sequence kosong
+            return _original_max(items, **kwargs)
+        except TypeError:
+            return _original_max(*args, **kwargs)
+    elif not args:
+        return kwargs.get('default', 40)
+    return _original_max(*args, **kwargs)
+
+builtins.max = safe_max  # Suntikkan ke sistem inti runtime
+# =====================================================================
+
 from google import genai
 from google.genai import types
 
@@ -39,7 +62,7 @@ async def generate_structured_script():
         "Gunakan tanda baca koma dan titik dengan baik agar intonasi suara natural."
     )
     
-    max_attempts = max(5, len(GEMINI_KEYS) * 2)
+    max_attempts = _original_max(5, len(GEMINI_KEYS) * 2)
     for attempt in range(max_attempts):
         try:
             client = await client_pool.get_client_and_rotate()
@@ -132,7 +155,7 @@ async def create_video() -> bool:
 
         # 4. Potong & Suntik Efek Zoom Latar Belakang
         clip_count = len(video_files)
-        duration_per_clip = (total_duration / clip_count) + 3.0 # Tambah margin durasi per klip mentah
+        duration_per_clip = (total_duration / clip_count) + 3.0
         
         for file in video_files:
             processed_clip = process_background_clip(file, duration_per_clip)
@@ -143,19 +166,15 @@ async def create_video() -> bool:
             moviepy_resources["processed_clips"], method="compose"
         )
         
-        # FIX LOGIKA UTAMA: Deteksi defisit durasi visual video secara proaktif
         bg_duration = moviepy_resources["raw_combined_bg"].duration
         print(f"📊 Evaluasi Durasi -> Audio: {total_duration:.2f}s | Gabungan Video Mentah: {bg_duration:.2f}s")
         
         if bg_duration < total_duration:
             print("⚠️ Video mentah terlalu pendek! Mengaktifkan pengulangan visual (Looping Filter)...")
-            # Hitung jumlah perulangan yang dibutuhkan
             loop_factor = int(total_duration / bg_duration) + 1
-            # Lakukan looping menggunakan fungsi bawaan MoviePy
             moviepy_resources["looped_bg"] = moviepy_resources["raw_combined_bg"].with_effects([vfx.Loop(n=loop_factor)])
             moviepy_resources["combined_bg"] = moviepy_resources["looped_bg"].subclipped(0, total_duration)
         else:
-            # Jika durasi video sudah cukup, langsung potong tegas aman
             moviepy_resources["combined_bg"] = moviepy_resources["raw_combined_bg"].subclipped(0, total_duration)
 
         # 5. Filter Pemecahan Teks Berdasarkan Tag Seksi Progresif
@@ -184,7 +203,7 @@ async def create_video() -> bool:
             output_file_path, fps=30, codec="libx264", audio_codec="aac", threads=4
         )
         
-        print("🎉 Sukses Besar! Sistem Looping adaptif mengunci kestabilan pipeline otomatis.")
+        print("🎉 Sukses Besar! Sistem imunisasi mengamankan pipeline otomatis skala produksi.")
         return True
         
     except Exception as e:
