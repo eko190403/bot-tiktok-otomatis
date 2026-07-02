@@ -1,9 +1,16 @@
 name: Bot TikTok Auto-Pilot
 
 on:
+  # 1. Mengaktifkan pemicu manual dari dasbor GitHub
   workflow_dispatch: 
+  
+  # 2. Mengaktifkan pemicu otomatis harian (Setiap jam 16:00 WIB / 09:00 UTC)
   schedule:
     - cron: '0 9 * * *' 
+    
+  # 3. GERBANG MASUK BARU: Menerima ketukan pemicu dari Telegram Bot kamu
+  repository_dispatch:
+    types: [telegram_trigger]
 
 jobs:
   build-and-run:
@@ -13,10 +20,15 @@ jobs:
     - name: Checkout Repositori
       uses: actions/checkout@v4
 
+    # Amankan dan bersihkan workspace dari sisa file temporer render sebelumnya
+    - name: Bersihkan Workspace Temporer
+      run: rm -rf temp/* output/*
+
     - name: Atur Lingkungan Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        cache: 'pip'
 
     - name: Instal System Dependencies (FFmpeg)
       run: |
