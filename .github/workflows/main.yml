@@ -31,10 +31,13 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg dan ImageMagick
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg imagemagick
+          
+          # Membuka izin akses ImageMagick agar MoviePy bisa merender teks/subtitle
+          sudo sed -i 's/domain="path" rights="none"/domain="path" rights="read|write"/' /etc/ImageMagick-6/policy.xml
 
       - name: Install Dependencies
         run: |
@@ -77,7 +80,7 @@ jobs:
           echo "🚀 Mengirim $VIDEO_FILE ke Telegram..."
           
           curl -v -F video="@${VIDEO_FILE}" \
-            -F caption="✅ Video Ruang Pikir Berhasil Dirender Sempurna!" \
+            -F caption="✅ Video Ruang Pikir Berhasil Dirender Sempurna dengan Subtitle!" \
             "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendVideo?chat_id=1120755820"
 
       - name: Upload Hasil Video
