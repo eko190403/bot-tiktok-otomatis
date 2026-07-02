@@ -14,7 +14,6 @@ DIR_DIAGONAL = 1
 DIR_UP = 2
 DIR_LEFT = 3
 
-# PERBAIKAN: Kamus fonetik disederhanakan hanya untuk ejaan/singkatan tanpa mengubah makna kata
 PHONETIC_DICTIONARY = {
     "NGGAK": "TIDAK",
     "NGAK": "TIDAK",
@@ -40,7 +39,7 @@ class WordTimestamp:
     section: str
     confidence: float
 
-@dataclass
+@dataclass(slots=True)
 class SyncMetadata:
     matched: int
     total: int
@@ -78,6 +77,7 @@ def fast_levenshtein_similarity(s1: str, s2: str) -> float:
 def pipeline_repair_tokens(source_seq: list, target_tokens: list) -> list:
     if not source_seq:
         return []
+    
     target_set = {t["token"] for t in target_tokens}
     repaired = []
     i = 0
@@ -110,14 +110,22 @@ def pipeline_repair_tokens(source_seq: list, target_tokens: list) -> list:
             if len(tgt) < len(curr["display"]) and curr["display"].startswith(tgt):
                 remainder = curr["display"][len(tgt):]
                 if remainder in target_set or apply_phonetic_normalization(remainder) in target_set:
-                    mid = curr["start"] + (curr["duration"] / 2)
+                    # SOLUSI: Bug fatal len_remainder diperbaiki secara eksplisit
+                    len_tgt = len(tgt)
+                    len_remainder = len(remainder)
+                    total_len = len_tgt + len_remainder
+                    
+                    ratio = len_tgt / total_len
+                    duration_1 = curr["duration"] * ratio
+                    mid_time = curr["start"] + duration_1
+                    
                     repaired.append({
-                        "word": curr["word"][:len(tgt)], "display": tgt,
-                        "start": curr["start"], "end": mid, "duration": curr["duration"] / 2
+                        "word": curr["word"][:len_tgt], "display": tgt,
+                        "start": curr["start"], "end": mid_time, "duration": duration_1
                     })
                     repaired.append({
-                        "word": curr["word"][len(tgt):], "display": apply_phonetic_normalization(remainder),
-                        "start": mid, "end": curr["end"], "duration": curr["duration"] / 2
+                        "word": curr["word"][len_tgt:], "display": apply_phonetic_normalization(remainder),
+                        "start": mid_time, "end": curr["end"], "duration": curr["duration"] - duration_1
                     })
                     split_found = True
                     break
@@ -200,7 +208,11 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     COST_INSERT = 10
     COST_DELETE = 10
     
-    similarity_matrix = [[fast_levenshtein_similarity(source_seq[i]["display"], target_seq[j]["token"]) for j in range(M)] for i in range(N)]
+    similarity_matrix = [[0.0] * M for _ in range(N)]
+    for i in range(N):
+        for j in range(M):
+            similarity_matrix[i][j] = fast_levenshtein_similarity(source_seq[i]["display"], target_seq[j]["token"])
+            
     dp = [[0] * (M + 1) for _ in range(N + 1)]
     trace = [[0] * (M + 1) for _ in range(N + 1)]
 
@@ -250,9 +262,13 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
             tgt_idx = alignment_map[idx]
             section = target_seq[tgt_idx]["section"]
             matched_targets.add(tgt_idx)
+            
+            # SOLUSI: Formulasi Baru multi-faktor berbasis kemiripan teks dan jarak spasial matriks
             base_sim = similarity_matrix[idx][tgt_idx]
-            alignment_penalty = 0.15 if abs(idx - tgt_idx) > 3 else 0.0
-            calculated_conf = max(0.0, base_sim - alignment_penalty)
+            pos_delta = abs(idx - tgt_idx)
+            position_score = max(0.0, 1.0 - (pos_delta / max(N, M)))
+            
+            calculated_conf = (0.70 * base_sim) + (0.30 * position_score)
         else:
             section = final_timestamps[-1].section if final_timestamps else "hook"
             calculated_conf = 0.0
