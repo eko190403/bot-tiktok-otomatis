@@ -6,22 +6,47 @@ from moviepy import ImageClip
 from subtitle_engine.renderer import SubtitleRenderer
 from config import WIDTH, HEIGHT, FONT_PATH
 
+# EVALUASI 4 & 7: Konfigurasi bersih dari Magic Number (Mudah di-tuning)
+DEBUG_SUBTITLE = False
+MAX_WORDS_PER_PHRASE = 4
+MAX_CHARS_PER_PHRASE = 30
+NATURAL_GAP_THRESHOLD = 0.45
+
+CHAIN_GAP_MAX = 0.03
+MIN_WORD_DURATION = 0.15
+
+CTA_LAST_PADDING = 0.30
+HOOK_LAST_PADDING = 0.15
+BODY_LAST_PADDING = 0.20
+
 class SubtitleEngineV2:
     def __init__(self):
         self.renderer = SubtitleRenderer(width=WIDTH, height=HEIGHT)
 
-    def _group_words_into_phrases(self, words: list, max_words: int = 4, max_chars: int = 32) -> list:
+    def _group_words_into_phrases(self, words: list) -> list:
         """
-        EVALUASI 6 & 10: Memotong list WordBoundary panjang menjadi kelompok frasa pendek (Phrase Grouper)[cite: 62, 63, 64, 194].
+        EVALUASI 3 & 9 (Phrase Grouper Cerdas): Memotong kelompok frasa 
+        berdasarkan panjang teks DAN jeda nafas alami pembicara (Delta > 0.45s).
         """
         phrases = []
         current_phrase = []
         current_char_count = 0
 
-        for item in words:
+        for idx, item in enumerate(words):
             word_len = len(item["word"])
-            # Jika grup sudah menyentuh batas kata atau batas karakter, kunci grup tersebut [cite: 63, 64]
-            if len(current_phrase) >= max_words or (current_char_count + word_len > max_chars and current_phrase):
+            
+            # Cek deteksi jeda alami ke kata berikutnya
+            is_natural_pause = False
+            if idx < len(words) - 1:
+                delta_time = words[idx + 1]["start"] - item["start"]
+                if delta_time > NATURAL_GAP_THRESHOLD:
+                    is_natural_pause = True
+
+            # Kondisi pemotongan grup frasa
+            if len(current_phrase) >= MAX_WORDS_PER_PHRASE or \
+               (current_char_count + word_len > MAX_CHARS_PER_PHRASE and current_phrase) or \
+               (is_natural_pause and current_phrase):
+                
                 phrases.append(current_phrase)
                 current_phrase = []
                 current_char_count = 0
@@ -29,53 +54,62 @@ class SubtitleEngineV2:
             current_phrase.append(item)
             current_char_count += word_len + 1
             
+            # Jika kata saat ini adalah akhir dari jeda nafas, langsung kunci grup setelah dimasukkan
+            if is_natural_pause:
+                phrases.append(current_phrase)
+                current_phrase = []
+                current_char_count = 0
+            
         if current_phrase:
             phrases.append(current_phrase)
         return phrases
 
     def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body") -> list:
         """
-        Subtitle Engine V4.5: Memisahkan tanggung jawab penataan waktu grup frasa pendek.
+        Subtitle Engine V4.6: Memproses sinkronisasi waktu karaoke berantai bebas bug overlap.
         """
         if not section_words:
             return []
 
-        # EVALUASI 1: Lakukan deepcopy agar data asal tidak bermutasi bebas [cite: 1]
         raw_words = copy.deepcopy(section_words)
         
-        # Pecah kata menjadi kelompok frasa pendek (TikTok Style) [cite: 67]
-        grouped_phrases = self._group_words_into_phrases(raw_words, max_words=4, max_chars=30)
+        # Pecah kata menjadi kelompok frasa pendek berbasis ritme bicara
+        grouped_phrases = self._group_words_into_phrases(raw_words)
         
-        # EVALUASI 3: Atur padding akhir adaptif berdasarkan tipe seksi agar fleksibel [cite: 36, 37]
+        # Atur padding adaptif berdasarkan tipe seksi
         if style_type == "cta":
-            last_padding = 0.30
+            last_padding = CTA_LAST_PADDING
         elif style_type == "hook":
-            last_padding = 0.15
+            last_padding = HOOK_LAST_PADDING
         else:
-            last_padding = 0.20
+            last_padding = BODY_LAST_PADDING
 
         clips = []
 
-        # Proses rantai waktu per grup frasa
-        for phrase in grouped_phrases:
+        # Proses koordinat rantai waktu per grup frasa
+        for p_idx, phrase in enumerate(grouped_phrases):
             phrase_len = len(phrase)
             
             # Bangun koordinat rantai waktu internal grup
             for i in range(phrase_len - 1):
-                # EVALUASI 2: Buat gap adaptif proporsional terhadap kecepatan ketukan kata (Anti-Negatif) [cite: 12, 25, 26]
-                gap = min(0.03, (phrase[i+1]["start"] - phrase[i]["start"]) * 0.4) [cite: 14, 25]
-                phrase[i]["end"] = phrase[i + 1]["start"] - gap [cite: 25]
+                gap = min(CHAIN_GAP_MAX, (phrase[i+1]["start"] - phrase[i]["start"]) * 0.4)
+                phrase[i]["end"] = phrase[i + 1]["start"] - gap
             
-            # Berikan padding pada kata terakhir di frasa ini
-            phrase[-1]["end"] += last_padding
+            # EVALUASI 2 FIXED: Padding hanya disuntikkan pada frasa paling akhir di dalam seksi tersebut (Anti-Overlap)
+            if p_idx == len(grouped_phrases) - 1:
+                phrase[-1]["end"] += last_padding
+            else:
+                # Frasa tengah ditahan tepat hingga frame frasa berikutnya mulai berjalan
+                phrase[-1]["end"] = grouped_phrases[p_idx + 1][0]["start"] - CHAIN_GAP_MAX
 
-            # Render frame karaoke progresif untuk kata aktif di dalam grup frasa ini
+            # Render frame karaoke progresif untuk kata aktif
             for i, item in enumerate(phrase):
                 word_start = item["start"]
-                word_duration = max(item["end"] - item["start"], 0.15) # Batas aman durasi minimal [cite: 22]
+                word_duration = max(item["end"] - item["start"], MIN_WORD_DURATION)
                 
-                # EVALUASI 5 DEBUG: Cetak data sinkronisasi ke log GitHub Actions untuk kemudahan pelacakan [cite: 50, 51]
-                print(f"📌 Sub V4.5 [{style_type.upper()}]: {item['word']} | {word_start:.2f}s - {word_start+word_duration:.2f}s") [cite: 52]
+                # EVALUASI 4 CONTROLLED: Log debug hanya aktif jika variabel DEBUG_SUBTITLE bernilai True
+                if DEBUG_SUBTITLE:
+                    print(f"📌 Sub V4.6 [{style_type.upper()}]: {item['word']} | {word_start:.2f}s - {word_start+word_duration:.2f}s")
 
                 frame = self.renderer.create_progressive_frame(
                     words_list=phrase,
@@ -87,7 +121,7 @@ class SubtitleEngineV2:
                 
                 img_rgba = np.array(frame.convert("RGBA"))
                 
-                # Gunakan .subclipped() jika memakai MoviePy 2.x, hapus .fade_in jika memicu error runtime [cite: 3, 10]
+                # Render stiker berdimensi penuh tanpa redundansi parameter transparent=True
                 clip = (ImageClip(img_rgba)
                         .with_start(word_start)
                         .with_duration(word_duration)
@@ -95,6 +129,6 @@ class SubtitleEngineV2:
                 
                 clips.append(clip)
 
-        # Bersihkan cache render setelah satu seksi video selesai dikerjakan agar RAM tetap lega [cite: 124]
+        # Bersihkan cache render setelah satu seksi selesai dikerjakan agar RAM tetap lega
         self.renderer.clear_cache()
         return clips
