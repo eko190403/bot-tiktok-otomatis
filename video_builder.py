@@ -96,7 +96,7 @@ async def create_video() -> bool:
 
         # 4. Potong & Zoom Background
         clip_count = len(video_files)
-        # Berikan padding durasi ekstra 2 detik per klip agar totalnya tidak defisit/kurang
+        # Berikan padding durasi ekstra 2 detik per klip agar totalnya tidak defisit
         duration_per_clip = (total_duration / clip_count) + 2.0
         
         for file in video_files:
@@ -106,8 +106,8 @@ async def create_video() -> bool:
         # Gabungkan semua klip background
         raw_combined_bg = concatenate_videoclips(processed_clips, method="compose")
         
-        # PERBAIKAN UTAMA: Potong ujung gabungan video tepat seukuran durasi total audio agar tidak freezing/berhenti duluan
-        combined_bg = raw_combined_bg.subclip(0, total_duration)
+        # PERBAIKAN MOVIEPY 2.X: Menggunakan cropped_by_time(0, total_duration) untuk memotong ujung durasi secara aman
+        combined_bg = raw_combined_bg.cropped_by_time(0, total_duration)
 
         # 5. Memecah list data absolut menggunakan filter penanda seksi
         hook_words = [x for x in all_timestamps if x["section"] == "hook"]
@@ -142,7 +142,7 @@ async def create_video() -> bool:
             if os.path.exists(file): os.remove(file)
         if os.path.exists(vo_file_path): os.remove(vo_file_path)
             
-        print("🎉 Sukses Besar! Masalah video membeku selesai ditangani.")
+        print("🎉 Sukses Besar! Masalah sintaks subclip MoviePy 2.x selesai diperbaiki.")
         return True
         
     except Exception as e:
