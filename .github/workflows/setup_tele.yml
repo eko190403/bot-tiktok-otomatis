@@ -7,11 +7,11 @@ jobs:
   link-bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Daftarkan Webhook Ke Telegram API
+      - name: Daftarkan Webhook Ke Telegram API via Issues
         env:
           TELEGRAM_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
           GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
         run: |
           curl -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook" \
             -H "Content-Type: application/json" \
-            -d "{\"url\": \"https://api.github.com/repos/eko190403/bot-tiktok-otomatis/dispatches\"}"
+            -d "{\"url\": \"https://api.github.com/repos/eko190403/bot-tiktok-otomatis/issues/1/comments\", \"secret_token\": \"$GH_PAT_TOKEN\"}"
