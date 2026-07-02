@@ -10,14 +10,12 @@ from dataclasses import dataclass
 logger = logging.getLogger("video_pipeline")
 TICKS_PER_SECOND = 10_000_000
 
-# Konstanta Arah Backtracking
 DIR_DIAGONAL = 1
 DIR_UP = 2
 DIR_LEFT = 3
 
-# Kamus Normalisasi Fonetik Bahasa Indonesia untuk Mengunci Akurasi TTS
+# PERBAIKAN: Kamus fonetik disederhanakan hanya untuk ejaan/singkatan tanpa mengubah makna kata
 PHONETIC_DICTIONARY = {
-    "KARNA": "KARENA",
     "NGGAK": "TIDAK",
     "NGAK": "TIDAK",
     "GAK": "TIDAK",
@@ -29,9 +27,7 @@ PHONETIC_DICTIONARY = {
     "DGN": "DENGAN",
     "YG": "YANG",
     "KRNA": "KARENA",
-    "JELASIN": "MENJELASKAN",
-    "MANDANG": "MEMANDANG",
-    "SKIP": "LEWATI"
+    "KARNA": "KARENA"
 }
 
 @dataclass(slots=True)
@@ -64,29 +60,22 @@ def normalize_token(text: str) -> str:
     return "".join(cleaned_chars).upper().strip()
 
 def apply_phonetic_normalization(token: str) -> str:
-    """TAHAP 1: Menyelaraskan variasi ucapan TTS Indonesia ke bentuk baku kamus target."""
     return PHONETIC_DICTIONARY.get(token, token)
 
 def fast_levenshtein_similarity(s1: str, s2: str) -> float:
-    if s1 == s2:
-        return 1.0
-    if not s1 or not s2:
-        return 0.0
-    if len(s1) < len(s2):
-        s1, s2 = s2, s1
+    if s1 == s2: return 1.0
+    if not s1 or not s2: return 0.0
+    if len(s1) < len(s2): s1, s2 = s2, s1
     distances = range(len(s2) + 1)
     for i2, c2 in enumerate(s2):
         distances_ = [i2+1]
         for i1, c1 in enumerate(s1):
-            if c1 == c2:
-                distances_.append(distances[i1])
-            else:
-                distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
+            if c1 == c2: distances_.append(distances[i1])
+            else: distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
         distances = distances_
     return 1.0 - (distances[-1] / max(len(s1), len(s2)))
 
 def pipeline_repair_tokens(source_seq: list, target_tokens: list) -> list:
-    """TAHAP 2: Perbaikan Token Linear dengan Kamus Target Terbaku."""
     if not source_seq:
         return []
     target_set = {t["token"] for t in target_tokens}
@@ -95,7 +84,6 @@ def pipeline_repair_tokens(source_seq: list, target_tokens: list) -> list:
     N = len(source_seq)
     
     while i < N:
-        # Multi-Token Merge (2-4 kata pecah dari Edge-TTS)
         merged_found = False
         for window in range(4, 1, -1):
             if i + window <= N:
@@ -114,10 +102,8 @@ def pipeline_repair_tokens(source_seq: list, target_tokens: list) -> list:
                     i += window
                     merged_found = True
                     break
-        if merged_found:
-            continue
+        if merged_found: continue
             
-        # Split Token Berbasis Urutan Target Konten
         curr = source_seq[i]
         split_found = False
         for tgt in target_set:
@@ -160,13 +146,12 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
                     "duration": chunk["duration"] / TICKS_PER_SECOND
                 })
     except Exception as e:
-        logger.exception("Edge-TTS communication failed")
+        logger.exception("Edge-TTS communication failed via network connection")
         raise RuntimeError(f"API Jaringan Edge-TTS Gagal: {e}") from e
 
     if not raw_boundaries or not audio_data:
         raise RuntimeError("Gagal menghasilkan metadata WordBoundary dari teks.")
 
-    # Atomic Write
     temp_fd = None
     temp_audio_path = None
     try:
@@ -177,12 +162,13 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         temp_fd = None
         os.replace(temp_audio_path, audio_path)
     except Exception as e:
-        logger.error("Failed to write audio file: %s", e)
+        logger.exception("Failed to write audio file atomically")
         if temp_fd is not None: os.close(temp_fd)
-        if temp_audio_path and os.path.exists(temp_audio_path): os.remove(temp_audio_path)
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try: os.remove(temp_audio_path)
+            except OSError: pass
         raise
 
-    # Ekstraksi Awal & Aplikasi Normalisasi Fonetik Sumber
     first_offset = raw_boundaries[0]["start"]
     raw_source_seq = []
     for b in raw_boundaries:
@@ -190,7 +176,7 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         if disp:
             raw_source_seq.append({
                 "word": b["word"], 
-                "display": apply_phonetic_normalization(disp), # Normalisasi Awal
+                "display": apply_phonetic_normalization(disp),
                 "start": b["start"] - first_offset,
                 "end": (b["start"] - first_offset) + b["duration"],
                 "duration": b["duration"]
@@ -205,29 +191,18 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     for tk in tokenize(story): target_seq.append({"token": tk, "section": "story"})
     for tk in tokenize(cta): target_seq.append({"token": tk, "section": "cta"})
 
-    # Jalankan Perbaikan Token
     source_seq = pipeline_repair_tokens(raw_source_seq, target_seq)
     N, M = len(source_seq), len(target_seq)
 
     if N == 0 or M == 0:
         return [], SyncMetadata(0, M, 0.0, M, [])
 
-    # =====================================================================
-    # TAHAP 3 & 4: PRE-CALCULATED MATRIKS SIMILARITY & INTEGER DP ALIGNMENT
-    # =====================================================================
-    # Skala Integer untuk Efisiensi CPU Maksimal (Poin 6)
-    # Match = 0, Insert = 10, Delete = 10, Max Substitution = 15
     COST_INSERT = 10
     COST_DELETE = 10
     
-    similarity_matrix = [[0.0] * M for _ in range(N)]
+    similarity_matrix = [[fast_levenshtein_similarity(source_seq[i]["display"], target_seq[j]["token"]) for j in range(M)] for i in range(N)]
     dp = [[0] * (M + 1) for _ in range(N + 1)]
     trace = [[0] * (M + 1) for _ in range(N + 1)]
-
-    # 1. Forward-Pass: Hitung matriks kemiripan satu kali saja (Poin 2)
-    for i in range(N):
-        for j in range(M):
-            similarity_matrix[i][j] = fast_levenshtein_similarity(source_seq[i]["display"], target_seq[j]["token"])
 
     for i in range(1, N + 1):
         dp[i][0] = i * COST_INSERT
@@ -236,7 +211,6 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         dp[0][j] = j * COST_DELETE
         trace[0][j] = DIR_LEFT
 
-    # 2. Eksekusi Matriks Jalur Terpendek Menggunakan Operasi Integer
     for i in range(1, N + 1):
         for j in range(1, M + 1):
             sim = similarity_matrix[i-1][j-1]
@@ -248,15 +222,8 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
 
             min_cost = min(cost_diag, cost_up, cost_left)
             dp[i][j] = min_cost
+            trace[i][j] = DIR_DIAGONAL if min_cost == cost_diag else (DIR_UP if min_cost == cost_up else DIR_LEFT)
 
-            if min_cost == cost_diag:
-                trace[i][j] = DIR_DIAGONAL
-            elif min_cost == cost_up:
-                trace[i][j] = DIR_UP
-            else:
-                trace[i][j] = DIR_LEFT
-
-    # Backtracking Cepat Berbasis Memori Matriks Similarity (Tanpa Kalkulasi Ulang)
     i, j = N, M
     alignment_map = {}
     
@@ -265,8 +232,6 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         if direction == DIR_DIAGONAL:
             sim_score = similarity_matrix[i-1][j-1]
             t_word = target_seq[j-1]["token"]
-            
-            # Poin 3: Batas Ambang Dinamis Mengikuti Panjang Kata Asli
             len_t = len(t_word)
             threshold = 0.90 if len_t <= 3 else (0.75 if len_t <= 6 else 0.60)
             
@@ -274,14 +239,9 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
                 alignment_map[i-1] = j-1
             i -= 1
             j -= 1
-        elif direction == DIR_UP:
-            i -= 1
-        else:
-            j -= 1
+        elif direction == DIR_UP: i -= 1
+        else: j -= 1
 
-    # =====================================================================
-    # TAHAP 5: MULTI-FACTOR CONFIDENCE SCORING & REKONSTRUKSI
-    # =====================================================================
     final_timestamps = []
     matched_targets = set()
 
@@ -290,8 +250,6 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
             tgt_idx = alignment_map[idx]
             section = target_seq[tgt_idx]["section"]
             matched_targets.add(tgt_idx)
-            
-            # Poin 5: Multi-Factor Confidence (Kombinasi Jarak Teks + Penalti Penyelarasan Global)
             base_sim = similarity_matrix[idx][tgt_idx]
             alignment_penalty = 0.15 if abs(idx - tgt_idx) > 3 else 0.0
             calculated_conf = max(0.0, base_sim - alignment_penalty)
@@ -308,10 +266,7 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         )
 
     matched_count = len(matched_targets)
-    failed_tokens = [
-        {"token": t["token"], "section": t["section"], "expected_pointer": idx}
-        for idx, t in enumerate(target_seq) if idx not in matched_targets
-    ]
+    failed_tokens = [{"token": t["token"], "section": t["section"], "expected_pointer": idx} for idx, t in enumerate(target_seq) if idx not in matched_targets]
 
     metadata = SyncMetadata(
         matched=matched_count, total=M,
