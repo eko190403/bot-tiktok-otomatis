@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruang Pikir - Video Generator Panel</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); text-align: center; max-width: 400px; width: 90%; }
+        h1 { color: #38bdf8; font-size: 1.8rem; margin-bottom: 0.5rem; }
+        p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 2rem; }
+        input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        button { background: #0284c7; color: white; border: none; padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: background 0.2s; }
+        button:hover { background: #0369a1; }
+        #status { margin-top: 1rem; font-size: 0.9rem; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Vio Video Generator</h1>
+        <p>Ketuk tombol di bawah untuk memicu pembuatan video TikTok Auto-Pilot langsung di GitHub Actions Cloud.</p>
+        
+        <input type="password" id="patToken" placeholder="Masukkan GitHub PAT Token (ghp_...)">
+        <button onclick="triggerPipeline()">🚀 GENERATE VIDEO</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function triggerPipeline() {
+            const token = document.getElementById('patToken').value.trim();
+            const statusDiv = document.getElementById('status');
+            
+            if(!token) {
+                statusDiv.style.color = '#ef4444';
+                statusDiv.innerText = "❌ Eror: Masukkan GitHub PAT Token kamu terlebih dahulu!";
+                return;
+            }
+
+            statusDiv.style.color = '#38bdf8';
+            statusDiv.innerText = "⏳ Menghubungi GitHub Actions...";
+
+            const url = "https://api.github.com/repos/eko190403/bot-tiktok-otomatis/dispatches";
+            const payload = { event_type: "webhook_trigger" };
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `token ${token}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 204) {
+                    statusDiv.style.color = '#4ade80';
+                    statusDiv.innerText = "🚀 SUKSES! GitHub Actions telah dibangunkan. Video sedang dirender di awan!";
+                } else {
+                    const text = await response.text();
+                    statusDiv.style.color = '#ef4444';
+                    statusDiv.innerText = `❌ Gagal (${response.status}): ${text}`;
+                }
+            } catch (err) {
+                statusDiv.style.color = '#ef4444';
+                statusDiv.innerText = `❌ Kesalahan Koneksi: ${err.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
+
