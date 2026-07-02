@@ -48,7 +48,6 @@ class SubtitleEngineV2:
                 is_punctuation_split
             )
             
-            # PERBAIKAN BUG: Hapus validasi idx untuk memastikan semua kata masuk ke list frasa
             if should_split:
                 phrases.append(current_phrase)
                 current_phrase = []
@@ -60,7 +59,8 @@ class SubtitleEngineV2:
 
     def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body") -> list:
         """
-        Timing Optimizer Mesin Utama V5.2 + Easing Animation Loop.
+        Ultra-Lightweight Timing Optimizer V6.0: 1 Kata = 1 ImageClip.
+        Memangkas alokasi objek memori secara radikal untuk stabilitas GitHub Actions.
         """
         if not section_words:
             return []
@@ -97,19 +97,21 @@ class SubtitleEngineV2:
 
                 word_total_duration = max(0.15, highlight_end - highlight_start)
 
-                frame_fps = 30.0
-                frame_time = 1.0 / frame_fps
+                # STRATEGI BARU: Hapus seluruh loop easing. Langsung render satu frame statis per kata.
+                frame = self.renderer.create_progressive_frame(
+                    words_list=phrase, active_index=i, font_path=FONT_PATH,
+                    font_size=font_size, scale_factor=1.10, style_type=style_type
+                )
+                img_rgba = np.array(frame.convert("RGBA"))
                 
-                easing_scales = [1.04, 1.08, 1.10]
-                current_time_pointer = highlight_start
+                clip = (ImageClip(img_rgba)
+                        .with_start(highlight_start)
+                        .with_duration(word_total_duration)
+                        .with_position((0, 0)))
+                clips.append(clip)
 
-                for s_idx, scale in enumerate(easing_scales):
-                    if word_total_duration > (s_idx * frame_time):
-                        frame = self.renderer.create_progressive_frame(
-                            words_list=phrase, active_index=i, font_path=FONT_PATH,
-                            font_size=font_size, scale_factor=scale, style_type=style_type
-                        )
-                        img_rgba = np.array(frame.convert("RGBA"))
+        self.renderer.clear_cache()
+        return clips
                         
                         clip = (ImageClip(img_rgba)
                                 .with_start(current_time_pointer)
