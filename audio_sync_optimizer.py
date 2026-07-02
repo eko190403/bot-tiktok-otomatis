@@ -167,50 +167,6 @@ def adjust_timestamps_with_gaps(timestamps: list, silence_regions: list) -> list
     return adjusted
 
 
-def interpolate_missing_timestamps(target_tokens: list, actual_timestamps: list) -> list:
-    """
-    Untuk token yang tidak match (akurasi rendah), interpolasi timing dari tetangga.
-    Catatan: sejak audio.py melakukan DP alignment + interpolasi sendiri, jumlah
-    actual_timestamps seharusnya SELALU >= target_tokens, jadi fungsi ini normalnya
-    no-op. Tetap dipertahankan sebagai safety net kalau ada perubahan upstream.
-    """
-    if len(actual_timestamps) >= len(target_tokens):
-        return actual_timestamps
-
-    result = []
-    actual_idx = 0
-
-    for target_idx, target in enumerate(target_tokens):
-        if actual_idx < len(actual_timestamps):
-            result.append(actual_timestamps[actual_idx])
-            actual_idx += 1
-        else:
-            if result:
-                last_ts = result[-1]
-                interpolated = {
-                    "word": target.get("word", ""),
-                    "display": target.get("token", ""),
-                    "start": last_ts["end"],
-                    "end": last_ts["end"] + 0.25,
-                    "duration": 0.25,
-                    "section": target.get("section", "body"),
-                    "confidence": 0.40,
-                }
-                result.append(interpolated)
-            else:
-                result.append({
-                    "word": target.get("word", ""),
-                    "display": target.get("token", ""),
-                    "start": 0.0,
-                    "end": 0.25,
-                    "duration": 0.25,
-                    "section": target.get("section", "body"),
-                    "confidence": 0.40,
-                })
-
-    return result
-
-
 def smooth_duration_outliers(timestamps: list, std_dev_threshold: float = 2.0) -> list:
     """
     Deteksi dan smoothing durasi kata yang outlier (terlalu panjang/pendek).
@@ -274,23 +230,26 @@ async def optimize_subtitle_timing(
         except Exception as e:
             logger.warning(f"⚠️ Smoothing gagal, dilewati: {e}")
 
-    # Step 3: Interpolasi untuk missing tokens (safety net, normalnya no-op)
-    if len(optimized) < len(target_tokens):
-        logger.info(f"🔧 Interpolasi {len(target_tokens) - len(optimized)} token yang hilang")
-        optimized = interpolate_missing_timestamps(target_tokens, optimized)
-
-    # Step 4: Validasi continuity (tidak boleh ada overlap)
+    # Step 3: Validasi continuity ringan (tidak boleh ada overlap) sebelum konversi balik
     optimized = _validate_and_fix_continuity(optimized)
 
-    # Step 5: Konversi balik ke WordTimestamp + lockdown final (anti overlap/overflow
-    # terhadap durasi audio asli) — satu-satunya jaring pengaman terakhir.
+    # Step 4: Konversi balik ke WordTimestamp, lalu lewati GERBANG TUNGGAL invariant
+    # (validate_timeline_invariants) — satu-satunya tempat aturan timing ditegakkan
+    # secara eksplisit & final sebelum dipakai render.
     result = _to_wordtimestamp_list(optimized)
+
+    if len(result) != len(target_tokens):
+        logger.warning(
+            f"⚠️ Panjang timestamp ({len(result)}) tidak sama dengan target_tokens "
+            f"({len(target_tokens)}) — periksa upstream (audio.py), ini seharusnya tidak terjadi."
+        )
+
     try:
-        from audio import lockdown_timeline
+        from audio import validate_timeline_invariants
         audio_duration = librosa.get_duration(path=audio_file_path)
-        result = lockdown_timeline(result, audio_duration)
+        result = validate_timeline_invariants(result, audio_duration)
     except Exception as e:
-        logger.warning(f"⚠️ Lockdown final gagal, memakai hasil optimasi apa adanya: {e}")
+        logger.warning(f"⚠️ Validasi invariant final gagal, memakai hasil optimasi apa adanya: {e}")
 
     logger.info(f"✅ Optimasi selesai. Total timestamps: {len(result)}")
     return result
