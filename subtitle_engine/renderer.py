@@ -7,43 +7,45 @@ class SubtitleRenderer:
         self.width = width
         self.height = height
         self.styles = SubtitleStyles()
-        self.render_cache = {}
         
-        # EVALUASI 5: measure_img dan measure_draw dibuat sekali di __init__ agar hemat CPU
+        # Inisialisasi sistem Cache Terkendali
+        self.render_cache = {}
+        self.font_cache = {}       # Optimasi 1: Cache Font khusus agar tidak re-load file (EVALUASI 1)
+        self.static_layer_cache = {}  # Optimasi 2: Cache Lapisan Statis (Background Box + Blur Shadow)
+        
+        # Objek pengukur geometry sekali pakai
         self.measure_img = Image.new("RGBA", (1, 1))
         self.measure_draw = ImageDraw.Draw(self.measure_img)
 
     def clear_cache(self):
-        """Mematikan potensi memory leak dengan mengosongkan cache setelah seksi selesai."""
+        """Mematikan potensi memory leak dengan mengosongkan seluruh cache setelah seksi selesai."""
         self.render_cache.clear()
+        self.static_layer_cache.clear()
 
-    def create_progressive_frame(self, words_list: list, active_index: int, font_path: str, font_size: int, style_type: str = "body") -> Image.Image:
+    def _get_cached_font(self, font_path: str, font_size: int):
+        """Mengambil atau menyimpan instans font dari cache memori internal."""
+        font_key = (font_path, font_size)
+        if font_key not in self.font_cache:
+            try:
+                self.font_cache[font_key] = ImageFont.truetype(font_path, font_size)
+            except IOError:
+                self.font_cache[font_key] = ImageFont.load_default()
+        return self.font_cache[font_key]
+
+    def _render_static_layer(self, words_tuple: tuple, font, style_cfg) -> Image.Image:
         """
-        Subtitle Engine V4.6 (Karaoke Style Premium):
-        Layout stabil, penahanan draw konstan, dan performa tinggi bebas memory leak.
+        Merender Lapisan Statis (Background + Shadow Teks Putih).
+        Hanya dipanggil SEKALI per kelompok frasa baru (Menghemat waktu hitung CPU).
         """
-        words_tuple = tuple(w["word"] for w in words_list)
-        cache_key = (active_index, words_tuple, font_size, style_type)
-        if cache_key in self.render_cache:
-            return self.render_cache[cache_key]
-
-        base_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
+        static_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
         
-        try:
-            font = ImageFont.truetype(font_path, font_size)
-        except IOError:
-            font = ImageFont.load_default()
-
-        style_cfg = self.styles.get_style_config(style_type)
-        
-        # Hitung geometri kata menggunakan font tunggal agar layout stabil tanpa interupsi berkedip
+        # Hitung geometri kata secara presisi
         word_positions = []
         current_x = 0
-        # Gunakan self.measure_draw yang sudah dibuat sejak awal (EVALUASI 5)
         space_w = self.measure_draw.textbbox((0, 0), " ", font=font)[2] + 8
 
-        for idx, item in enumerate(words_list):
-            w_text = item["word"].upper()
+        for item_word in words_tuple:
+            w_text = item_word.upper()
             bbox = self.measure_draw.textbbox((0, 0), w_text, font=font)
             w_width = bbox[2] - bbox[0]
             w_height = bbox[3] - bbox[1]
@@ -57,33 +59,28 @@ class SubtitleRenderer:
             current_x += w_width + space_w
 
         total_sentence_width = current_x - space_w if word_positions else 0
-        
-        # EVALUASI 4: Menggunakan generator expression langsung di dalam max() tanpa membuat list sementara
         max_word_height = max(w["height"] for w in word_positions) if word_positions else 40
 
-        # Kunci posisi stabil di area emas 58% tinggi layar
         start_x = (self.width - total_sentence_width) // 2
         start_y = int(self.height * 0.58) - (max_word_height // 2)
 
-        # Koordinat bounding box latar belakang
+        # Bounding box koordinat box
         box_x0 = start_x - self.styles.BOX_PADDING_X
         box_y0 = start_y - self.styles.BOX_PADDING_Y
         box_x1 = start_x + total_sentence_width + self.styles.BOX_PADDING_X
         box_y1 = start_y + max_word_height + self.styles.BOX_PADDING_Y + 10
 
-        # 1. Gambar Background Rounded Box
-        box_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
-        box_draw = ImageDraw.Draw(box_canvas)
+        # Optimasi Poin 4: Gambar langsung rounded box ke canvas utama tanpa composite tambahan
+        static_draw = ImageDraw.Draw(static_canvas)
         box_fill = (self.styles.BOX_COLOR[0], self.styles.BOX_COLOR[1], self.styles.BOX_COLOR[2], 130)
-        box_draw.rounded_rectangle([box_x0, box_y0, box_x1, box_y1], radius=self.styles.BOX_ROUNDED_RADIUS, fill=box_fill)
-        base_canvas = Image.alpha_composite(base_canvas, box_canvas)
+        static_draw.rounded_rectangle([box_x0, box_y0, box_x1, box_y1], radius=self.styles.BOX_ROUNDED_RADIUS, fill=box_fill)
 
-        # 2. Gambar Lapisan Drop Shadow Blur Terpisah
+        # Gambar lapisan Drop Shadow Blur Terpisah
         shadow_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
         shadow_draw = ImageDraw.Draw(shadow_canvas)
         off_x, off_y = self.styles.SHADOW_OFFSET
 
-        for idx, w in enumerate(word_positions):
+        for w in word_positions:
             word_x = start_x + w["local_x"]
             shadow_draw.text(
                 (word_x + off_x, start_y + off_y), w["text"], font=font,
@@ -91,17 +88,46 @@ class SubtitleRenderer:
                 stroke_width=self.styles.STROKE_WIDTH, stroke_fill=self.styles.SHADOW_COLOR
             )
         
-        blur_radius = getattr(self.styles, 'SHADOW_BLUR_RADIUS', 6)
+        # Optimasi Poin 5: SubtitleStyles dijamin memiliki properti SHADOW_BLUR_RADIUS secara mutlak
+        blur_radius = self.styles.SHADOW_BLUR_RADIUS
         shadow_blurred = shadow_canvas.filter(ImageFilter.GaussianBlur(radius=blur_radius))
-        base_canvas = Image.alpha_composite(base_canvas, shadow_blurred)
+        
+        # Satukan background dan bayangan kabur menjadi satu lapisan statis tunggal
+        static_canvas = Image.alpha_composite(static_canvas, shadow_blurred)
+        
+        return static_canvas, word_positions, start_x, start_y
 
-        # 3. Gambar Teks Utama (Highlight Warna)
+    def create_progressive_frame(self, words_list: list, active_index: int, font_path: str, font_size: int, style_type: str = "body") -> Image.Image:
+        """
+        Subtitle Engine V4.8 (Ultimate Phrase Hybrid Layer):
+        Menggabungkan Static Cache Layer (Blur hanya sekali) dengan Dynamic Highlight Teks Utama.
+        """
+        words_tuple = tuple(w["word"] for w in words_list)
+        cache_key = (active_index, words_tuple, font_size, style_type)
+        if cache_key in self.render_cache:
+            return self.render_cache[cache_key]
+
+        font = self._get_cached_font(font_path, font_size)
+        style_cfg = self.styles.get_style_config(style_type)
+
+        # OPTIMASI DUA TAHAP (EVALUASI 2 & TAHAP LANJUT #169): 
+        # Cek apakah Lapisan Statis (Background + Shadow) untuk frasa kata ini sudah ada di cache
+        static_key = (words_tuple, font_size, style_type)
+        if static_key not in self.static_layer_cache:
+            self.static_layer_cache[static_key] = self._render_static_layer(words_tuple, font, style_cfg)
+        
+        # Panggil lapisan dasar hasil pengerjaan cache (Instan, Hemat Beban Kerja Gaussian Blur!)
+        static_layer_img, word_positions, start_x, start_y = self.static_layer_cache[static_key]
+        
+        # Buat salinan lapisan statis untuk disuntikkan teks dinamis aktif diatasnya
+        base_canvas = static_layer_img.copy()
         main_draw = ImageDraw.Draw(base_canvas)
+
+        # Gambar Teks Utama (Kata tidak aktif = Putih, Kata aktif = Kuning Murni)
         for idx, w in enumerate(word_positions):
             word_x = start_x + w["local_x"]
             
-            # EVALUASI 6: Ambil nilai warna aktif dari konfigurasi styles global (ACTIVE_WORD_COLOR)
-            highlight_color = getattr(self.styles, 'ACTIVE_WORD_COLOR', "#FFCC00")
+            highlight_color = self.styles.ACTIVE_WORD_COLOR
             text_color = highlight_color if idx == active_index else style_cfg["default_color"]
 
             main_draw.text(
