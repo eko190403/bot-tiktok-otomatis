@@ -64,6 +64,22 @@ jobs:
           echo "Isi folder output:"
           ls -lah output || true
 
+      - name: Kirim Hasil Video ke Telegram Bot
+        if: success()
+        run: |
+          VIDEO_FILE=$(ls output/*.mp4 | head -n 1)
+          
+          if [ -z "$VIDEO_FILE" ]; then
+            echo "❌ Eror: Tidak ada file video .mp4 di folder output!"
+            exit 1
+          fi
+          
+          echo "🚀 Mengirim $VIDEO_FILE ke Telegram..."
+          
+          curl -v -F video="@${VIDEO_FILE}" \
+            -F caption="✅ Video Ruang Pikir Berhasil Dirender Sempurna!" \
+            "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendVideo?chat_id=1120755820"
+
       - name: Upload Hasil Video
         if: success()
         uses: actions/upload-artifact@v4
