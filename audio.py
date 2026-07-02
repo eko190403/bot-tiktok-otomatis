@@ -4,11 +4,12 @@ import edge_tts
 async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
     """
     Membuat audio dari teks bersih dan menangkap timestamp kata-per-kata secara real-time.
-    Dilengkapi proteksi mutlak jika stream data WordBoundary kosong agar tidak memicu eror max().
+    Menggunakan pencocokan teks berbasis array kata asli untuk menjamin seksi tidak akan acak-acakan.
     """
-    words_hook = hook.split()
-    words_story = story.split()
-    words_cta = cta.split()
+    # Bersihkan kata dan buat kamus pencarian seksi berdasarkan teks kata asli
+    words_hook = [w.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").strip() for w in hook.split()]
+    words_story = [w.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").strip() for w in story.split()]
+    words_cta = [w.upper().replace(".", "").replace(",", "").replace("?", "").replace("!", "").strip() for w in cta.split()]
     
     full_clean_text = f"{hook}. {story} {cta}"
 
@@ -17,7 +18,6 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
     audio_data = bytearray()
     raw_timestamps = []
 
-    # Konsumsi stream tunggal
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
             audio_data.extend(chunk["data"])
@@ -33,11 +33,9 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
                 "end": end_sec
             })
 
-    # Simpan file audio mentah
     with open(audio_path, "wb") as f:
         f.write(audio_data)
 
-    # Filter tanda baca
     cleaned_timestamps = []
     for item in raw_timestamps:
         cleaned_word = item["word"].replace(".", "").replace(",", "").replace("?", "").replace("!", "").strip()
@@ -48,40 +46,43 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
                 "end": item["end"]
             })
 
-    # PERBAIKAN UTAMA: Validasi langsung di awal. Jika kosong, langsung kembalikan data fallback linear.
     if not cleaned_timestamps:
         print("⚠️ Data timestamp kosong dari stream. Membuat fallback durasi linear...")
         fallback_timestamps = []
-        
-        # Buat estimasi run-time linear sederhana berdasarkan panjang kata agar aman
         current_time = 0.0
-        for w in words_hook:
+        for w in hook.split():
             fallback_timestamps.append({"word": w, "start": current_time, "end": current_time + 0.3, "section": "hook"})
             current_time += 0.3
-        for w in words_story:
+        for w in story.split():
             fallback_timestamps.append({"word": w, "start": current_time, "end": current_time + 0.3, "section": "story"})
             current_time += 0.3
-        for w in words_cta:
+        for w in cta.split():
             fallback_timestamps.append({"word": w, "start": current_time, "end": current_time + 0.3, "section": "cta"})
             current_time += 0.3
-            
         return fallback_timestamps
 
-    # Normalisasi offset waktu (Masalah 2 Fix)
+    # Normalisasi offset waktu agar pas sejak detik 0.00
     first_offset = cleaned_timestamps[0]["start"]
     for item in cleaned_timestamps:
         item["start"] -= first_offset
         item["end"] -= first_offset
 
-    # Pemetaan seksi sekuensial (Masalah 1 Fix)
+    # PERBAIKAN LOGIKA UTAMA: Lacak posisi kata menggunakan pointer pencarian dinamis
     final_timestamps = []
-    idx_hook = len(words_hook)
-    idx_story = idx_hook + len(words_story)
+    
+    # Kumpulkan semua kata target berdasarkan seksi untuk dicocokkan posisinya
+    hook_len = len(words_hook)
+    story_len = len(words_story)
+    
+    current_match_idx = 0
 
-    for idx, item in enumerate(cleaned_timestamps):
-        if idx < idx_hook:
+    for item in cleaned_timestamps:
+        current_word = item["word"].upper()
+        
+        # Tentukan seksi berdasarkan posisi kecocokan kata sekuensial
+        if current_match_idx < hook_len:
             section = "hook"
-        elif idx < idx_story:
+        elif current_match_idx < (hook_len + story_len):
             section = "story"
         else:
             section = "cta"
@@ -92,5 +93,8 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
             "end": item["end"],
             "section": section
         })
+        
+        # Geser pointer kecocokan ke kata berikutnya
+        current_match_idx += 1
 
     return final_timestamps
