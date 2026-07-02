@@ -1,9 +1,15 @@
 import os
+import copy
 import numpy as np
 from PIL import Image
 from moviepy import ImageClip
 from subtitle_engine.renderer import SubtitleRenderer
 from config import WIDTH, HEIGHT, FONT_PATH
+
+# EVALUASI 7: Taruh variabel konfigurasi di atas (Jangan di-hardcode)
+CHAIN_GAP = 0.03
+MIN_DURATION = 0.15
+LAST_WORD_PADDING = 0.25
 
 class SubtitleEngineV2:
     def __init__(self):
@@ -11,34 +17,33 @@ class SubtitleEngineV2:
 
     def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body") -> list:
         """
-        Subtitle Engine V3.9 (Progressive Caption): Merender kalimat utuh berkelanjutan
-        dengan rantai durasi presisi agar visual menyatu natural dengan suara dubbing.
+        Subtitle Engine V4.2 (Orchestrator Clean Integration):
+        Memproses duplikasi list aman, penahan durasi minimal, dan transisi fade halus.
         """
         if not section_words:
             return []
 
-        # MASALAH 3 FIX: Terapkan rumus Rantai Durasi (Chain-Timing) rekomendasi kamumu
-        total_len = len(section_words)
-        for i in range(total_len - 1):
-            # Tahan visual kata aktif hingga 0.03 detik sebelum kata berikutnya muncul
-            section_words[i]["end"] = section_words[i + 1]["start"] - 0.03
+        # EVALUASI 1: Lakukan deepcopy agar list asal tidak bermutasi/berubah di tempat lain
+        words = copy.deepcopy(section_words)
+        total_len = len(words)
         
-        # Berikan padding napas 0.15 detik untuk kata paling akhir di seksi tersebut
-        section_words[-1]["end"] += 0.15
+        # Ikat rantai waktu berurutan
+        for i in range(total_len - 1):
+            words[i]["end"] = words[i + 1]["start"] - CHAIN_GAP
+        
+        # EVALUASI 6: Berikan padding waktu istirahat yang lebih longgar di akhir kalimat CTA
+        words[-1]["end"] += LAST_WORD_PADDING
 
         clips = []
 
-        # Loop untuk membuat potongan klip per kata aktif di dalam satu baris kalimat yang sama
-        for i, item in enumerate(section_words):
+        for i, item in enumerate(words):
             word_start = item["start"]
-            word_duration = item["end"] - item["start"]
             
-            if word_duration <= 0:
-                word_duration = 0.20
-
-            # Panggil renderer progresif (Kirim seluruh list kalimat dan berikan indeks kata aktif)
+            # EVALUASI 2: Amankan kalkulasi dari potensi durasi bernilai negatif menggunakan fungsi max()
+            word_duration = max(item["end"] - item["start"], MIN_DURATION)
+            
             frame = self.renderer.create_progressive_frame(
-                words_list=section_words,
+                words_list=words,
                 active_index=i,
                 font_path=FONT_PATH,
                 font_size=font_size,
@@ -47,11 +52,13 @@ class SubtitleEngineV2:
             
             img_rgba = np.array(frame.convert("RGBA"))
             
-            # Letakkan klip secara absolut. Dimensi gambar sudah full 1080x1920 sehingga set posisinya (0,0)
-            clip = (ImageClip(img_rgba, transparent=True)
+            # EVALUASI 8: MoviePy 2.x membaca channel alpha RGBA secara otomatis dari numpy array
+            # EVALUASI 3 FADE: Suntikkan efek fade_in berdurasi 50ms agar perpindahan tidak kaku mendadak
+            clip = (ImageClip(img_rgba)
                     .with_start(word_start)
                     .with_duration(word_duration)
-                    .with_position((0, 0)))
+                    .with_position((0, 0))
+                    .fade_in(0.05))
             
             clips.append(clip)
 
