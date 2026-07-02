@@ -59,8 +59,8 @@ class SubtitleEngineV2:
 
     def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body") -> list:
         """
-        Ultra-Lightweight Timing Optimizer V6.0: 1 Kata = 1 ImageClip.
-        Memangkas alokasi objek memori secara radikal untuk stabilitas GitHub Actions.
+        Ultra-Lightweight Timing Optimizer V6.1: BBox Integration Layer.
+        Menangani pembongkaran data tuple renderer dan pemetaan titik koordinat absolut.
         """
         if not section_words:
             return []
@@ -97,19 +97,26 @@ class SubtitleEngineV2:
 
                 word_total_duration = max(0.15, highlight_end - highlight_start)
 
-                # STRATEGI BARU: Hapus seluruh loop easing. Langsung render satu frame statis per kata.
-                frame = self.renderer.create_progressive_frame(
+                # Ekstraksi kembalian tuple (Image, Width, Height) dari engine renderer baru
+                frame, bbox_w, bbox_h = self.renderer.create_progressive_frame(
                     words_list=phrase, active_index=i, font_path=FONT_PATH,
                     font_size=font_size, scale_factor=1.10, style_type=style_type
                 )
+                
                 img_rgba = np.array(frame.convert("RGBA"))
                 
+                # Kalkulasi penempatan koordinat absolut berbasis geometri canvas mini
+                pos_x = (WIDTH - bbox_w) // 2
+                pos_y = int(HEIGHT * 0.70) - (bbox_h // 2)
+
                 clip = (ImageClip(img_rgba)
                         .with_start(highlight_start)
                         .with_duration(word_total_duration)
-                        .with_position((0, 0)))
+                        .with_position((pos_x, pos_y)))
                 clips.append(clip)
 
+        self.renderer.clear_cache()
+        return clips
         self.renderer.clear_cache()
         return clips
                         
