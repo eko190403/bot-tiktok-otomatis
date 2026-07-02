@@ -46,6 +46,13 @@ jobs:
             pip install -r requirements.txt
           fi
 
+      # === LANGKAH BARU: NOTIFIKASI MULAI ===
+      - name: Kirim Notifikasi Proses Dimulai ke Telegram
+        run: |
+          curl -v -X POST "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendMessage" \
+            -d "chat_id=1120755820" \
+            -d "text=⏳ Perintah diterima! Video Ruang Pikir sedang mulai diproses dan dirender di Cloud. Mohon tunggu sekitar 2-5 menit..."
+
       - name: Jalankan Bot
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
