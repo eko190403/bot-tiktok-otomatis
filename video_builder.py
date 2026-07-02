@@ -84,7 +84,7 @@ async def create_video() -> bool:
         keywords = extract_keywords_from_script(story)
         video_files = download_video_clips(keywords, target_count=4)
         
-        # 3. Generate Audio & Tangkap List Timestamp Terpadu
+        # 3. Generate Audio & Tangkap List Timestamp Terpadu Berbasis Seksi
         vo_file_path = "temp/vo.mp3"
         os.makedirs("temp", exist_ok=True)
         all_timestamps = await generate_voiceover_with_timestamps(hook, story, cta, vo_file_path)
@@ -96,20 +96,16 @@ async def create_video() -> bool:
 
         # 4. Potong & Zoom Background
         clip_count = len(video_files)
-        # Berikan padding durasi ekstra 2 detik per klip agar totalnya tidak defisit
         duration_per_clip = (total_duration / clip_count) + 2.0
         
         for file in video_files:
             processed_clip = process_background_clip(file, duration_per_clip)
             processed_clips.append(processed_clip)
             
-        # Gabungkan semua klip background
         raw_combined_bg = concatenate_videoclips(processed_clips, method="compose")
-        
-        # PERBAIKAN MOVIEPY 2.X: Menggunakan cropped_by_time(0, total_duration) untuk memotong ujung durasi secara aman
-        combined_bg = raw_combined_bg.cropped_by_time(0, total_duration)
+        combined_bg = raw_combined_bg.subclipped(0, total_duration)
 
-        # 5. Memecah list data absolut menggunakan filter penanda seksi
+        # 5. Memecah list data absolut menggunakan filter penanda seksi yang aman
         hook_words = [x for x in all_timestamps if x["section"] == "hook"]
         story_words = [x for x in all_timestamps if x["section"] == "story"]
         cta_words = [x for x in all_timestamps if x["section"] == "cta"]
@@ -117,7 +113,7 @@ async def create_video() -> bool:
         engine_v3 = SubtitleEngineV2()
         all_text_clips = []
 
-        # Kirim potongan list kata langsung ke generator
+        # Kirim potongan list kata langsung ke generator progresif baru
         all_text_clips.extend(engine_v3.generate_subtitle_clips(hook_words, font_size=FONT_SIZE_HOOK, style_type="hook"))
         all_text_clips.extend(engine_v3.generate_subtitle_clips(story_words, font_size=FONT_SIZE_BODY, style_type="body"))
         all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_words, font_size=FONT_SIZE_BODY, style_type="cta"))
@@ -129,7 +125,7 @@ async def create_video() -> bool:
         output_file_path = os.path.join(DIR_OUTPUT, "final_output.mp4")
         os.makedirs(DIR_OUTPUT, exist_ok=True)
         
-        print(f"🔄 Memulai proses ekspor video dengan durasi penuh {total_duration:.2f} detik...")
+        print(f"🔄 Memulai proses ekspor video dengan Progressive Caption V3 resmi...")
         final_video.write_videofile(output_file_path, fps=30, codec="libx264", audio_codec="aac", threads=4)
         
         # Clean Up
@@ -142,7 +138,7 @@ async def create_video() -> bool:
             if os.path.exists(file): os.remove(file)
         if os.path.exists(vo_file_path): os.remove(vo_file_path)
             
-        print("🎉 Sukses Besar! Masalah sintaks subclip MoviePy 2.x selesai diperbaiki.")
+        print("🎉 Sukses Besar! Arsitektur Progressive Caption baru telah aktif sempurna.")
         return True
         
     except Exception as e:
