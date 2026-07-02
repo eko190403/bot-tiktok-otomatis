@@ -117,6 +117,13 @@ class SubtitleEngineV2:
 
         self.renderer.clear_cache()
         return clips
+                        .with_start(highlight_start)
+                        .with_duration(word_total_duration)
+                        .with_position((pos_x, pos_y)))
+                clips.append(clip)
+
+        self.renderer.clear_cache()
+        return clips
         self.renderer.clear_cache()
         return clips
                         
