@@ -9,12 +9,11 @@ MAX_STATIC_CACHE = 40
 MAX_FONT_CACHE = 20
 
 class PhraseCache:
-    def __init__(self, base_image: Image.Image, word_positions: list, start_x: int, start_y: int, max_h: int):
+    def __init__(self, base_image: Image.Image, word_positions: list, bbox_w: int, bbox_h: int):
         self.base_image = base_image       
         self.word_positions = word_positions 
-        self.start_x = start_x
-        self.start_y = start_y
-        self.max_h = max_h
+        self.bbox_w = bbox_w
+        self.bbox_h = bbox_h
 
 class SubtitleRenderer:
     def __init__(self, width: int = 1080, height: int = 1920):
@@ -25,9 +24,9 @@ class SubtitleRenderer:
         self.static_layer_cache = OrderedDict()
         self.font_cache = OrderedDict()
         
+        # Objek ukur kecil, membuang canvas raksasa 1080x1920 dari inisialisasi
         self.measure_img = Image.new("RGBA", (1, 1))
         self.measure_draw = ImageDraw.Draw(self.measure_img)
-        self.shadow_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
 
     def clear_cache(self):
         self.static_layer_cache.clear()
@@ -41,7 +40,6 @@ class SubtitleRenderer:
             self.font_cache.move_to_end(font_key)
             return self.font_cache[font_key]
             
-        # PERBAIKAN SYSTEM FALLBACK: Paksa cari font sistem Linux jika font proyek gagal dimuat
         font_obj = None
         paths_to_try = [
             font_path,
@@ -58,7 +56,7 @@ class SubtitleRenderer:
                 except IOError:
                     continue
         
-        if font_obj == None:
+        if font_obj is None:
             try:
                 font_obj = ImageFont.truetype(font_path, safe_font_size)
             except IOError:
@@ -73,17 +71,13 @@ class SubtitleRenderer:
     def _clean_unicode_text(self, text: str) -> str:
         if not text:
             return ""
-        # Disederhanakan agar tidak merusak string alfabet normal saat dibaca di cloud
         return str(text).strip().upper()
 
-    def _render_static_base(self, words_list: list, font_normal, font_active_base) -> tuple:
-        static_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
+    def _render_static_base(self, words_list: list, font_normal, font_active_base) -> PhraseCache:
         word_positions = []
         current_x = 0
-        
         stroke_w = getattr(self.styles, 'STROKE_WIDTH', 0)
         
-        # Penanganan fail-safe jika menggunakan load_default() yang tidak punya textbbox
         try:
             space_w = self.measure_draw.textbbox((0, 0), " ", font=font_normal)[2] + 14
         except Exception:
@@ -94,7 +88,6 @@ class SubtitleRenderer:
             if not clean_text:
                 clean_text = self._clean_unicode_text(item.get("word", ""))
             
-            # Buang tanda baca di ujung kata untuk kalkulasi boks agar rapi
             clean_text = clean_text.translate(str.maketrans('', '', string.punctuation))
             if not clean_text:
                 continue
@@ -108,7 +101,6 @@ class SubtitleRenderer:
                 w_act = max(10, bbox_a[2] - bbox_a[0])
                 h_act = max(10, bbox_a[3] - bbox_a[1])
             except Exception:
-                # Fallback ukuran manual jika textbbox gagal
                 w_norm, h_norm = len(clean_text) * 25, 40
                 w_act, h_act = len(clean_text) * 28, 44
             
@@ -133,20 +125,31 @@ class SubtitleRenderer:
         heights = [w["h_normal"] for w in word_positions]
         max_word_height = max(heights) if heights else 40
 
-        start_x = (self.width - total_sentence_width) // 2
-        start_y = int(self.height * 0.70) - (max_word_height // 2) # Diturunkan ke posisi posisi rasio 0.70 agar pas di mata viewer TikTok
+        # OPTIMASI DINAMIS: Batasi ukuran canvas gambar seminimal mungkin hanya seukuran teks + padding box
+        padding_x = self.styles.BOX_PADDING_X
+        padding_y = self.styles.BOX_PADDING_Y
+        
+        bbox_w = total_sentence_width + (padding_x * 2) + 20
+        bbox_h = max_word_height + (padding_y * 2) + 30
 
-        box_x0 = start_x - self.styles.BOX_PADDING_X
-        box_y0 = start_y - self.styles.BOX_PADDING_Y
-        box_x1 = start_x + total_sentence_width + self.styles.BOX_PADDING_X
-        box_y1 = start_y + max_word_height + self.styles.BOX_PADDING_Y + 12
+        static_canvas = Image.new("RGBA", (bbox_w, bbox_h), (0, 0, 0, 0))
+        
+        # Titik start internal di dalam canvas kecil
+        start_x = padding_x + 10
+        start_y = padding_y + 5
+
+        box_x0 = start_x - padding_x
+        box_y0 = start_y - padding_y
+        box_x1 = start_x + total_sentence_width + padding_x
+        box_y1 = start_y + max_word_height + padding_y + 12
 
         static_draw = ImageDraw.Draw(static_canvas)
         box_fill = (self.styles.BOX_COLOR[0], self.styles.BOX_COLOR[1], self.styles.BOX_COLOR[2], 130)
         static_draw.rounded_rectangle([box_x0, box_y0, box_x1, box_y1], radius=self.styles.BOX_ROUNDED_RADIUS, fill=box_fill)
 
-        self.shadow_canvas.paste((0, 0, 0, 0), [0, 0, self.width, self.height])
-        shadow_draw = ImageDraw.Draw(self.shadow_canvas)
+        # Buat shadow canvas terlokalisasi hanya seukuran bounding box
+        shadow_canvas = Image.new("RGBA", (bbox_w, bbox_h), (0, 0, 0, 0))
+        shadow_draw = ImageDraw.Draw(shadow_canvas)
         off_x, off_y = self.styles.SHADOW_OFFSET
 
         for w in word_positions:
@@ -161,7 +164,7 @@ class SubtitleRenderer:
                 shadow_draw.text((word_x + off_x, start_y + off_y), w["text"], font=font_normal, fill=self.styles.SHADOW_COLOR)
                 
         try:
-            shadow_blurred = self.shadow_canvas.filter(ImageFilter.GaussianBlur(radius=self.styles.SHADOW_BLUR_RADIUS))
+            shadow_blurred = shadow_canvas.filter(ImageFilter.GaussianBlur(radius=self.styles.SHADOW_BLUR_RADIUS))
             static_canvas = Image.alpha_composite(static_canvas, shadow_blurred)
         except Exception:
             pass
@@ -178,9 +181,17 @@ class SubtitleRenderer:
             except Exception:
                 main_static_draw.text((word_x, start_y), w["text"], font=font_normal, fill="#E0E0E0")
         
-        return PhraseCache(static_canvas, word_positions, start_x, start_y, max_word_height)
+        # Simpan offset koordinat internal awal agar fungsi penyorot kata tahu titik acuan gambarnya
+        for w in word_positions:
+            w["render_start_x"] = start_x
+            w["render_start_y"] = start_y
 
-    def create_progressive_frame(self, words_list: list, active_index: int, font_path: str, font_size: int, scale_factor: float = 1.0, style_type: str = "body") -> Image.Image:
+        return PhraseCache(static_canvas, word_positions, bbox_w, bbox_h)
+
+    def create_progressive_frame(self, words_list: list, active_index: int, font_path: str, font_size: int, scale_factor: float = 1.0, style_type: str = "body") -> tuple[Image.Image, int, int]:
+        """
+        Mengembalikan tuple: (Objek_Gambar_BBox, lebar_bbox, tinggi_bbox)
+        """
         if not words_list:
             words_list = [{"word": "KONTEN", "display": "KONTEN"}]
 
@@ -202,6 +213,7 @@ class SubtitleRenderer:
         
         phrase_storage = self.static_layer_cache[static_key]
         
+        # Salin canvas kecil (Bukan gambar 1080x1920 lagi, hemat alokasi memori secara drastis)
         final_frame = phrase_storage.base_image.copy()
         frame_draw = ImageDraw.Draw(final_frame)
 
@@ -217,9 +229,9 @@ class SubtitleRenderer:
                 curr_w = int(w["w_normal"] + (w["w_active_max"] - w["w_normal"]) * ratio)
                 curr_h = int(w["h_normal"] + (w["h_active_max"] - w["h_normal"]) * ratio)
 
-            word_center_x = phrase_storage.start_x + w["local_x"] + (w["w_normal"] // 2)
+            word_center_x = w["render_start_x"] + w["local_x"] + (w["w_normal"] // 2)
             render_x = word_center_x - (curr_w // 2)
-            render_y = phrase_storage.start_y + (w["h_normal"] // 2) - (curr_h // 2)
+            render_y = w["render_start_y"] + (w["h_normal"] // 2) - (curr_h // 2)
 
             try:
                 frame_draw.text(
@@ -230,4 +242,4 @@ class SubtitleRenderer:
             except Exception:
                 frame_draw.text((render_x, render_y), w["text"], font=font_active_current, fill=active_color)
 
-        return final_frame
+        return final_frame, phrase_storage.bbox_w, phrase_storage.bbox_h
