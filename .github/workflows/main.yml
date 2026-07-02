@@ -1,14 +1,17 @@
 name: Bot TikTok Auto-Pilot
 
 on:
-  repository_dispatch:
-    types: [telegram_trigger]
+  # Ganti gerbang masuk menjadi Issue Comment
+  issue_comment:
+    types: [created]
   workflow_dispatch: 
   schedule:
     - cron: '0 9 * * *' 
 
 jobs:
   build-and-run:
+    # Keamanan tambahan: pastikan workflow hanya jalan jika trigger berasal dari bot kamu
+    if: contains(github.event.comment.body, '/generate') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
 
     steps:
