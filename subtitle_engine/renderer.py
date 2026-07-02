@@ -7,18 +7,21 @@ class SubtitleRenderer:
         self.width = width
         self.height = height
         self.styles = SubtitleStyles()
-        self.render_cache = {}  # Cache internal terkendali
+        self.render_cache = {}
+        
+        # EVALUASI 5: measure_img dan measure_draw dibuat sekali di __init__ agar hemat CPU
+        self.measure_img = Image.new("RGBA", (1, 1))
+        self.measure_draw = ImageDraw.Draw(self.measure_img)
 
     def clear_cache(self):
-        """Mematikan potensi memory leak dengan mengosongkan cache setelah satu video selesai[cite: 123]."""
+        """Mematikan potensi memory leak dengan mengosongkan cache setelah seksi selesai."""
         self.render_cache.clear()
 
     def create_progressive_frame(self, words_list: list, active_index: int, font_path: str, font_size: int, style_type: str = "body") -> Image.Image:
         """
-        Subtitle Engine V4.5 (Karaoke Style Teroptimasi):
-        Layout tetap stabil tanpa pergeseran kata, anti-leak RAM, dan hemat CPU[cite: 77].
+        Subtitle Engine V4.6 (Karaoke Style Premium):
+        Layout stabil, penahanan draw konstan, dan performa tinggi bebas memory leak.
         """
-        # EVALUASI 9: Gunakan text kata saja untuk key cache agar lebih ringkas [cite: 184, 185]
         words_tuple = tuple(w["word"] for w in words_list)
         cache_key = (active_index, words_tuple, font_size, style_type)
         if cache_key in self.render_cache:
@@ -33,18 +36,15 @@ class SubtitleRenderer:
 
         style_cfg = self.styles.get_style_config(style_type)
         
-        # EVALUASI 4: Buat satu canvas ukur sekali pakai untuk seluruh kata (Hemat CPU) [cite: 135, 137]
-        measure_img = Image.new("RGBA", (1, 1))
-        measure_draw = ImageDraw.Draw(measure_img)
-        
-        # Hitung geometri kata menggunakan ukuran font tunggal agar layout stabil (EVALUASI 6 & 7) [cite: 158, 172]
+        # Hitung geometri kata menggunakan font tunggal agar layout stabil tanpa interupsi berkedip
         word_positions = []
         current_x = 0
-        space_w = measure_draw.textbbox((0, 0), " ", font=font)[2] + 8  # Spasi longgar dinamis [cite: 76]
+        # Gunakan self.measure_draw yang sudah dibuat sejak awal (EVALUASI 5)
+        space_w = self.measure_draw.textbbox((0, 0), " ", font=font)[2] + 8
 
         for idx, item in enumerate(words_list):
             w_text = item["word"].upper()
-            bbox = measure_draw.textbbox((0, 0), w_text, font=font)
+            bbox = self.measure_draw.textbbox((0, 0), w_text, font=font)
             w_width = bbox[2] - bbox[0]
             w_height = bbox[3] - bbox[1]
             
@@ -57,13 +57,15 @@ class SubtitleRenderer:
             current_x += w_width + space_w
 
         total_sentence_width = current_x - space_w if word_positions else 0
-        max_word_height = max([w["height"] for w in word_positions]) if word_positions else 40
+        
+        # EVALUASI 4: Menggunakan generator expression langsung di dalam max() tanpa membuat list sementara
+        max_word_height = max(w["height"] for w in word_positions) if word_positions else 40
 
-        # EVALUASI 4 POSITION: Tempatkan teks stabil di area emas 58% tinggi layar [cite: 80]
+        # Kunci posisi stabil di area emas 58% tinggi layar
         start_x = (self.width - total_sentence_width) // 2
         start_y = int(self.height * 0.58) - (max_word_height // 2)
 
-        # Hitung bounding box latar belakang (Konsisten tidak berkedip) [cite: 172]
+        # Koordinat bounding box latar belakang
         box_x0 = start_x - self.styles.BOX_PADDING_X
         box_y0 = start_y - self.styles.BOX_PADDING_Y
         box_x1 = start_x + total_sentence_width + self.styles.BOX_PADDING_X
@@ -76,7 +78,7 @@ class SubtitleRenderer:
         box_draw.rounded_rectangle([box_x0, box_y0, box_x1, box_y1], radius=self.styles.BOX_ROUNDED_RADIUS, fill=box_fill)
         base_canvas = Image.alpha_composite(base_canvas, box_canvas)
 
-        # 2. Gambar Lapisan Drop Shadow Blur Terpisah (Saran Profesional #8) [cite: 173, 176]
+        # 2. Gambar Lapisan Drop Shadow Blur Terpisah
         shadow_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
         shadow_draw = ImageDraw.Draw(shadow_canvas)
         off_x, off_y = self.styles.SHADOW_OFFSET
@@ -89,16 +91,18 @@ class SubtitleRenderer:
                 stroke_width=self.styles.STROKE_WIDTH, stroke_fill=self.styles.SHADOW_COLOR
             )
         
-        # Ambil radius blur dinamis dari configurasi styles [cite: 144, 145]
         blur_radius = getattr(self.styles, 'SHADOW_BLUR_RADIUS', 6)
         shadow_blurred = shadow_canvas.filter(ImageFilter.GaussianBlur(radius=blur_radius))
         base_canvas = Image.alpha_composite(base_canvas, shadow_blurred)
 
-        # 3. Gambar Teks Utama (Highlight Hanya Berubah Warna) [cite: 159]
+        # 3. Gambar Teks Utama (Highlight Warna)
         main_draw = ImageDraw.Draw(base_canvas)
         for idx, w in enumerate(word_positions):
             word_x = start_x + w["local_x"]
-            text_color = "#FFCC00" if idx == active_index else style_cfg["default_color"]
+            
+            # EVALUASI 6: Ambil nilai warna aktif dari konfigurasi styles global (ACTIVE_WORD_COLOR)
+            highlight_color = getattr(self.styles, 'ACTIVE_WORD_COLOR', "#FFCC00")
+            text_color = highlight_color if idx == active_index else style_cfg["default_color"]
 
             main_draw.text(
                 (word_x, start_y), w["text"], font=font,
