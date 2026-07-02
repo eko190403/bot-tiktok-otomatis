@@ -1,12 +1,11 @@
 import asyncio
 import edge_tts
 import unicodedata
-import string
 
 async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"):
     """
     Membuat audio dari teks bersih dan menangkap timestamp kata-per-kata secara real-time.
-    Seksi ditentukan menggunakan metode pencarian teks bersih (Anti-Overlapping Index).
+    Seksi ditentukan menggunakan metode Persentase Durasi Akurat (Anti-Crash Kata Kembar).
     """
     full_clean_text = f"{hook}. {story} {cta}"
     communicate = edge_tts.Communicate(full_clean_text, voice)
@@ -62,27 +61,23 @@ async def generate_voiceover_with_timestamps(hook: str, story: str, cta: str, au
         item["start"] -= first_offset
         item["end"] -= first_offset
 
-    # PERBAIKAN TOTAL: Segmentasi Berbasis Teks Bersih
+    # TOTAL DURASI UTAMA AUDIO
+    total_voice_duration = cleaned_timestamps[-1]["end"]
+
+    # PERBAIKAN MUTLAK: Pembagian Seksi Menggunakan Alokasi Waktu Linier
     final_timestamps = []
     
-    # Buat versi huruf kecil tanpa tanda baca untuk pencarian akurat
-    def clean_str(t):
-        return t.lower().translate(str.maketrans('', '', string.punctuation)).split()
-
-    hook_words_list = clean_str(hook)
-    story_words_list = clean_str(story)
+    # Menentukan batasan detik secara proporsional
+    hook_end_boundary = total_voice_duration * 0.18  # 18% awal untuk Hook
+    story_end_boundary = total_voice_duration * 0.88 # Hingga 88% untuk isi Story, sisanya CTA
 
     for item in cleaned_timestamps:
-        word_clean = item["display"].lower()
+        word_start = item["start"]
         
-        # Cek keberadaan kata di dalam teks aslinya secara berurutan
-        if word_clean in hook_words_list:
+        if word_start <= hook_end_boundary:
             section = "hook"
-            # Hapus kata yang sudah dipakai agar tidak tertukar jika ada kata kembar
-            hook_words_list.remove(word_clean)
-        elif word_clean in story_words_list:
+        elif word_start <= story_end_boundary:
             section = "story"
-            story_words_list.remove(word_clean)
         else:
             section = "cta"
             
