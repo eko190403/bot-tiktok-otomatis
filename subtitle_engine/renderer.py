@@ -55,8 +55,10 @@ class SubtitleRenderer:
 
     def _clean_unicode_text(self, text: str) -> str:
         """Menyaring emoji dan karakter non-huruf secara universal."""
+        if not text:
+            return ""
         cleaned_chars = []
-        for ch in text:
+        for ch in str(text):
             category = unicodedata.category(ch)
             if category.startswith('L') or category.startswith('N') or category == 'Zs':
                 cleaned_chars.append(ch)
@@ -65,7 +67,7 @@ class SubtitleRenderer:
     def _render_static_base(self, words_list: list, font_normal, font_active_base) -> tuple:
         """
         DIHITUNG HANYA SEKALI PER FRASA.
-        FIXED: Menggunakan default=40 pada max() untuk menghalau eror empty sequence secara mutlak.
+        Membentuk lapisan gambar dasar statis secara kokoh dan aman.
         """
         static_canvas = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
         word_positions = []
@@ -74,13 +76,12 @@ class SubtitleRenderer:
         stroke_w = getattr(self.styles, 'STROKE_WIDTH', 0)
         space_w = self.measure_draw.textbbox((0, 0), " ", font=font_normal)[2] + 14
 
+        # Ekstrak teks bersih ke dalam list penampung geometry
         for item in words_list:
-            # Gunakan text visual bersih yang sudah disediakan oleh audio.py
             clean_text = item.get("display", "").strip()
             if not clean_text:
                 clean_text = self._clean_unicode_text(item.get("word", ""))
-                
-            # Fallback jika kata benar-benar kosong setelah dibersihkan agar tidak crash
+            
             if not clean_text:
                 continue
 
@@ -102,7 +103,7 @@ class SubtitleRenderer:
             })
             current_x += w_norm + space_w
 
-        # SUNTIKAN PROTEKSI JIKA SATU BARIS FRASA KOSONG TOTAL
+        # Jika setelah loop tetap kosong, suntik langsung fallback text statis (Anti-Crash)
         if not word_positions:
             word_positions.append({
                 "text": "...", "w_normal": 20, "h_normal": 30,
@@ -112,8 +113,9 @@ class SubtitleRenderer:
 
         total_sentence_width = current_x - space_w
         
-        # PERBAIKAN BUG UTAMA: Menambahkan parameter default agar max() tidak meledak saat sequence kosong
-        max_word_height = max((w["h_normal"] for w in word_positions), default=40)
+        # Ekstrak tinggi maksimal secara manual dengan proteksi array dasar
+        heights = [w["h_normal"] for w in word_positions]
+        max_word_height = max(heights) if heights else 40
 
         start_x = (self.width - total_sentence_width) // 2
         start_y = int(self.height * 0.58) - (max_word_height // 2)
@@ -153,8 +155,12 @@ class SubtitleRenderer:
         return PhraseCache(static_canvas, word_positions, start_x, start_y, max_word_height)
 
     def create_progressive_frame(self, words_list: list, active_index: int, font_path: str, font_size: int, scale_factor: float = 1.0, style_type: str = "body") -> Image.Image:
-        """Subtitle Engine V7.0 (Safe Static Base Patching)."""
-        words_tuple = tuple(w.get("display", w.get("word", "")) for w in words_list)
+        """Subtitle Engine V7.1 (Ultimate Static Base Patching)."""
+        # Proteksi awal: Jika list kata kosong, isi dengan fallback default
+        if not words_list:
+            words_list = [{"word": "...", "display": "..."}]
+
+        words_tuple = tuple(w.get("display", w.get("word", "...")) for w in words_list)
         active_color = getattr(self.styles, 'ACTIVE_WORD_COLOR', "#FFCC00")
         
         safe_scale = round(min(scale_factor, 1.05), 1)
