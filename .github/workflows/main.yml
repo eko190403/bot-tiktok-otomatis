@@ -1,7 +1,6 @@
 name: Bot TikTok Auto-Pilot
 
 on:
-  # Menerima segala jenis ketukan kiriman dari luar (termasuk tombol web)
   repository_dispatch:
     types: [*]
   workflow_dispatch: 
