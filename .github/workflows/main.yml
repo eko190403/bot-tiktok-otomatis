@@ -10,8 +10,9 @@ on:
       - webhook_trigger
 
   schedule:
-    # 02:00 UTC = 09:00 WIB
-    - cron: '0 2 * * *'
+    # Jalan otomatis 8 kali sehari (setiap 2 jam dari jam 08:00 WIB - 22:00 WIB)
+    # UTC: 01:00, 03:00, 05:00, 07:00, 09:00, 11:00, 13:00, 15:00
+    - cron: '0 1,3,5,7,9,11,13,15 * * *'
 
 jobs:
   build-and-run:
