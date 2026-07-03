@@ -461,15 +461,45 @@ async def create_video() -> bool:
         moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips, use_bgclip=True)
 
         # ================= MUSIK LATAR OTOMATIS =================
-        # Mencari file musik dari folder assets/music/
         bg_music_clip = None
         music_dir = os.path.join(os.path.dirname(__file__), "assets", "music")
         music_extensions = (".mp3", ".wav", ".ogg", ".m4a")
-        if os.path.isdir(music_dir):
-            music_files = [f for f in os.listdir(music_dir) if f.lower().endswith(music_extensions)]
-            if music_files:
-                import random
-                chosen_music = os.path.join(music_dir, random.choice(music_files))
+        
+        os.makedirs(music_dir, exist_ok=True)
+        music_files = [f for f in os.listdir(music_dir) if f.lower().endswith(music_extensions)]
+        
+        if not music_files:
+            logger.info("🎵 Folder assets/music/ kosong. Mengunduh backsound gratis bebas hak cipta secara otomatis...")
+            import urllib.request
+            import random
+            
+            # List lagu dark/cinematic stoic dari Incompetech (Kevin MacLeod)
+            free_tracks = [
+                ("Dark_Times.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Times.mp3"),
+                ("Dark_Fog.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Fog.mp3"),
+                ("Echoes_of_Time.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Echoes%20of%20Time.mp3"),
+                ("Anxiety.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Anxiety.mp3"),
+                ("Distant_Tension.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Distant%20Tension.mp3")
+            ]
+            chosen_track_name, chosen_track_url = random.choice(free_tracks)
+            download_dest = os.path.join(music_dir, chosen_track_name)
+            try:
+                # Unduh file BGM dengan user agent agar tidak diblokir
+                req = urllib.request.Request(
+                    chosen_track_url,
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+                )
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    with open(download_dest, "wb") as out_file:
+                        out_file.write(response.read())
+                logger.info("✅ Berhasil mengunduh backsound otomatis: %s", chosen_track_name)
+                music_files = [chosen_track_name]
+            except Exception as dl_err:
+                logger.warning("⚠️ Gagal mengunduh backsound otomatis dari Incompetech: %s. Melanjutkan tanpa musik.", dl_err)
+                
+        if music_files:
+            import random
+            chosen_music = os.path.join(music_dir, random.choice(music_files))
                 try:
                     bg_music_raw = AudioFileClip(chosen_music)
                     moviepy_resources["bg_music_clip"] = bg_music_raw
