@@ -447,6 +447,29 @@ async def generate_voiceover_with_timestamps(
         failed_tokens=failed_tokens,
     )
 
+    # 9. PROTEKSI DURASI MAKSIMAL 58 DETIK (TIKTOK SHORTS)
+    try:
+        duration = librosa.get_duration(path=audio_path)
+        if duration > 58.0:
+            stretch_factor = duration / 58.0
+            logger.info("⏳ Durasi audio (%.2fs) melebihi batas 58s. Melakukan time-stretch dengan faktor %.2f...", duration, stretch_factor)
+            
+            import soundfile as sf
+            y, sr = librosa.load(audio_path, sr=None)
+            y_stretched = librosa.effects.time_stretch(y, rate=stretch_factor)
+            sf.write(audio_path, y_stretched, sr)
+            
+            # Koreksi timestamps agar tetap sinkron
+            for t in final_timestamps:
+                t.start = round(t.start / stretch_factor, 3)
+                t.end = round(t.end / stretch_factor, 3)
+                t.duration = round(t.end - t.start, 3)
+                
+            # Lockdown ulang dengan durasi baru
+            final_timestamps = lockdown_timeline(final_timestamps, 58.0)
+    except Exception as stretch_err:
+        logger.warning("⚠️ Gagal menerapkan proteksi durasi / time-stretch: %s", stretch_err)
+
     logger.info(
         f"📊 Sinkronisasi selesai: {matched_count}/{total} kata match "
         f"({accuracy*100:.1f}% akurasi), {missed} kata di-interpolasi."

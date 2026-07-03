@@ -244,13 +244,16 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             # Menunggu konfirmasi sukses dari TikTok
             print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
             success_selectors = [
+                '[data-e2e="upload-success-modal"]',
+                'button:has-text("Post another video")',
+                'button:has-text("Urus postingan")',
+                'button:has-text("Kelola konten")',
                 'text="Manage posts"',
                 'text="Manage content"',
                 'text="Manage your posts"',
                 'text="Post another video"',
                 'text="Urus postingan"',
-                'text="Kelola konten"',
-                '[data-e2e="upload-success-modal"]'
+                'text="Kelola konten"'
             ]
             
             success_found = False

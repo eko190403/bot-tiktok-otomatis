@@ -22,3 +22,6 @@ temp/
 # File OS
 .DS_Store
 Thumbs.db
+
+# Cache Video Pool Pexels
+assets/video_pool/
