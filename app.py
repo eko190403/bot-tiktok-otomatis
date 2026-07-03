@@ -151,13 +151,14 @@ async def main():
                     from youtube_uploader import upload_to_youtube
                     print(f"🎬 Menemukan video terbaru untuk YouTube: {latest_video}. Memulai upload...")
                     try:
-                        await upload_to_youtube(latest_video, caption=caption)
+                        youtube_url = await upload_to_youtube(latest_video, caption=caption)
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
                         
                         # Kirim notifikasi SUKSES ke Telegram
                         msg = (
                             "🚀 <b>YOUTUBE SHORTS UPLOAD SUKSES!</b>\n\n"
-                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
+                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n"
+                            f"🔗 <b>Tautan Shorts:</b> {youtube_url}\n\n"
                             f"✍️ <b>Caption:</b>\n<i>{caption}</i>"
                         )
                         send_telegram_message(msg)

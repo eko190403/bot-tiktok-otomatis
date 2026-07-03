@@ -26,5 +26,7 @@ Thumbs.db
 # Cache Video Pool Pexels
 assets/video_pool/
 
-# YouTube Cookies
+# YouTube Cookies & Credentials
 youtube_cookies.json
+youtube_credentials.json
+client_secret.json

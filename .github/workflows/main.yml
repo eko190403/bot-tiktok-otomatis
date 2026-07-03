@@ -73,15 +73,15 @@ jobs:
             echo "ℹ️ Secret TIKTOK_COOKIES tidak diset. Menggunakan berkas cookies.json bawaan dari repositori."
           fi
 
-      - name: Siapkan Cookies YouTube dari Secret
+      - name: Siapkan Kredensial YouTube dari Secret
         env:
-          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+          YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS }}
         run: |
-          if [ -n "$YOUTUBE_COOKIES" ]; then
-            echo "📝 Menulis berkas youtube_cookies.json secara dinamis dari GitHub Secrets..."
-            echo "$YOUTUBE_COOKIES" > youtube_cookies.json
+          if [ -n "$YOUTUBE_CREDENTIALS" ]; then
+            echo "📝 Menulis berkas youtube_credentials.json secara dinamis dari GitHub Secrets..."
+            echo "$YOUTUBE_CREDENTIALS" > youtube_credentials.json
           else
-            echo "ℹ️ Secret YOUTUBE_COOKIES tidak diset. Menggunakan berkas youtube_cookies.json bawaan dari repositori."
+            echo "ℹ️ Secret YOUTUBE_CREDENTIALS tidak diset. Menggunakan berkas youtube_credentials.json bawaan dari repositori."
           fi
 
       - name: Jalankan Bot
