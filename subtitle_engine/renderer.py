@@ -1,3 +1,7 @@
+"""
+subtitle_engine/renderer.py
+Subtitle Renderer Premium V2 — Multi-line word-wrap + Active Word Glow Effect
+"""
 import os
 import string
 import unicodedata
@@ -6,254 +10,343 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from subtitle_engine.styles import SubtitleStyles
 
 MAX_STATIC_CACHE = 40
-MAX_FONT_CACHE = 20
+MAX_FONT_CACHE   = 20
+
+# Lebar maksimal frase sebagai persentase lebar layar (80%)
+MAX_LINE_WIDTH_RATIO = 0.80
+
 
 class PhraseCache:
-    def __init__(self, base_image: Image.Image, word_positions: list, bbox_w: int, bbox_h: int):
-        self.base_image = base_image       
-        self.word_positions = word_positions 
-        self.bbox_w = bbox_w
-        self.bbox_h = bbox_h
+    def __init__(self, base_image: Image.Image, word_positions: list,
+                 bbox_w: int, bbox_h: int, line_count: int = 1):
+        self.base_image    = base_image
+        self.word_positions = word_positions  # list of dict, sudah berisi koordinat absolut di canvas
+        self.bbox_w        = bbox_w
+        self.bbox_h        = bbox_h
+        self.line_count    = line_count
+
 
 class SubtitleRenderer:
     def __init__(self, width: int = 1080, height: int = 1920):
-        self.width = width
+        self.width  = width
         self.height = height
         self.styles = SubtitleStyles()
-        
+
         self.static_layer_cache = OrderedDict()
-        self.font_cache = OrderedDict()
-        
-        # Objek ukur kecil, membuang canvas raksasa 1080x1920 dari inisialisasi
-        self.measure_img = Image.new("RGBA", (1, 1))
+        self.font_cache         = OrderedDict()
+
+        # Canvas ukur kecil — hindari alokasi 1080x1920 saat inisialisasi
+        self.measure_img  = Image.new("RGBA", (1, 1))
         self.measure_draw = ImageDraw.Draw(self.measure_img)
 
     def clear_cache(self):
         self.static_layer_cache.clear()
         self.font_cache.clear()
 
-    def _get_cached_font(self, font_path: str, font_size: int):
-        safe_font_size = int(font_size)
-        font_key = (font_path, safe_font_size)
-        
-        if font_key in self.font_cache:
-            self.font_cache.move_to_end(font_key)
-            return self.font_cache[font_key]
-            
-        font_obj = None
+    # ─────────────────────────────────────────────────────────────────────────
+    # Font helper
+    # ─────────────────────────────────────────────────────────────────────────
+    def _get_cached_font(self, font_path: str, font_size: int) -> ImageFont.FreeTypeFont:
+        safe_size = max(10, int(font_size))
+        key = (font_path, safe_size)
+
+        if key in self.font_cache:
+            self.font_cache.move_to_end(key)
+            return self.font_cache[key]
+
         paths_to_try = [
             font_path,
             "assets/fonts/Oswald-Bold.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         ]
-        
+        font_obj = None
         for path in paths_to_try:
             if path and os.path.exists(path):
                 try:
-                    font_obj = ImageFont.truetype(path, safe_font_size)
+                    font_obj = ImageFont.truetype(path, safe_size)
                     break
                 except IOError:
                     continue
-        
+
         if font_obj is None:
-            try:
-                font_obj = ImageFont.truetype(font_path, safe_font_size)
-            except IOError:
-                font_obj = ImageFont.load_default()
-            
-        self.font_cache[font_key] = font_obj
+            font_obj = ImageFont.load_default()
+
+        self.font_cache[key] = font_obj
         if len(self.font_cache) > MAX_FONT_CACHE:
             self.font_cache.popitem(last=False)
-            
         return font_obj
 
-    def _clean_unicode_text(self, text: str) -> str:
-        if not text:
-            return ""
-        return str(text).strip().upper()
+    # ─────────────────────────────────────────────────────────────────────────
+    # Text cleaning
+    # ─────────────────────────────────────────────────────────────────────────
+    def _clean_text(self, raw: str) -> str:
+        return str(raw).strip().upper().translate(
+            str.maketrans("", "", string.punctuation)
+        )
 
-    def _render_static_base(self, words_list: list, font_normal, font_active_base, style_type: str = "body") -> PhraseCache:
-        word_positions = []
-        current_x = 0
-        stroke_w = getattr(self.styles, 'STROKE_WIDTH', 0)
-        
-        from subtitle_engine.highlighter import KeywordHighlighter
-        highlighter = KeywordHighlighter()
-        style_cfg = self.styles.get_style_config(style_type)
-        default_color = style_cfg.get("default_color", "#FFFFFF")
-        
-        try:
-            space_w = self.measure_draw.textbbox((0, 0), " ", font=font_normal)[2] + 14
-        except Exception:
-            space_w = 20
+    # ─────────────────────────────────────────────────────────────────────────
+    # Multi-line word-wrap layout builder
+    # ─────────────────────────────────────────────────────────────────────────
+    def _build_lines(self, words_list: list, font_normal, space_w: int) -> list:
+        """
+        Memecah daftar kata menjadi baris-baris otomatis berdasarkan MAX_LINE_WIDTH_RATIO.
+        Mengembalikan list of list-of-word-dicts, setiap sub-list adalah satu baris.
+        """
+        max_px = int(self.width * MAX_LINE_WIDTH_RATIO)
+        lines = []
+        current_line = []
+        current_w = 0
 
         for item in words_list:
-            clean_text = item.get("display", "").strip()
-            if not clean_text:
-                clean_text = self._clean_unicode_text(item.get("word", ""))
-            
-            clean_text = clean_text.translate(str.maketrans('', '', string.punctuation))
-            if not clean_text:
+            text = self._clean_text(item.get("display", item.get("word", "")))
+            if not text:
                 continue
-
             try:
-                bbox_n = self.measure_draw.textbbox((0, 0), clean_text, font=font_normal, stroke_width=stroke_w)
-                w_norm = max(10, bbox_n[2] - bbox_n[0])
-                h_norm = max(10, bbox_n[3] - bbox_n[1])
-                
-                bbox_a = self.measure_draw.textbbox((0, 0), clean_text, font=font_active_base, stroke_width=stroke_w)
-                w_act = max(10, bbox_a[2] - bbox_a[0])
-                h_act = max(10, bbox_a[3] - bbox_a[1])
+                bb = self.measure_draw.textbbox((0, 0), text, font=font_normal)
+                w = max(10, bb[2] - bb[0])
+                h = max(10, bb[3] - bb[1])
             except Exception:
-                w_norm, h_norm = len(clean_text) * 25, 40
-                w_act, h_act = len(clean_text) * 28, 44
-            
-            word_positions.append({
-                "text": clean_text,
-                "w_normal": w_norm,
-                "h_normal": h_norm,
-                "w_active_max": w_act,
-                "h_active_max": h_act,
-                "local_x": current_x
+                w, h = len(text) * 24, 40
+
+            # Jika menambahkan kata ini melebihi batas baris, mulai baris baru
+            needed = current_w + w + (space_w if current_line else 0)
+            if current_line and needed > max_px:
+                lines.append(current_line)
+                current_line = []
+                current_w = 0
+
+            current_line.append({
+                "original": item,
+                "text": text,
+                "w": w,
+                "h": h,
             })
-            current_x += w_norm + space_w
+            current_w += w + (space_w if len(current_line) > 1 else 0)
 
-        if not word_positions:
-            word_positions.append({
-                "text": "KONTEN", "w_normal": 100, "h_normal": 40,
-                "w_active_max": 110, "h_active_max": 44, "local_x": 0
-            })
-            current_x = 100 + space_w
+        if current_line:
+            lines.append(current_line)
+        return lines
 
-        total_sentence_width = current_x - space_w
-        heights = [w["h_normal"] for w in word_positions]
-        max_word_height = max(heights) if heights else 40
+    # ─────────────────────────────────────────────────────────────────────────
+    # Static base renderer (dipanggil sekali per frase unik, di-cache)
+    # ─────────────────────────────────────────────────────────────────────────
+    def _render_static_base(self, words_list: list, font_normal,
+                            font_active_max, style_type: str = "body") -> PhraseCache:
+        from subtitle_engine.highlighter import KeywordHighlighter
+        highlighter  = KeywordHighlighter()
+        style_cfg    = self.styles.get_style_config(style_type)
+        default_color = style_cfg.get("default_color", "#FFFFFF")
+        stroke_w      = self.styles.STROKE_WIDTH
 
-        # OPTIMASI DINAMIS: Batasi ukuran canvas gambar seminimal mungkin hanya seukuran teks + padding box
-        padding_x = self.styles.BOX_PADDING_X
-        padding_y = self.styles.BOX_PADDING_Y
-        
-        bbox_w = total_sentence_width + (padding_x * 2) + 20
-        bbox_h = max_word_height + (padding_y * 2) + 30
+        try:
+            space_w = int(self.measure_draw.textbbox((0, 0), " ", font=font_normal)[2]) + 12
+        except Exception:
+            space_w = 18
+
+        # ── Bangun layout multi-baris ────────────────────────────────────────
+        lines = self._build_lines(words_list, font_normal, space_w)
+
+        padding_x  = self.styles.BOX_PADDING_X
+        padding_y  = self.styles.BOX_PADDING_Y
+        line_gap   = 10   # Jarak antar baris (px)
+
+        line_widths  = []
+        line_heights = []
+        for line in lines:
+            lw = sum(wd["w"] for wd in line) + space_w * (len(line) - 1)
+            lh = max((wd["h"] for wd in line), default=40)
+            line_widths.append(lw)
+            line_heights.append(lh)
+
+        total_w = max(line_widths) if line_widths else 100
+        total_h = sum(line_heights) + line_gap * (len(lines) - 1) if line_heights else 40
+
+        bbox_w = total_w + padding_x * 2 + 20
+        bbox_h = total_h + padding_y * 2 + 24
 
         static_canvas = Image.new("RGBA", (bbox_w, bbox_h), (0, 0, 0, 0))
-        
-        # Titik start internal di dalam canvas kecil
-        start_x = padding_x + 10
-        start_y = padding_y + 5
 
-        box_x0 = start_x - padding_x
-        box_y0 = start_y - padding_y
-        box_x1 = start_x + total_sentence_width + padding_x
-        box_y1 = start_y + max_word_height + padding_y + 12
+        start_x = padding_x + 10   # titik kiri dalam canvas
+        start_y = padding_y + 8    # titik atas dalam canvas
 
+        # Gambar rounded background box
+        box_fill = (*self.styles.BOX_COLOR, 135)
         static_draw = ImageDraw.Draw(static_canvas)
-        box_fill = (self.styles.BOX_COLOR[0], self.styles.BOX_COLOR[1], self.styles.BOX_COLOR[2], 130)
-        static_draw.rounded_rectangle([box_x0, box_y0, box_x1, box_y1], radius=self.styles.BOX_ROUNDED_RADIUS, fill=box_fill)
+        static_draw.rounded_rectangle(
+            [start_x - padding_x, start_y - padding_y,
+             start_x + total_w + padding_x, start_y + total_h + padding_y + 8],
+            radius=self.styles.BOX_ROUNDED_RADIUS,
+            fill=box_fill
+        )
 
-        # Buat shadow canvas terlokalisasi hanya seukuran bounding box
+        # ── Shadow layer ─────────────────────────────────────────────────────
         shadow_canvas = Image.new("RGBA", (bbox_w, bbox_h), (0, 0, 0, 0))
-        shadow_draw = ImageDraw.Draw(shadow_canvas)
-        off_x, off_y = self.styles.SHADOW_OFFSET
+        shadow_draw   = ImageDraw.Draw(shadow_canvas)
+        ox, oy        = self.styles.SHADOW_OFFSET
 
-        for w in word_positions:
-            word_x = start_x + w["local_x"]
-            try:
-                shadow_draw.text(
-                    (word_x + off_x, start_y + off_y), w["text"], font=font_normal,
-                    fill=self.styles.SHADOW_COLOR,
-                    stroke_width=self.styles.STROKE_WIDTH, stroke_fill=self.styles.SHADOW_COLOR
-                )
-            except Exception:
-                shadow_draw.text((word_x + off_x, start_y + off_y), w["text"], font=font_normal, fill=self.styles.SHADOW_COLOR)
-                
+        # ── Posisikan setiap kata & buat word_positions flat (urutan kata) ───
+        word_positions = []
+        cursor_y = start_y
+        for line_idx, (line, lh) in enumerate(zip(lines, line_heights)):
+            # Center-align setiap baris secara horizontal
+            lw = line_widths[line_idx]
+            cursor_x = start_x + (total_w - lw) // 2
+
+            for wd in line:
+                abs_x = cursor_x
+                abs_y = cursor_y
+
+                # Shadow
+                try:
+                    shadow_draw.text(
+                        (abs_x + ox, abs_y + oy), wd["text"],
+                        font=font_normal, fill=self.styles.SHADOW_COLOR,
+                        stroke_width=stroke_w, stroke_fill=self.styles.SHADOW_COLOR,
+                    )
+                except Exception:
+                    shadow_draw.text((abs_x + ox, abs_y + oy), wd["text"],
+                                     font=font_normal, fill=self.styles.SHADOW_COLOR)
+
+                word_positions.append({
+                    "text":        wd["text"],
+                    "w_normal":    wd["w"],
+                    "h_normal":    wd["h"],
+                    "abs_x":       abs_x,
+                    "abs_y":       abs_y,
+                    # Untuk kompatibilitas render aktif (digunakan di create_progressive_frame)
+                    "render_start_x": abs_x,
+                    "render_start_y": abs_y,
+                    "local_x": 0,
+                    "w_active_max": int(wd["w"] * 1.05),
+                    "h_active_max": int(wd["h"] * 1.05),
+                })
+                cursor_x += wd["w"] + space_w
+
+            cursor_y += lh + line_gap
+
+        # Blur shadow & composite
         try:
-            shadow_blurred = shadow_canvas.filter(ImageFilter.GaussianBlur(radius=self.styles.SHADOW_BLUR_RADIUS))
+            shadow_blurred = shadow_canvas.filter(
+                ImageFilter.GaussianBlur(radius=self.styles.SHADOW_BLUR_RADIUS)
+            )
             static_canvas = Image.alpha_composite(static_canvas, shadow_blurred)
         except Exception:
             pass
 
-        main_static_draw = ImageDraw.Draw(static_canvas)
-        for w in word_positions:
-            word_x = start_x + w["local_x"]
-            word_color = highlighter.get_word_color(w["text"], default_color)
+        # ── Gambar teks normal (non-aktif) ───────────────────────────────────
+        main_draw = ImageDraw.Draw(static_canvas)
+        for wp in word_positions:
+            color = highlighter.get_word_color(wp["text"], default_color)
             try:
-                main_static_draw.text(
-                    (word_x, start_y), w["text"], font=font_normal,
-                    fill=word_color,
-                    stroke_width=self.styles.STROKE_WIDTH, stroke_fill=self.styles.STROKE_COLOR
+                main_draw.text(
+                    (wp["abs_x"], wp["abs_y"]), wp["text"],
+                    font=font_normal, fill=color,
+                    stroke_width=stroke_w, stroke_fill=self.styles.STROKE_COLOR,
                 )
             except Exception:
-                main_static_draw.text((word_x, start_y), w["text"], font=font_normal, fill=word_color)
-        
-        # Simpan offset koordinat internal awal agar fungsi penyorot kata tahu titik acuan gambarnya
-        for w in word_positions:
-            w["render_start_x"] = start_x
-            w["render_start_y"] = start_y
+                main_draw.text((wp["abs_x"], wp["abs_y"]), wp["text"],
+                               font=font_normal, fill=color)
 
-        return PhraseCache(static_canvas, word_positions, bbox_w, bbox_h)
+        return PhraseCache(static_canvas, word_positions, bbox_w, bbox_h,
+                           line_count=len(lines))
 
-    def create_progressive_frame(self, words_list: list, active_index: int, font_path: str, font_size: int, scale_factor: float = 1.0, style_type: str = "body") -> tuple[Image.Image, int, int]:
+    # ─────────────────────────────────────────────────────────────────────────
+    # Active word glow helper
+    # ─────────────────────────────────────────────────────────────────────────
+    def _draw_active_glow(self, canvas: Image.Image, wp: dict,
+                          glow_color: tuple, font_active) -> Image.Image:
+        """Menggambar efek glow berwarna pada kata aktif menggunakan Gaussian Blur."""
+        glow_canvas = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        glow_draw   = ImageDraw.Draw(glow_canvas)
+        glow_fill   = (*glow_color[:3], self.styles.ACTIVE_GLOW_ALPHA)
+        try:
+            glow_draw.text(
+                (wp["abs_x"], wp["abs_y"]), wp["text"],
+                font=font_active, fill=glow_fill,
+                stroke_width=self.styles.STROKE_WIDTH + 2, stroke_fill=glow_fill,
+            )
+        except Exception:
+            glow_draw.text((wp["abs_x"], wp["abs_y"]), wp["text"],
+                           font=font_active, fill=glow_fill)
+        try:
+            glow_blurred = glow_canvas.filter(
+                ImageFilter.GaussianBlur(radius=self.styles.ACTIVE_GLOW_BLUR)
+            )
+            return Image.alpha_composite(canvas, glow_blurred)
+        except Exception:
+            return canvas
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Public API — dipanggil oleh orchestrator setiap frame
+    # ─────────────────────────────────────────────────────────────────────────
+    def create_progressive_frame(
+        self,
+        words_list:   list,
+        active_index: int,
+        font_path:    str,
+        font_size:    int,
+        scale_factor: float = 1.0,
+        style_type:   str   = "body",
+    ) -> tuple:
         """
-        Mengembalikan tuple: (Objek_Gambar_BBox, lebar_bbox, tinggi_bbox)
+        Mengembalikan tuple: (PIL.Image, bbox_w, bbox_h)
+        Canvas sudah berisi teks frase lengkap + highlight kata aktif + glow efek.
         """
         if not words_list:
             words_list = [{"word": "KONTEN", "display": "KONTEN"}]
 
-        words_tuple = tuple(w.get("display", w.get("word", "KONTEN")) for w in words_list)
-        
-        from subtitle_engine.highlighter import KeywordHighlighter
-        highlighter = KeywordHighlighter()
-        style_cfg = self.styles.get_style_config(style_type)
-        default_active_color = style_cfg.get("active_color", getattr(self.styles, 'ACTIVE_WORD_COLOR', "#FFCC00"))
-        
-        safe_scale = round(min(scale_factor, 1.05), 1)
-        font_normal = self._get_cached_font(font_path, font_size)
-        font_active_current = font_normal if safe_scale == 1.0 else self._get_cached_font(font_path, int(font_size * safe_scale))
-        font_active_max = self._get_cached_font(font_path, int(font_size * 1.05))
+        words_tuple  = tuple(w.get("display", w.get("word", "")) for w in words_list)
+        safe_scale   = round(min(max(scale_factor, 1.0), 1.10), 2)
 
+        font_normal  = self._get_cached_font(font_path, font_size)
+        font_active  = (font_normal if safe_scale == 1.0
+                        else self._get_cached_font(font_path, int(font_size * safe_scale)))
+
+        # Ambil / buat cache static base
         static_key = (words_tuple, font_size, style_type)
         if static_key in self.static_layer_cache:
             self.static_layer_cache.move_to_end(static_key)
         else:
-            self.static_layer_cache[static_key] = self._render_static_base(words_list, font_normal, font_active_max, style_type)
+            font_active_max = self._get_cached_font(font_path, int(font_size * 1.10))
+            self.static_layer_cache[static_key] = self._render_static_base(
+                words_list, font_normal, font_active_max, style_type
+            )
             if len(self.static_layer_cache) > MAX_STATIC_CACHE:
                 self.static_layer_cache.popitem(last=False)
-        
-        phrase_storage = self.static_layer_cache[static_key]
-        
-        # Salin canvas kecil (Bukan gambar 1080x1920 lagi, hemat alokasi memori secara drastis)
-        final_frame = phrase_storage.base_image.copy()
-        frame_draw = ImageDraw.Draw(final_frame)
 
-        if 0 <= active_index < len(phrase_storage.word_positions):
-            w = phrase_storage.word_positions[active_index]
-            
-            # Tentukan warna aktif secara dinamis: jika keyword, pakai warna keyword. Jika tidak, pakai default_active_color
-            keyword_color = highlighter.get_word_color(w["text"], None)
-            active_color = keyword_color if keyword_color else default_active_color
-            
-            if safe_scale == 1.0:
-                curr_w, curr_h = w["w_normal"], w["h_normal"]
-            elif safe_scale == 1.05:
-                curr_w, curr_h = w["w_active_max"], w["h_active_max"]
-            else:
-                ratio = (safe_scale - 1.0) / 0.05
-                curr_w = int(w["w_normal"] + (w["w_active_max"] - w["w_normal"]) * ratio)
-                curr_h = int(w["h_normal"] + (w["h_active_max"] - w["h_normal"]) * ratio)
+        phrase_cache = self.static_layer_cache[static_key]
 
-            word_center_x = w["render_start_x"] + w["local_x"] + (w["w_normal"] // 2)
-            render_x = word_center_x - (curr_w // 2)
-            render_y = w["render_start_y"] + (w["h_normal"] // 2) - (curr_h // 2)
+        # Salin canvas dasar (bukan 1080×1920 — hanya canvas mini)
+        final_frame  = phrase_cache.base_image.copy()
 
+        if 0 <= active_index < len(phrase_cache.word_positions):
+            wp = phrase_cache.word_positions[active_index]
+
+            from subtitle_engine.highlighter import KeywordHighlighter
+            highlighter   = KeywordHighlighter()
+            style_cfg     = self.styles.get_style_config(style_type)
+            default_active = style_cfg.get("active_color", "#FFCC00")
+            glow_color     = style_cfg.get("glow_color", (255, 204, 0))
+
+            # Warna kata aktif — keyword overrides default_active
+            keyword_color = highlighter.get_word_color(wp["text"], None)
+            active_color  = keyword_color if keyword_color else default_active
+
+            # ── 1. Gambar glow efek dulu (di belakang teks) ─────────────────
+            final_frame = self._draw_active_glow(final_frame, wp, glow_color, font_active)
+
+            # ── 2. Gambar teks aktif di atas glow ───────────────────────────
+            frame_draw = ImageDraw.Draw(final_frame)
             try:
                 frame_draw.text(
-                    (render_x, render_y), w["text"], font=font_active_current,
-                    fill=active_color,
-                    stroke_width=self.styles.STROKE_WIDTH, stroke_fill=self.styles.STROKE_COLOR
+                    (wp["abs_x"], wp["abs_y"]), wp["text"],
+                    font=font_active, fill=active_color,
+                    stroke_width=self.styles.STROKE_WIDTH,
+                    stroke_fill=self.styles.STROKE_COLOR,
                 )
             except Exception:
-                frame_draw.text((render_x, render_y), w["text"], font=font_active_current, fill=active_color)
+                frame_draw.text((wp["abs_x"], wp["abs_y"]), wp["text"],
+                                font=font_active, fill=active_color)
 
-        return final_frame, phrase_storage.bbox_w, phrase_storage.bbox_h
+        return final_frame, phrase_cache.bbox_w, phrase_cache.bbox_h
