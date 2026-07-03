@@ -312,6 +312,28 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                 except Exception as post_again_err:
                     print(f"⚠️ Gagal menekan tombol posting kedua kali: {post_again_err}")
             
+            # Tangani popup konfirmasi posting kedua ("Continue to post?") yang mungkin muncul saat proses check belum selesai
+            await asyncio.sleep(2)
+            try:
+                post_now_selectors = [
+                    'button:has-text("Post now")',
+                    'button:has-text("Posting sekarang")',
+                    'button:has-text("Terbitkan sekarang")',
+                    'button:has-text("Post anyway")'
+                ]
+                for sel in post_now_selectors:
+                    locator = page.locator(sel)
+                    count = await locator.count()
+                    for i in range(count):
+                        el = locator.nth(i)
+                        if await el.is_visible():
+                            print(f"🎬 Klik konfirmasi posting sekarang (bypass check pending): {sel}")
+                            await el.click(timeout=5000, force=True)
+                            await asyncio.sleep(1)
+                            break
+            except Exception as post_now_err:
+                print(f"⚠️ Gagal menangani dialog 'Post now': {post_now_err}")
+            
             # Menunggu konfirmasi sukses dari TikTok
             print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
             success_selectors = [
