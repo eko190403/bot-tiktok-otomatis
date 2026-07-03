@@ -215,17 +215,23 @@ VOICE_ROTATION = [
 
 async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: str, attempts: int = 3):
     """Mencoba menghasilkan voiceover dengan rotasi voice jika gagal atau WordBoundary kosong."""
+    import random
     last_exception = None
-    for voice_idx, voice in enumerate(VOICE_ROTATION):
+    
+    # Salin dan acak daftar pengisi suara agar bervariasi setiap run (Pria/Wanita)
+    voices = VOICE_ROTATION.copy()
+    random.shuffle(voices)
+    
+    for voice_idx, voice in enumerate(voices):
         for i in range(attempts):
             try:
                 result = await generate_voiceover_with_timestamps(hook, story, cta, path, voice=voice)
                 timestamps, meta = result
                 # Jika WordBoundary kosong (akurasi 0), coba voice berikutnya
-                if meta.accuracy == 0.0 and voice_idx < len(VOICE_ROTATION) - 1:
+                if meta.accuracy == 0.0 and voice_idx < len(voices) - 1:
                     logger.warning(
                         "⚠️ Voice '%s' tidak menghasilkan WordBoundary. Mencoba voice cadangan '%s'...",
-                        voice, VOICE_ROTATION[voice_idx + 1]
+                        voice, voices[voice_idx + 1]
                     )
                     break  # Keluar dari loop percobaan, coba voice berikutnya
                 return result
