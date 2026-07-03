@@ -139,9 +139,8 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
         
         # Cek apakah berhasil masuk atau malah mental ke halaman login biasa
         if "login" in page.url:
-            print("❌ Eror: Cookies kedaluwarsa atau tidak valid. TikTok meminta login ulang.")
             await browser.close()
-            return
+            raise RuntimeError("Cookies kedaluwarsa atau tidak valid. TikTok meminta login ulang.")
             
         print("📤 Memilih dan mengunggah berkas video...")
         # Menemukan elemen input file di halaman TikTok Studio

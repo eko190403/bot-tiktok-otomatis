@@ -513,7 +513,8 @@ async def create_video() -> bool:
                 else:
                     bg_music_clip = bg_music_raw.subclipped(0, total_duration)
                 # Volume musik latar -20dB (sekitar 10% dari suara utama)
-                bg_music_clip = bg_music_clip.with_effects([lambda c: c.multiply_volume(0.10)])
+                from moviepy.audio.fx import MultiplyVolume
+                bg_music_clip = bg_music_clip.with_effects([MultiplyVolume(0.10)])
                 logger.info("🎵 Musik latar berhasil dimuat: %s", chosen_music)
             except Exception as me:
                 logger.warning("⚠️ Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
@@ -533,7 +534,8 @@ async def create_video() -> bool:
                         # Potong sfx maksimal sepanjang durasi aslinya atau 1.2 detik
                         clip_len = min(sfx_base.duration, 1.2)
                         sfx_item = sfx_base.subclipped(0, clip_len).with_start(t_start - 0.4)
-                        sfx_item = sfx_item.with_effects([lambda c: c.multiply_volume(0.20)])
+                        from moviepy.audio.fx import MultiplyVolume
+                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.20)])
                         sfx_clips.append(sfx_item)
                 logger.info("🔊 SFX Transisi (Swoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
             except Exception as sfx_err:
