@@ -16,10 +16,20 @@ def create_text_watermark_frame(text: str, video_width: int, video_height: int) 
     draw = ImageDraw.Draw(img)
 
     # Coba muat font custom, fallback ke default
-    font_path = os.path.join(os.path.dirname(__file__), "assets", "fonts", "Oswald-Bold.ttf")
-    try:
-        font = ImageFont.truetype(font_path, size=28)
-    except (IOError, OSError):
+    # Coba muat font custom, fallback ke default
+    font_paths = [
+        os.path.join(os.path.dirname(__file__), "assets", "fonts", "font.ttf"),
+        os.path.join(os.path.dirname(__file__), "assets", "fonts", "Oswald-Bold.ttf")
+    ]
+    font = None
+    for path in font_paths:
+        if os.path.exists(path):
+            try:
+                font = ImageFont.truetype(path, size=28)
+                break
+            except (IOError, OSError):
+                continue
+    if font is None:
         font = ImageFont.load_default()
 
     # Ukur dimensi teks

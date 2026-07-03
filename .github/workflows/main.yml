@@ -6,6 +6,7 @@ on:
   repository_dispatch:
     types:
       - run-bot
+      - telegram_trigger
 
   schedule:
     # 02:00 UTC = 09:00 WIB
