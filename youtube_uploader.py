@@ -36,7 +36,11 @@ async def upload_to_youtube(video_path: str, caption: str) -> str:
             cookies_list = cookies.get("cookies", []) if isinstance(cookies, dict) else cookies
             
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            locale="id-ID",
+            timezone_id="Asia/Jakarta",
+            geolocation={"latitude": -6.2088, "longitude": 106.8456}, # Jakarta coordinates
+            permissions=["geolocation"]
         )
         await context.add_cookies(cookies_list)
         
