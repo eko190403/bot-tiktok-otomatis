@@ -309,8 +309,8 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                 await asyncio.sleep(1)
                 
             if not success_found:
-                print("⚠️ Peringatan: Konfirmasi sukses publikasi tidak muncul secara visual dalam 45 detik. Tombol posting sudah diklik, memberikan waktu penyelamatan tambahan 12 detik...")
-                await asyncio.sleep(12)
+                print("❌ Konfirmasi sukses publikasi tidak terdeteksi dalam 45 detik!")
+                raise RuntimeError("Konfirmasi sukses publikasi dari TikTok tidak muncul di layar (kemungkinan terhalang dialog konfirmasi posting/copyright check).")
             else:
                 print("🚀 Konfirmasi sukses terverifikasi secara visual.")
                 await asyncio.sleep(3) # Jeda ekstra agar request selesai dikirim sepenuhnya
