@@ -97,3 +97,11 @@ jobs:
           name: video-tiktok-fakta
           path: output/
           retention-days: 7
+
+      - name: Kirim Notifikasi GAGAL ke Telegram
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendMessage" \
+            -d "chat_id=1120755820" \
+            -d "parse_mode=HTML" \
+            -d "text=❌ <b>PIPELINE GAGAL!</b>%0A%0A⚠️ Bot TikTok mengalami error saat menjalankan workflow.%0A%0A🔗 Cek log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

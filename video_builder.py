@@ -143,10 +143,15 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True) -> str:
 async def generate_structured_script() -> dict:
     logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
     prompt = (
-        "Buat satu konten edukasi pendek untuk TikTok Shorts dalam format JSON.\n"
-        "Pilih secara acak tema: Fakta Psikologi, Stoikisme, Dark Psychology, atau Mindset Sukses.\n"
-        "Format JSON wajib memiliki 3 key: 'hook' (kapital), 'story', dan 'cta'.\n"
-        "Gunakan tanda baca koma dan titik dengan baik agar intonasi suara natural."
+        "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
+        "Buat SATU konten edukasi singkat dan viral untuk TikTok Shorts dalam format JSON.\n\n"
+        "TEMA: Pilih SECARA ACAK salah satu dari: Fakta Psikologi, Stoikisme, Dark Psychology, Mindset Sukses, Efek Psikologis.\n\n"
+        "ATURAN WAJIB:\n"
+        "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
+        "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 6 kalimat, MAKSIMAL 9 kalimat. Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
+        "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n\n"
+        "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
+        "OUTPUT: Hanya JSON murni dengan key 'hook', 'story', dan 'cta'. Tidak ada teks lain di luar JSON."
     )
     res = await call_gemini_with_retry(prompt, is_json=True)
     return clean_and_parse_json(res)
@@ -164,14 +169,44 @@ async def extract_keywords_from_script(script_text: str) -> list:
         logger.warning("[%s] Keyword extraction gagal, memakai default: %s", EV_GEMINI_CRASH, e)
     return ["mind", "abstract", "human"]
 
+
+# Daftar voice cadangan Bahasa Indonesia — dirotasi jika voice sebelumnya gagal WordBoundary
+VOICE_ROTATION = [
+    "id-ID-ArdiNeural",    # Pria utama
+    "id-ID-GadisNeural",   # Wanita cadangan 1
+]
+
 async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: str, attempts: int = 3):
-    for i in range(attempts):
-        try:
-            return await generate_voiceover_with_timestamps(hook, story, cta, path)
-        except Exception as e:
-            logger.warning("⚠️ Kegagalan Edge-TTS pada percobaan %d/%d: %s", i + 1, attempts, e)
-            if i == attempts - 1: raise
-            await asyncio.sleep(1.5 + i)
+    """Mencoba menghasilkan voiceover dengan rotasi voice jika gagal atau WordBoundary kosong."""
+    last_exception = None
+    for voice_idx, voice in enumerate(VOICE_ROTATION):
+        for i in range(attempts):
+            try:
+                result = await generate_voiceover_with_timestamps(hook, story, cta, path, voice=voice)
+                timestamps, meta = result
+                # Jika WordBoundary kosong (akurasi 0), coba voice berikutnya
+                if meta.accuracy == 0.0 and voice_idx < len(VOICE_ROTATION) - 1:
+                    logger.warning(
+                        "⚠️ Voice '%s' tidak menghasilkan WordBoundary. Mencoba voice cadangan '%s'...",
+                        voice, VOICE_ROTATION[voice_idx + 1]
+                    )
+                    break  # Keluar dari loop percobaan, coba voice berikutnya
+                return result
+            except Exception as e:
+                last_exception = e
+                logger.warning("⚠️ Kegagalan Edge-TTS (voice=%s) percobaan %d/%d: %s", voice, i + 1, attempts, e)
+                if i < attempts - 1:
+                    await asyncio.sleep(1.5 + i)
+        else:
+            # Semua percobaan untuk voice ini gagal, lanjut ke voice berikutnya
+            if voice_idx < len(VOICE_ROTATION) - 1:
+                logger.warning("⚠️ Voice '%s' gagal semua percobaan. Beralih ke voice cadangan...", voice)
+                continue
+    # Semua voice sudah dicoba
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("Semua voice Edge-TTS gagal menghasilkan voiceover.")
+
 
 async def run_download_with_retry(loop, keywords: list, max_retry: int = 3) -> list:
     """Poin 4: Mengaktifkan mekanisme Retry internal untuk menangani network glitch download."""
@@ -310,7 +345,7 @@ async def create_video() -> bool:
             
         all_timestamps = [asdict(ts) for ts in all_timestamps_dataclass]
             
-        from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip
+        from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip, CompositeAudioClip
         try:
             from moviepy.video.fx.loop import Loop
         except ImportError:
@@ -367,14 +402,63 @@ async def create_video() -> bool:
         all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_words, font_size=FONT_SIZE_BODY, style_type="cta"))
 
         moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips, use_bgclip=True)
-        moviepy_resources["final_video"] = moviepy_resources["final_video"].with_audio(moviepy_resources["audio_clip"])
+
+        # ================= MUSIK LATAR OTOMATIS =================
+        # Mencari file musik dari folder assets/music/
+        bg_music_clip = None
+        music_dir = os.path.join(os.path.dirname(__file__), "assets", "music")
+        music_extensions = (".mp3", ".wav", ".ogg", ".m4a")
+        if os.path.isdir(music_dir):
+            music_files = [f for f in os.listdir(music_dir) if f.lower().endswith(music_extensions)]
+            if music_files:
+                import random
+                chosen_music = os.path.join(music_dir, random.choice(music_files))
+                try:
+                    bg_music_raw = AudioFileClip(chosen_music)
+                    moviepy_resources["bg_music_clip"] = bg_music_raw
+                    # Potong atau loop musik agar sesuai durasi video
+                    if bg_music_raw.duration < total_duration:
+                        loops_needed = int(total_duration / bg_music_raw.duration) + 1
+                        import itertools
+                        music_clips = [bg_music_raw] * loops_needed
+                        from moviepy import concatenate_audioclips
+                        bg_music_clip = concatenate_audioclips(music_clips).subclipped(0, total_duration)
+                    else:
+                        bg_music_clip = bg_music_raw.subclipped(0, total_duration)
+                    # Volume musik latar -20dB (sekitar 10% dari suara utama)
+                    bg_music_clip = bg_music_clip.with_effects([lambda c: c.multiply_volume(0.10)])
+                    logger.info("🎵 Musik latar berhasil dimuat: %s", chosen_music)
+                except Exception as me:
+                    logger.warning("⚠️ Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
+                    bg_music_clip = None
+        # Gabungkan audio TTS + musik latar
+        if bg_music_clip is not None:
+            final_audio = CompositeAudioClip([moviepy_resources["audio_clip"], bg_music_clip])
+            moviepy_resources["final_video"] = moviepy_resources["final_video"].with_audio(final_audio)
+            logger.info("✅ Audio final: TTS + Musik Latar digabungkan.")
+        else:
+            moviepy_resources["final_video"] = moviepy_resources["final_video"].with_audio(moviepy_resources["audio_clip"])
+        # =========================================================
+
 
         output_file_name = f"final_output_{timestamp_suffix}.mp4"
         output_file_path = os.path.join(DIR_OUTPUT, output_file_name)
         temp_output_path = f"{output_file_path}.tmp.mp4"
-        
+
+        # ================= WATERMARK CHANNEL =================
+        try:
+            from overlay import apply_text_watermark
+            moviepy_resources["final_video"] = apply_text_watermark(
+                moviepy_resources["final_video"], channel_name="@RuangPikir"
+            )
+            logger.info("🏷️ Watermark channel berhasil ditambahkan.")
+        except Exception as wm_err:
+            logger.warning("⚠️ Watermark dilewati: %s", wm_err)
+        # ======================================================
+
         os.makedirs(DIR_OUTPUT, exist_ok=True)
         cpu_threads = min(THREADS_MAX, os.cpu_count() or 2)
+
         
         def execute_ffmpeg_render(target_path: str):
             moviepy_resources["final_video"].write_videofile(

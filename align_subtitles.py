@@ -337,6 +337,7 @@ def interpolate_timestamps(subtitle_words: list, aligned_results: list, audio_du
 def forced_alignment_whisper(subtitle_segments: list, audio_path: str, model_size: str = "tiny") -> list:
     """Mencocokkan kata-kata subtitle dengan suara riil menggunakan OpenAI Whisper."""
     print(f"🤖 Mengunduh/memuat model Whisper '{model_size}' (CPU friendly)...")
+    # pyrefly: ignore [missing-import]
     import whisper
     model = whisper.load_model(model_size)
     

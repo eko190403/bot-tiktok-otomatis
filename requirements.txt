@@ -1,6 +1,8 @@
 google-genai
 moviepy
-edge-tts
+
+# Pin versi stabil edge-tts — versi 7.x ke atas diketahui stabil untuk WordBoundary
+edge-tts==6.1.12
 
 librosa==0.10.2.post1
 numpy
@@ -8,3 +10,5 @@ scipy
 soundfile
 audioread
 openai-whisper
+Pillow
+psutil
