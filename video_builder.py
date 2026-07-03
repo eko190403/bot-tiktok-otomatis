@@ -500,24 +500,24 @@ async def create_video() -> bool:
         if music_files:
             import random
             chosen_music = os.path.join(music_dir, random.choice(music_files))
-                try:
-                    bg_music_raw = AudioFileClip(chosen_music)
-                    moviepy_resources["bg_music_clip"] = bg_music_raw
-                    # Potong atau loop musik agar sesuai durasi video
-                    if bg_music_raw.duration < total_duration:
-                        loops_needed = int(total_duration / bg_music_raw.duration) + 1
-                        import itertools
-                        music_clips = [bg_music_raw] * loops_needed
-                        from moviepy import concatenate_audioclips
-                        bg_music_clip = concatenate_audioclips(music_clips).subclipped(0, total_duration)
-                    else:
-                        bg_music_clip = bg_music_raw.subclipped(0, total_duration)
-                    # Volume musik latar -20dB (sekitar 10% dari suara utama)
-                    bg_music_clip = bg_music_clip.with_effects([lambda c: c.multiply_volume(0.10)])
-                    logger.info("🎵 Musik latar berhasil dimuat: %s", chosen_music)
-                except Exception as me:
-                    logger.warning("⚠️ Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
-                    bg_music_clip = None
+            try:
+                bg_music_raw = AudioFileClip(chosen_music)
+                moviepy_resources["bg_music_clip"] = bg_music_raw
+                # Potong atau loop musik agar sesuai durasi video
+                if bg_music_raw.duration < total_duration:
+                    loops_needed = int(total_duration / bg_music_raw.duration) + 1
+                    import itertools
+                    music_clips = [bg_music_raw] * loops_needed
+                    from moviepy import concatenate_audioclips
+                    bg_music_clip = concatenate_audioclips(music_clips).subclipped(0, total_duration)
+                else:
+                    bg_music_clip = bg_music_raw.subclipped(0, total_duration)
+                # Volume musik latar -20dB (sekitar 10% dari suara utama)
+                bg_music_clip = bg_music_clip.with_effects([lambda c: c.multiply_volume(0.10)])
+                logger.info("🎵 Musik latar berhasil dimuat: %s", chosen_music)
+            except Exception as me:
+                logger.warning("⚠️ Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
+                bg_music_clip = None
         # ================= TRANSISI SOUND EFFECTS (SFX) =================
         sfx_clips = []
         sfx_path = os.path.join(os.path.dirname(__file__), "assets", "sfx", "swoosh.mp3")
