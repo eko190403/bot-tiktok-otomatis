@@ -177,7 +177,24 @@ async def generate_structured_script() -> dict:
     return clean_and_parse_json(res)
 
 async def extract_keywords_from_script(script_text: str) -> list:
-    prompt = f"Berikan 4 kata kunci visual bahasa Inggris dalam bentuk JSON array langsung untuk mencari video latar belakang naskah ini: \"{script_text}\""
+    categories = [
+        "dark abstract", "cinematic nature", "space galaxy", "moody urban", 
+        "minimalist", "calm ocean", "mysterious forest", "dark aesthetic", 
+        "stoic statue", "night sky", "abstract light", "vintage texture",
+        "smoke fog", "cyberpunk city", "deep sea"
+    ]
+    categories_str = ", ".join(f'"{c}"' for c in categories)
+    
+    prompt = (
+        "You are a visual design expert. Analyze the following TikTok script and choose exactly 4 English search terms "
+        f"from this curated list of aesthetic visual themes: [{categories_str}].\n"
+        "If some themes are highly relevant to the script's mood (e.g. stoic, dark, success, mind), prioritize them. "
+        "You may also fallback to general themes from the list if needed.\n\n"
+        f"SCRIPT:\n\"{script_text}\"\n\n"
+        "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 4 themes chosen from the list above. "
+        "Example: [\"dark abstract\", \"stoic statue\", \"night sky\", \"minimalist\"]. "
+        "No additional text outside the JSON."
+    )
     try:
         res = await call_gemini_with_retry(prompt, is_json=True)
         res_data = clean_and_parse_json(res)
@@ -187,7 +204,7 @@ async def extract_keywords_from_script(script_text: str) -> list:
         if isinstance(res_data, list): return res_data
     except Exception as e:
         logger.warning("[%s] Keyword extraction gagal, memakai default: %s", EV_GEMINI_CRASH, e)
-    return ["mind", "abstract", "human"]
+    return ["dark abstract", "minimalist", "dark aesthetic", "space galaxy"]
 
 
 # Daftar voice cadangan Bahasa Indonesia — dirotasi jika voice sebelumnya gagal WordBoundary
@@ -281,16 +298,35 @@ async def create_video() -> bool:
     video_files = []
     timestamp_suffix = int(time.time())
     vo_file_path = f"temp/vo_{timestamp_suffix}.mp3"
+    draft_script_path = "temp/draft_script.json"
+    draft_audio_path = "temp/draft_audio.mp3"
+    draft_timestamps_path = "temp/draft_timestamps.json"
     
     try:
-        script_data = await generate_structured_script()
+        os.makedirs("temp", exist_ok=True)
+        
+        # 1. Cek naskah di cache
+        script_data = None
+        if os.path.exists(draft_script_path):
+            try:
+                with open(draft_script_path, "r", encoding="utf-8") as f:
+                    script_data = json.load(f)
+                logger.info("♻️ Menggunakan draf naskah dari cache (%s)", draft_script_path)
+            except Exception as e:
+                logger.warning("⚠️ Gagal memuat draf naskah: %s", e)
+                
+        if not script_data:
+            script_data = await generate_structured_script()
+            with open(draft_script_path, "w", encoding="utf-8") as f:
+                json.dump(script_data, f, indent=4, ensure_ascii=False)
+            logger.info("💾 Draf naskah disimpan ke cache (%s)", draft_script_path)
+            
         hook = script_data.get("hook", "FAKTA MENARIK").strip()
         story = script_data.get("story", "").strip()
         cta = script_data.get("cta", "Follow untuk info lainnya").strip()
         caption = script_data.get("caption", "Fakta Menarik Hari Ini... #faktapsikologi #ruangpikir #fyp").strip()
         
         keywords = await extract_keywords_from_script(story)
-        os.makedirs("temp", exist_ok=True)
         
         # Simpan metadata caption untuk dibaca uploader di app.py
         with open("temp/video_metadata.json", "w", encoding="utf-8") as f:
@@ -304,17 +340,18 @@ async def create_video() -> bool:
                 with open(history_path, "r", encoding="utf-8") as hf:
                     history_data = json.load(hf)
             
-            history_data.append({
-                "timestamp": int(time.time()),
-                "hook": hook,
-                "caption": caption
-            })
-            # Batasi riwayat ke 25 entri terakhir agar file tetap kecil
-            history_data = history_data[-25:]
-            
-            with open(history_path, "w", encoding="utf-8") as hf:
-                json.dump(history_data, hf, indent=4, ensure_ascii=False)
-            logger.info("📝 Naskah berhasil disimpan ke riwayat kontent (naskah_history.json).")
+            # Cek apakah hook ini sudah terdaftar agar tidak duplikat riwayat saat memuat cache
+            if not any(item.get("hook") == hook for item in history_data):
+                history_data.append({
+                    "timestamp": int(time.time()),
+                    "hook": hook,
+                    "caption": caption
+                })
+                # Batasi riwayat ke 25 entri terakhir agar file tetap kecil
+                history_data = history_data[-25:]
+                with open(history_path, "w", encoding="utf-8") as hf:
+                    json.dump(history_data, hf, indent=4, ensure_ascii=False)
+                logger.info("📝 Naskah berhasil disimpan ke riwayat konten (naskah_history.json).")
         except Exception as hist_err:
             logger.warning("⚠️ Gagal mencatat riwayat naskah: %s", hist_err)
         
@@ -324,24 +361,77 @@ async def create_video() -> bool:
         needed_clips = max(4, int(estimated_duration / 4.0) + 1)
         logger.info("🎬 Menghitung target background clip: estimasi %.1fs -> %d clip (4s/clip)", estimated_duration, needed_clips)
         
-        logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
         loop = asyncio.get_running_loop()
         
-        download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, max_retry=3)
-        audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, attempts=3)
+        # 2. Cek audio & timestamps di cache
+        reused_audio_and_timestamps = False
+        all_timestamps_dataclass = None
+        meta = None
         
-        results = await asyncio.gather(download_task, audio_task, return_exceptions=True)
-        
-        if isinstance(results[0], Exception) or not results[0]:
-            logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
-            video_files = []
+        if os.path.exists(draft_audio_path) and os.path.exists(draft_timestamps_path):
+            try:
+                import shutil
+                shutil.copy2(draft_audio_path, vo_file_path)
+                with open(draft_timestamps_path, "r", encoding="utf-8") as f:
+                    ts_data = json.load(f)
+                all_timestamps_dataclass = _to_wordtimestamp_list(ts_data["timestamps"])
+                from audio import SyncMetadata
+                meta = SyncMetadata(
+                    matched=ts_data["meta"]["matched"],
+                    total=ts_data["meta"]["total"],
+                    accuracy=ts_data["meta"]["accuracy"],
+                    missed=ts_data["meta"]["missed"],
+                    failed_tokens=ts_data["meta"]["failed_tokens"]
+                )
+                reused_audio_and_timestamps = True
+                logger.info("♻️ Menggunakan draf audio & timestamps dari cache")
+            except Exception as e:
+                logger.warning("⚠️ Gagal memuat cache audio & timestamps: %s. Mengulang proses sintesis.", e)
+                
+        if reused_audio_and_timestamps:
+            logger.info("⚡ Menjalankan download background secara mandiri (menggunakan audio cache)...")
+            results = await run_download_with_retry(loop, keywords, target_count=needed_clips, max_retry=3)
+            if not results:
+                logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
+                video_files = []
+            else:
+                video_files = results
         else:
-            video_files = results[0]
+            logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
+            download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, max_retry=3)
+            audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, attempts=3)
             
-        if isinstance(results[1], Exception):
-            raise RuntimeError(f"Gagal menghasilkan audio dari Edge-TTS: {results[1]}") from results[1]
+            results = await asyncio.gather(download_task, audio_task, return_exceptions=True)
             
-        _, (all_timestamps_dataclass, meta) = results
+            if isinstance(results[0], Exception) or not results[0]:
+                logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
+                video_files = []
+            else:
+                video_files = results[0]
+                
+            if isinstance(results[1], Exception):
+                raise RuntimeError(f"Gagal menghasilkan audio dari Edge-TTS: {results[1]}") from results[1]
+                
+            _, (all_timestamps_dataclass, meta) = results
+            
+            # Simpan hasil baru ke cache
+            try:
+                import shutil
+                shutil.copy2(vo_file_path, draft_audio_path)
+                with open(draft_timestamps_path, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "meta": {
+                            "matched": meta.matched,
+                            "total": meta.total,
+                            "accuracy": meta.accuracy,
+                            "missed": meta.missed,
+                            "failed_tokens": meta.failed_tokens
+                        },
+                        "timestamps": _to_dict_list(all_timestamps_dataclass)
+                    }, f, indent=4, ensure_ascii=False)
+                logger.info("💾 Audio & timestamps disimpan ke cache")
+            except Exception as cache_save_err:
+                logger.warning("⚠️ Gagal menyimpan cache audio/timestamps: %s", cache_save_err)
 
         if meta.accuracy < SUBTITLE_MIN_ACCURACY:
             logger.warning(
@@ -622,6 +712,12 @@ async def create_video() -> bool:
             try: ram_mb = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
             except: pass
         
+        # Bersihkan cache draf naskah & audio karena rendering berhasil sempurna
+        for cp in [draft_script_path, draft_audio_path, draft_timestamps_path]:
+            if os.path.exists(cp):
+                try: os.remove(cp)
+                except OSError: pass
+
         logger.info("[%s] Autopilot Berhasil. Total Waktu: %.2fs | RAM: %.2f MB | Output: %s", EV_PIPELINE_SUCCESS, time.time() - start_total, ram_mb, output_file_name)
         return True
         

@@ -13,8 +13,14 @@ async def main():
     
     async with async_playwright() as p:
         # Jalankan browser Chromium secara visual (headless=False)
-        browser = await p.chromium.launch(headless=False)
-        context = await browser.new_context()
+        # Jalankan browser Chromium secara visual dengan mode anti-deteksi bot
+        browser = await p.chromium.launch(
+            headless=False,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
         page = await context.new_page()
         
         print("🌐 Membuka halaman login TikTok...")
