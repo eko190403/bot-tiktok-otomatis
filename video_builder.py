@@ -256,7 +256,11 @@ async def create_video() -> bool:
         _, (all_timestamps_dataclass, meta) = results
 
         if meta.accuracy < SUBTITLE_MIN_ACCURACY:
-            raise RuntimeError(f"[{EV_SUBTITLE_REJECT}] Akurasi sinkronisasi subtitle di bawah batas toleransi produksi: {meta.accuracy*100:.1f}%")
+            logger.warning(
+                "[%s] Akurasi sinkronisasi rendah (%.1f%%). "
+                "Pipeline tetap dilanjutkan menggunakan interpolasi timestamp.",
+                EV_SUBTITLE_WARN, meta.accuracy * 100
+            )
         elif meta.accuracy < 0.90:
             logger.warning("[%s] Peringatan: Akurasi subtitle berada di zona rendah (%.1f%%)", EV_SUBTITLE_WARN, meta.accuracy * 100)
 

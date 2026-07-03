@@ -334,7 +334,41 @@ async def generate_voiceover_with_timestamps(
 
     audio_duration = librosa.get_duration(path=audio_path)
 
-    # 4. DP ALIGNMENT: cocokkan target_tokens (spoken) <-> raw_boundaries
+    # 4. Cek apakah Edge-TTS mengembalikan WordBoundary — jika kosong, langsung interpolasi
+    if not raw_boundaries:
+        logger.warning(
+            "⚠️ Edge-TTS tidak mengembalikan WordBoundary (raw_boundaries kosong). "
+            "Kemungkinan versi edge-tts berubah atau ada masalah jaringan. "
+            "Melakukan interpolasi linear merata untuk semua %d kata...", len(target_tokens)
+        )
+        slot = audio_duration / max(len(target_tokens), 1)
+        final_timestamps: List[WordTimestamp] = []
+        for i, tgt in enumerate(target_tokens):
+            start = round(slot * i, 3)
+            end = round(min(slot * (i + 1), audio_duration), 3)
+            final_timestamps.append(
+                WordTimestamp(
+                    word=tgt["spoken"],
+                    display=tgt["display"],
+                    start=start,
+                    end=end,
+                    duration=round(end - start, 3),
+                    section=tgt["section"],
+                    confidence=0.0,
+                )
+            )
+        final_timestamps = lockdown_timeline(final_timestamps, audio_duration)
+        metadata = SyncMetadata(
+            matched=0,
+            total=len(target_tokens),
+            accuracy=0.0,
+            missed=len(target_tokens),
+            failed_tokens=[t["display"] for t in target_tokens],
+        )
+        logger.warning("📊 Fallback interpolasi selesai. Total timestamps: %d", len(final_timestamps))
+        return final_timestamps, metadata
+
+    # 4b. DP ALIGNMENT: cocokkan target_tokens (spoken) <-> raw_boundaries
     alignment = align_target_to_boundaries(target_tokens, raw_boundaries)
 
     # 5. BANGUN FINAL TIMESTAMPS berdasarkan hasil alignment
