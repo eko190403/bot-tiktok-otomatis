@@ -1,8 +1,8 @@
 google-genai
 moviepy
 
-# Pin versi stabil edge-tts — versi 7.x ke atas diketahui stabil untuk WordBoundary
-edge-tts==6.1.12
+# Pin versi stabil edge-tts — versi 7.2.8 untuk mengatasi error 403 handshake
+edge-tts==7.2.8
 
 librosa==0.10.2.post1
 numpy
