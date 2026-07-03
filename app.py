@@ -89,18 +89,18 @@ async def main():
                 except Exception as meta_err:
                     print(f"⚠️ Gagal membaca/menghapus metadata caption: {meta_err}")
 
+            # Cari file video terbaru di folder output untuk diunggah (digunakan untuk TikTok & YouTube)
+            import glob
+            video_files = glob.glob("output/*.mp4")
+            latest_video = max(video_files, key=os.path.getctime) if video_files else None
+
             # Poin 9: Integrasi Upload Otomatis ke TikTok
             enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
             if enable_upload:
-                print("📤 Memicu pengunggahan otomatis ke TikTok...")
-                import glob
-                from uploader import upload_to_tiktok
-                
-                # Cari file video terbaru di folder output
-                video_files = glob.glob("output/*.mp4")
-                if video_files:
-                    latest_video = max(video_files, key=os.path.getctime)
-                    print(f"🎬 Menemukan video terbaru: {latest_video}. Memulai upload...")
+                if latest_video:
+                    print("📤 Memicu pengunggahan otomatis ke TikTok...")
+                    from uploader import upload_to_tiktok
+                    print(f"🎬 Menemukan video terbaru untuk TikTok: {latest_video}. Memulai upload...")
                     try:
                         tiktok_username = await upload_to_tiktok(latest_video, caption=caption)
                         print("🚀 Sukses mengunggah video ke TikTok!")
@@ -139,9 +139,52 @@ async def main():
                                 caption=f"📸 <b>Bukti Kegagalan Layar (TikTok Upload)</b>\nAkun: <code>{failed_user}</code>"
                             )
                 else:
-                    print("⚠️ Tidak ada file video di folder output untuk diunggah.")
+                    print("⚠️ Tidak ada file video di folder output untuk diunggah ke TikTok.")
             else:
                 print("ℹ️ Pengunggahan otomatis ke TikTok dinonaktifkan (ENABLE_TIKTOK_UPLOAD=false).")
+
+            # Integrasi Upload Otomatis ke YouTube Shorts
+            enable_yt_upload = os.getenv("ENABLE_YOUTUBE_UPLOAD", "false").lower() == "true"
+            if enable_yt_upload:
+                if latest_video:
+                    print("📤 Memicu pengunggahan otomatis ke YouTube Shorts...")
+                    from youtube_uploader import upload_to_youtube
+                    print(f"🎬 Menemukan video terbaru untuk YouTube: {latest_video}. Memulai upload...")
+                    try:
+                        await upload_to_youtube(latest_video, caption=caption)
+                        print("🚀 Sukses mengunggah video ke YouTube Shorts!")
+                        
+                        # Kirim notifikasi SUKSES ke Telegram
+                        msg = (
+                            "🚀 <b>YOUTUBE SHORTS UPLOAD SUKSES!</b>\n\n"
+                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
+                            f"✍️ <b>Caption:</b>\n<i>{caption}</i>"
+                        )
+                        send_telegram_message(msg)
+                    except Exception as yt_err:
+                        print(f"❌ Gagal mengunggah ke YouTube Shorts: {yt_err}")
+                        
+                        # Kirim notifikasi GAGAL ke Telegram
+                        import html
+                        escaped_err = html.escape(str(yt_err))
+                        msg = (
+                            "⚠️ <b>YOUTUBE SHORTS UPLOAD GAGAL!</b>\n\n"
+                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
+                            f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
+                        )
+                        send_telegram_message(msg)
+                        
+                        # Kirim screenshot kegagalan jika ada berkas hasil tangkapan layar
+                        yt_screenshot = "output/youtube_error_screenshot.png"
+                        if os.path.exists(yt_screenshot):
+                            send_telegram_photo(
+                                yt_screenshot,
+                                caption="📸 <b>Bukti Kegagalan Layar (YouTube Upload)</b>"
+                            )
+                else:
+                    print("⚠️ Tidak ada file video di folder output untuk diunggah ke YouTube Shorts.")
+            else:
+                print("ℹ️ Pengunggahan otomatis ke YouTube Shorts dinonaktifkan (ENABLE_YOUTUBE_UPLOAD=false).")
         else:
             print("❌ Gagal membuat video (Kembalian Bernilai False).")
             sys.exit(1)
