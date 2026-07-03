@@ -126,169 +126,188 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
         temp_cookie = input_cookie
 
     async with async_playwright() as p:
-        # Menjalankan browser Chromium bawaan Playwright
-        browser = await p.chromium.launch(headless=True)
+        # Jalankan browser Chromium secara headless dengan mode anti-deteksi bot
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
         
-        # Membuat konteks browser baru dengan storage_state hasil konversi
-        context = await browser.new_context(storage_state=temp_cookie)
+        # Membuat konteks browser dengan storage_state hasil konversi dan User Agent manusia
+        context = await browser.new_context(
+            storage_state=temp_cookie,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
         page = await context.new_page()
+        await page.set_viewport_size({"width": 1280, "height": 800})
         
-        print("🌐 Mengakses halaman TikTok Creator Studio Upload...")
-        await page.goto("https://www.tiktok.com/creator-center/upload?lang=id-ID", timeout=60000)
-        await page.wait_for_load_state("networkidle")
+        detected_username = None
         
-        # Cek apakah berhasil masuk atau malah mental ke halaman login biasa
-        if "login" in page.url:
-            await browser.close()
-            raise RuntimeError("Cookies kedaluwarsa atau tidak valid. TikTok meminta login ulang.")
+        try:
+            print("🌐 Mengakses halaman TikTok Creator Studio Upload...")
+            await page.goto("https://www.tiktok.com/creator-center/upload?lang=id-ID", timeout=60000)
+            await page.wait_for_load_state("networkidle")
             
-        print("📤 Memilih dan mengunggah berkas video...")
-        # Menemukan elemen input file di halaman TikTok Studio
-        file_input = await page.wait_for_selector("input[type='file']")
-        await file_input.set_input_files(video_path)
-        
-        # Beri jeda sejenak agar form metadata termuat
-        await asyncio.sleep(3)
-
-        # Masukkan Caption/Deskripsi
-        if caption:
-            print(f"✍️ Menulis deskripsi video: {caption}")
-            try:
-                # Mencoba beberapa selektor alternatif demi ketahanan DOM TikTok
-                selectors = [
-                    '[data-e2e="upload-caption-input"]',
-                    'div[contenteditable="true"]',
-                    '.editor-container div[contenteditable="true"]',
-                    'textarea[placeholder*="caption"]',
-                    'textarea[placeholder*="deskripsi"]'
-                ]
-                caption_element = None
-                for sel in selectors:
-                    try:
-                        caption_element = await page.wait_for_selector(sel, timeout=10000)
-                        if caption_element:
-                            print(f"✅ Menemukan elemen caption dengan selektor: {sel}")
-                            break
-                    except:
-                        continue
+            # Cek apakah berhasil masuk atau malah mental ke halaman login biasa
+            if "login" in page.url or "signup" in page.url:
+                raise RuntimeError("Cookies kedaluwarsa atau tidak valid. TikTok meminta login ulang.")
                 
-                if caption_element:
-                    # Klik elemen untuk memfokuskan
-                    await caption_element.click()
-                    
-                    # Bersihkan isi teks bawaan (nama file)
-                    # Shortcut Keyboard Control+A lalu Backspace
-                    await page.keyboard.press("Control+A")
-                    await page.keyboard.press("Backspace")
-                    await asyncio.sleep(1)
-                    
-                    # Ketikkan caption secara bertahap (human-like typing)
-                    await page.keyboard.type(caption, delay=60) # delay 60ms per karakter
-                    print("📝 Deskripsi dan Hashtag berhasil diinput.")
-                else:
-                    print("⚠️ Gagal menemukan elemen input caption. Melanjutkan tanpa deskripsi.")
-            except Exception as e:
-                print(f"⚠️ Gagal menginput caption: {e}")
-        
-        print("⏳ Menunggu proses upload dan enkoding video selesai di server TikTok...")
-        # Menunggu tombol "Posting" aktif (menandakan video selesai terunggah)
-        # Kita tunggu tombol [data-e2e="post_video_button"] yang tidak memiliki aria-disabled="true"
-        button_post = None
-        selectors_post = [
-            '[data-e2e="post_video_button"]:not([aria-disabled="true"])',
-            'button:has-text("Post"):not([disabled]):not([aria-disabled="true"])',
-            'button:has-text("Posting"):not([disabled]):not([aria-disabled="true"])',
-            'button:has-text("Terbitkan"):not([disabled]):not([aria-disabled="true"])',
-            # Fallback jika selektor strict tidak terdeteksi
-            '[data-e2e="post_video_button"]',
-            'button:has-text("Post")',
-            'button:has-text("Posting")'
-        ]
-        
-        for sel in selectors_post:
-            try:
-                button_post = await page.wait_for_selector(sel, timeout=10000)
-                if button_post:
-                    is_disabled = await button_post.get_attribute("aria-disabled")
-                    if is_disabled == "true":
-                        continue
-                    print(f"✅ Menemukan tombol posting yang aktif: {sel}")
-                    break
-            except:
-                continue
-
-        # Jika setelah iterasi cepat tidak ketemu tombol aktif, mari tunggu tombol resmi yang aktif secara eksplisit
-        if not button_post:
-            print("⏳ Menunggu tombol posting resmi [data-e2e='post_video_button'] menjadi aktif (maksimal 3 menit)...")
-            try:
-                button_post = await page.wait_for_selector('[data-e2e="post_video_button"]:not([aria-disabled="true"])', timeout=180000)
-            except Exception as e:
-                print(f"⚠️ Gagal menunggu tombol data-e2e aktif: {e}. Mencoba mencari tombol teks 'Post' secara umum...")
+            print("📤 Memilih dan mengunggah berkas video...")
+            # Menemukan elemen input file di halaman TikTok Studio dengan timeout 45 detik
+            file_input = await page.wait_for_selector("input[type='file']", timeout=45000)
+            await file_input.set_input_files(video_path)
+            
+            # Beri jeda sejenak agar form metadata termuat
+            await asyncio.sleep(3)
+    
+            # Masukkan Caption/Deskripsi
+            if caption:
+                print(f"✍️ Menulis deskripsi video: {caption}")
                 try:
-                    button_post = await page.wait_for_selector('button:has-text("Post")', timeout=30000)
-                except Exception as e2:
-                    raise RuntimeError(f"❌ Tidak dapat menemukan tombol posting aktif di layar: {e2}")
-
-        # Klik tombol posting
-        print("🎯 Klik tombol posting konten!")
-        await button_post.click()
-        
-        # Menunggu konfirmasi sukses dari TikTok
-        print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
-        success_selectors = [
-            'text="Manage posts"',
-            'text="Manage content"',
-            'text="Manage your posts"',
-            'text="Post another video"',
-            'text="Urus postingan"',
-            'text="Kelola konten"',
-            '[data-e2e="upload-success-modal"]'
-        ]
-        
-        success_found = False
-        # Polling setiap 1 detik selama maksimal 45 detik
-        for attempt in range(45):
-            for sel in success_selectors:
+                    # Mencoba beberapa selektor alternatif demi ketahanan DOM TikTok
+                    selectors = [
+                        '[data-e2e="upload-caption-input"]',
+                        'div[contenteditable="true"]',
+                        '.editor-container div[contenteditable="true"]',
+                        'textarea[placeholder*="caption"]',
+                        'textarea[placeholder*="deskripsi"]'
+                    ]
+                    caption_element = None
+                    for sel in selectors:
+                        try:
+                            caption_element = await page.wait_for_selector(sel, timeout=10000)
+                            if caption_element:
+                                print(f"✅ Menemukan elemen caption dengan selektor: {sel}")
+                                break
+                        except:
+                            continue
+                    
+                    if caption_element:
+                        # Klik elemen untuk memfokuskan
+                        await caption_element.click()
+                        
+                        # Bersihkan isi teks bawaan (nama file)
+                        # Shortcut Keyboard Control+A lalu Backspace
+                        await page.keyboard.press("Control+A")
+                        await page.keyboard.press("Backspace")
+                        await asyncio.sleep(1)
+                        
+                        # Ketikkan caption secara bertahap (human-like typing)
+                        await page.keyboard.type(caption, delay=60) # delay 60ms per karakter
+                        print("📝 Deskripsi dan Hashtag berhasil diinput.")
+                    else:
+                        print("⚠️ Gagal menemukan elemen input caption. Melanjutkan tanpa deskripsi.")
+                except Exception as e:
+                    print(f"⚠️ Gagal menginput caption: {e}")
+            
+            print("⏳ Menunggu proses upload dan enkoding video selesai di server TikTok...")
+            # Menunggu tombol "Posting" aktif (menandakan video selesai terunggah)
+            # Kita tunggu tombol [data-e2e="post_video_button"] yang tidak memiliki aria-disabled="true"
+            button_post = None
+            selectors_post = [
+                '[data-e2e="post_video_button"]:not([aria-disabled="true"])',
+                'button:has-text("Post"):not([disabled]):not([aria-disabled="true"])',
+                'button:has-text("Posting"):not([disabled]):not([aria-disabled="true"])',
+                'button:has-text("Terbitkan"):not([disabled]):not([aria-disabled="true"])',
+                # Fallback jika selektor strict tidak terdeteksi
+                '[data-e2e="post_video_button"]',
+                'button:has-text("Post")',
+                'button:has-text("Posting")'
+            ]
+            
+            for sel in selectors_post:
                 try:
-                    el = page.locator(sel).first
-                    if await el.is_visible():
-                        print(f"🚀 Konfirmasi Sukses Terdeteksi: '{sel}' terlihat di layar!")
-                        success_found = True
+                    button_post = await page.wait_for_selector(sel, timeout=10000)
+                    if button_post:
+                        is_disabled = await button_post.get_attribute("aria-disabled")
+                        if is_disabled == "true":
+                            continue
+                        print(f"✅ Menemukan tombol posting yang aktif: {sel}")
                         break
                 except:
                     continue
-            if success_found:
-                break
-            await asyncio.sleep(1)
+    
+            # Jika setelah iterasi cepat tidak ketemu tombol aktif, mari tunggu tombol resmi yang aktif secara eksplisit
+            if not button_post:
+                print("⏳ Menunggu tombol posting resmi [data-e2e='post_video_button'] menjadi aktif (maksimal 3 menit)...")
+                try:
+                    button_post = await page.wait_for_selector('[data-e2e="post_video_button"]:not([aria-disabled="true"])', timeout=180000)
+                except Exception as e:
+                    print(f"⚠️ Gagal menunggu tombol data-e2e aktif: {e}. Mencoba mencari tombol teks 'Post' secara umum...")
+                    try:
+                        button_post = await page.wait_for_selector('button:has-text("Post")', timeout=30000)
+                    except Exception as e2:
+                        raise RuntimeError(f"❌ Tidak dapat menemukan tombol posting aktif di layar: {e2}")
+    
+            # Klik tombol posting
+            print("🎯 Klik tombol posting konten!")
+            await button_post.click()
             
-        if not success_found:
-            print("⚠️ Peringatan: Konfirmasi sukses publikasi tidak muncul secara visual dalam 45 detik. Tombol posting sudah diklik, memberikan waktu penyelamatan tambahan 12 detik...")
-            await asyncio.sleep(12)
-        else:
-            print("🚀 Konfirmasi sukses terverifikasi secara visual.")
-            await asyncio.sleep(3) # Jeda ekstra agar request selesai dikirim sepenuhnya
+            # Menunggu konfirmasi sukses dari TikTok
+            print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
+            success_selectors = [
+                'text="Manage posts"',
+                'text="Manage content"',
+                'text="Manage your posts"',
+                'text="Post another video"',
+                'text="Urus postingan"',
+                'text="Kelola konten"',
+                '[data-e2e="upload-success-modal"]'
+            ]
             
-        # Deteksi username secara dinamis dari visual layar (Body Text) sebelum menutup browser
-        detected_username = None
-        try:
-            body_text = await page.locator("body").text_content()
-            import re
-            matches = re.findall(r'@[a-zA-Z0-9_\.]+', body_text)
-            for m in matches:
-                clean_m = m.strip()
-                # Filter email dan teks yang tidak valid
-                if len(clean_m) > 2 and len(clean_m) < 30 and "." not in clean_m:
-                    detected_username = clean_m
-                    print(f"👤 Berhasil mendeteksi username secara visual dari layar: {detected_username}")
+            success_found = False
+            # Polling setiap 1 detik selama maksimal 45 detik
+            for attempt in range(45):
+                for sel in success_selectors:
+                    try:
+                        el = page.locator(sel).first
+                        if await el.is_visible():
+                            print(f"🚀 Konfirmasi Sukses Terdeteksi: '{sel}' terlihat di layar!")
+                            success_found = True
+                            break
+                    except:
+                        continue
+                if success_found:
                     break
-        except Exception as detect_err:
-            print(f"⚠️ Gagal mendeteksi username secara visual dari layar: {detect_err}")
+                await asyncio.sleep(1)
+                
+            if not success_found:
+                print("⚠️ Peringatan: Konfirmasi sukses publikasi tidak muncul secara visual dalam 45 detik. Tombol posting sudah diklik, memberikan waktu penyelamatan tambahan 12 detik...")
+                await asyncio.sleep(12)
+            else:
+                print("🚀 Konfirmasi sukses terverifikasi secara visual.")
+                await asyncio.sleep(3) # Jeda ekstra agar request selesai dikirim sepenuhnya
+                
+            # Deteksi username secara dinamis dari visual layar (Body Text) sebelum menutup browser
+            try:
+                body_text = await page.locator("body").text_content()
+                import re
+                matches = re.findall(r'@[a-zA-Z0-9_\.]+', body_text)
+                for m in matches:
+                    clean_m = m.strip()
+                    # Filter email dan teks yang tidak valid
+                    if len(clean_m) > 2 and len(clean_m) < 30 and "." not in clean_m:
+                        detected_username = clean_m
+                        print(f"👤 Berhasil mendeteksi username secara visual dari layar: {detected_username}")
+                        break
+            except Exception as detect_err:
+                print(f"⚠️ Gagal mendeteksi username secara visual dari layar: {detect_err}")
+                
+            if not detected_username:
+                detected_username = get_tiktok_username_from_cookies(input_cookie)
+                
+        except Exception as e:
+            # Ambil screenshot jika terjadi kegagalan untuk mempermudah debugging di GitHub Actions
+            print(f"📸 Mengambil screenshot kegagalan karena terjadi eror: {e}")
+            try:
+                os.makedirs("output", exist_ok=True)
+                await page.screenshot(path="output/error_screenshot.png", full_page=True)
+                print("💾 Screenshot berhasil disimpan ke: output/error_screenshot.png")
+            except Exception as screenshot_err:
+                print(f"⚠️ Gagal mengambil screenshot: {screenshot_err}")
+            raise e
+        finally:
+            await browser.close()
             
-        if not detected_username:
-            detected_username = get_tiktok_username_from_cookies(input_cookie)
-            
-        await browser.close()
-        
         # Bersihkan cookie temporer demi keamanan
         if os.path.exists(temp_cookie) and temp_cookie != input_cookie:
             try:
