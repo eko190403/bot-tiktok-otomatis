@@ -16,6 +16,29 @@ async def main():
         
         if success:
             print("✅ Video Berhasil Dirender Sempurna!")
+            
+            # Poin 9: Integrasi Upload Otomatis ke TikTok
+            enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
+            if enable_upload:
+                print("📤 Memicu pengunggahan otomatis ke TikTok...")
+                import glob
+                from uploader import upload_to_tiktok
+                
+                # Cari file video terbaru di folder output
+                video_files = glob.glob("output/*.mp4")
+                if video_files:
+                    latest_video = max(video_files, key=os.path.getctime)
+                    print(f"🎬 Menemukan video terbaru: {latest_video}. Memulai upload...")
+                    try:
+                        await upload_to_tiktok(latest_video)
+                        print("🚀 Sukses mengunggah video ke TikTok!")
+                    except Exception as upload_err:
+                        print(f"❌ Gagal mengunggah ke TikTok: {upload_err}")
+                        # Jangan sys.exit(1) agar workflow tidak dianggap gagal hanya karena masalah upload/cookie
+                else:
+                    print("⚠️ Tidak ada file video di folder output untuk diunggah.")
+            else:
+                print("ℹ️ Pengunggahan otomatis ke TikTok dinonaktifkan (ENABLE_TIKTOK_UPLOAD=false).")
         else:
             print("❌ Gagal membuat video (Kembalian Bernilai False).")
             sys.exit(1)

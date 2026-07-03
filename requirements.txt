@@ -12,3 +12,4 @@ audioread
 openai-whisper
 Pillow
 psutil
+playwright
