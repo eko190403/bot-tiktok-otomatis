@@ -138,29 +138,36 @@ class SubtitleEngineV2:
                 pos_x = (WIDTH  - bbox_w) // 2
                 pos_y = int(HEIGHT * subtitle_y_ratio) - (bbox_h // 2)
 
-                # ── Pop animation: hanya pada 180ms pertama setiap kata ───────
-                pop_duration = min(POP_ANIM_DURATION, word_duration * 0.40)
+                # ── Pop animation: pre-render 5 frames of scale animation ───────
+                fps = 30
+                frame_duration = 1.0 / fps
+                num_anim_frames = 5
+                pop_duration = num_anim_frames * frame_duration  # 0.167s
 
-                def make_frame_fn(img_pil: Image.Image, bw: int, bh: int,
-                                  px: int, py: int, pop_dur: float):
-                    """Factory closure untuk menghindari masalah late-binding Python."""
-                    img_np = np.array(img_pil.convert("RGBA"))
+                # Jika durasi kata sangat singkat, sesuaikan jumlah frame pop
+                if word_duration < pop_duration:
+                    num_anim_frames = max(1, int(word_duration * fps))
+                    pop_duration = num_anim_frames * frame_duration
 
-                    def frame_fn(t: float):
-                        if t < pop_dur and pop_dur > 0:
-                            progress = t / pop_dur
-                            animated = SubtitleAnimator.apply_pop_animation(
-                                img_pil.copy(), progress,
-                                center_coords=(bw // 2, bh // 2),
-                            )
-                            return np.array(animated.convert("RGBA"))
-                        return img_np
+                anim_clips = []
+                for f_idx in range(num_anim_frames):
+                    # Progress [0.2 - 1.0] untuk curve scaling
+                    progress = (f_idx + 1) / num_anim_frames
+                    animated_pil = SubtitleAnimator.apply_pop_animation(
+                        frame_img.copy(), progress,
+                        center_coords=(bbox_w // 2, bbox_h // 2),
+                    )
+                    animated_np = np.array(animated_pil.convert("RGBA"))
+                    # imageio / moviepy akan membaca canvas mini RGBA ini dengan transparansi
+                    anim_clips.append(ImageClip(animated_np).with_duration(frame_duration))
 
-                    return frame_fn
+                remain_duration = word_duration - pop_duration
+                if remain_duration > 0.001:
+                    static_np = np.array(frame_img.convert("RGBA"))
+                    anim_clips.append(ImageClip(static_np).with_duration(remain_duration))
 
-                frame_maker = make_frame_fn(frame_img, bbox_w, bbox_h, pos_x, pos_y, pop_duration)
-
-                clip = (ImageClip(frame_maker, duration=word_duration)
+                from moviepy import concatenate_videoclips
+                clip = (concatenate_videoclips(anim_clips, method="compose")
                         .with_start(highlight_start)
                         .with_position((pos_x, pos_y)))
                 clips.append(clip)
