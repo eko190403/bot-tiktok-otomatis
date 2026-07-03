@@ -145,7 +145,6 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
         try:
             print("🌐 Mengakses halaman TikTok Creator Studio Upload...")
             await page.goto("https://www.tiktok.com/creator-center/upload?lang=id-ID", timeout=60000)
-            await page.wait_for_load_state("networkidle")
             
             # Cek apakah berhasil masuk atau malah mental ke halaman login biasa
             if "login" in page.url or "signup" in page.url:
