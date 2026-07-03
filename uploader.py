@@ -277,6 +277,28 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             await dismiss_modals(page)
             await button_post.click(force=True)
             
+            # Tangani popup konfirmasi cek hak cipta / konten ("Turn on automatic content checks?") yang sering muncul setelah klik Post
+            await asyncio.sleep(2)
+            try:
+                checks_modal_selectors = [
+                    'button:has-text("Turn on")',
+                    'button:has-text("Aktifkan")',
+                    'button:has-text("Cancel")',
+                    'button:has-text("Batal")'
+                ]
+                for sel in checks_modal_selectors:
+                    locator = page.locator(sel)
+                    count = await locator.count()
+                    for i in range(count):
+                        el = locator.nth(i)
+                        if await el.is_visible():
+                            print(f"🎬 Klik konfirmasi dialog setelah posting: {sel}")
+                            await el.click(timeout=5000, force=True)
+                            await asyncio.sleep(1)
+                            break
+            except Exception as checks_err:
+                print(f"⚠️ Gagal menangani dialog konfirmasi cek konten: {checks_err}")
+            
             # Menunggu konfirmasi sukses dari TikTok
             print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
             success_selectors = [
