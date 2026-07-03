@@ -322,7 +322,10 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                 matches = re.findall(r'@[a-zA-Z0-9_\.]+', body_text)
                 for m in matches:
                     clean_m = m.strip()
-                    # Filter email dan teks yang tidak valid
+                    # Filter email dan istilah internal TikTok yang tidak valid
+                    blacklist = ["@pgc", "@tiktok", "@creator", "@creatorportal", "@support", "@admin", "@user", "@settings"]
+                    if clean_m.lower() in blacklist:
+                        continue
                     if len(clean_m) > 2 and len(clean_m) < 30 and "." not in clean_m:
                         detected_username = clean_m
                         print(f"👤 Berhasil mendeteksi username secara visual dari layar: {detected_username}")
