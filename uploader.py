@@ -151,8 +151,8 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                 raise RuntimeError("Cookies kedaluwarsa atau tidak valid. TikTok meminta login ulang.")
                 
             print("📤 Memilih dan mengunggah berkas video...")
-            # Menemukan elemen input file di halaman TikTok Studio dengan timeout 45 detik
-            file_input = await page.wait_for_selector("input[type='file']", timeout=45000)
+            # Menemukan elemen input file di halaman TikTok Studio dengan state attached (karena input sering disembunyikan secara visual)
+            file_input = await page.wait_for_selector("input[type='file']", state="attached", timeout=45000)
             await file_input.set_input_files(video_path)
             
             # Beri jeda sejenak agar form metadata termuat

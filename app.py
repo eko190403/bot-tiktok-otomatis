@@ -94,11 +94,13 @@ async def main():
                         failed_user = get_tiktok_username_from_cookies()
                         
                         # Kirim notifikasi GAGAL ke Telegram
+                        import html
+                        escaped_err = html.escape(str(upload_err))
                         msg = (
                             "⚠️ <b>TIKTOK UPLOAD GAGAL!</b>\n\n"
                             f"👤 <b>Akun TikTok:</b> <code>{failed_user}</code>\n"
                             f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
-                            f"❌ <b>Error Log:</b>\n<code>{upload_err}</code>"
+                            f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
                         )
                         send_telegram_message(msg)
                 else:
