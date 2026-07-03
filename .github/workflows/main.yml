@@ -16,6 +16,8 @@ on:
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -117,6 +119,19 @@ jobs:
           name: video-tiktok-fakta
           path: output/
           retention-days: 7
+
+      - name: Commit dan Push Riwayat Naskah ke Repositori
+        if: success()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f naskah_history.json ]; then
+            git add naskah_history.json
+            git commit -m "chore: update riwayat naskah otomatis [skip ci]" || echo "Tidak ada perubahan riwayat naskah."
+            git push origin main || echo "Gagal melakukan push riwayat naskah."
+          else
+            echo "ℹ️ Berkas naskah_history.json tidak ditemukan."
+          fi
 
       - name: Kirim Notifikasi GAGAL ke Telegram
         if: failure()

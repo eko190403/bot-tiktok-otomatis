@@ -145,7 +145,7 @@ async def generate_structured_script() -> dict:
     
     # Baca riwayat naskah untuk mencegah repetisi ide
     exclude_prompt = ""
-    history_path = "temp/naskah_history.json"
+    history_path = "naskah_history.json"
     if os.path.exists(history_path):
         try:
             with open(history_path, "r", encoding="utf-8") as hf:
@@ -298,7 +298,7 @@ async def create_video() -> bool:
             
         # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten
         try:
-            history_path = "temp/naskah_history.json"
+            history_path = "naskah_history.json"
             history_data = []
             if os.path.exists(history_path):
                 with open(history_path, "r", encoding="utf-8") as hf:
