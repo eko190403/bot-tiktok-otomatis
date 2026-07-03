@@ -106,7 +106,7 @@ def get_tiktok_username_from_cookies(cookie_path="cookies.json") -> str:
     except Exception as e:
         print(f"⚠️ Gagal mengekstrak username dari cookie: {e}")
         
-    return "@Akun_TikTok"
+    return "@RuangPikir"
 
 
 async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
@@ -269,6 +269,25 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             print("🚀 Konfirmasi sukses terverifikasi secara visual.")
             await asyncio.sleep(3) # Jeda ekstra agar request selesai dikirim sepenuhnya
             
+        # Deteksi username secara dinamis dari visual layar (Body Text) sebelum menutup browser
+        detected_username = None
+        try:
+            body_text = await page.locator("body").text_content()
+            import re
+            matches = re.findall(r'@[a-zA-Z0-9_\.]+', body_text)
+            for m in matches:
+                clean_m = m.strip()
+                # Filter email dan teks yang tidak valid
+                if len(clean_m) > 2 and len(clean_m) < 30 and "." not in clean_m:
+                    detected_username = clean_m
+                    print(f"👤 Berhasil mendeteksi username secara visual dari layar: {detected_username}")
+                    break
+        except Exception as detect_err:
+            print(f"⚠️ Gagal mendeteksi username secara visual dari layar: {detect_err}")
+            
+        if not detected_username:
+            detected_username = get_tiktok_username_from_cookies(input_cookie)
+            
         await browser.close()
         
         # Bersihkan cookie temporer demi keamanan
@@ -278,4 +297,4 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             except OSError:
                 pass
                 
-        return get_tiktok_username_from_cookies(input_cookie)
+        return detected_username
