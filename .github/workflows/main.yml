@@ -72,6 +72,17 @@ jobs:
             echo "ℹ️ Secret TIKTOK_COOKIES tidak diset. Menggunakan berkas cookies.json bawaan dari repositori."
           fi
 
+      - name: Siapkan Cookies YouTube dari Secret
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        run: |
+          if [ -n "$YOUTUBE_COOKIES" ]; then
+            echo "📝 Menulis berkas youtube_cookies.json secara dinamis dari GitHub Secrets..."
+            echo "$YOUTUBE_COOKIES" > youtube_cookies.json
+          else
+            echo "ℹ️ Secret YOUTUBE_COOKIES tidak diset. Menggunakan berkas youtube_cookies.json bawaan dari repositori."
+          fi
+
       - name: Jalankan Bot
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -85,6 +96,7 @@ jobs:
           GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
           GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
           ENABLE_TIKTOK_UPLOAD: "true"
+          ENABLE_YOUTUBE_UPLOAD: "true"
           TELEGRAM_BOT_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
           TELEGRAM_CHAT_ID: "1120755820"
         run: |
