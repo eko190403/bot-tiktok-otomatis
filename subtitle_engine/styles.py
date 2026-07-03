@@ -17,8 +17,8 @@ class SubtitleStyles:
     def get_style_config(style_type: str = "body"):
         """Mengembalikan warna dasar default berdasarkan jenis segmen konten."""
         styles = {
-            "hook": {"default_color": "#FF9500", "font_scale": 1.2},  # Orange premium untuk Hook
-            "body": {"default_color": "#FFFFFF", "font_scale": 1.0},  # Putih bersih untuk isi cerita
-            "cta":  {"default_color": "#5AC8FA", "font_scale": 1.1}   # Cyan terang untuk ajakan CTA
+            "hook": {"default_color": "#FF9500", "active_color": "#FFFFFF", "font_scale": 1.2},  # Orange premium untuk Hook, aktif Putih
+            "body": {"default_color": "#FFFFFF", "active_color": "#FFCC00", "font_scale": 1.0},  # Putih bersih untuk isi cerita, aktif Kuning
+            "cta":  {"default_color": "#5AC8FA", "active_color": "#FFFFFF", "font_scale": 1.1}   # Cyan terang untuk ajakan CTA, aktif Putih
         }
         return styles.get(style_type, styles["body"])

@@ -73,10 +73,15 @@ class SubtitleRenderer:
             return ""
         return str(text).strip().upper()
 
-    def _render_static_base(self, words_list: list, font_normal, font_active_base) -> PhraseCache:
+    def _render_static_base(self, words_list: list, font_normal, font_active_base, style_type: str = "body") -> PhraseCache:
         word_positions = []
         current_x = 0
         stroke_w = getattr(self.styles, 'STROKE_WIDTH', 0)
+        
+        from subtitle_engine.highlighter import KeywordHighlighter
+        highlighter = KeywordHighlighter()
+        style_cfg = self.styles.get_style_config(style_type)
+        default_color = style_cfg.get("default_color", "#FFFFFF")
         
         try:
             space_w = self.measure_draw.textbbox((0, 0), " ", font=font_normal)[2] + 14
@@ -172,14 +177,15 @@ class SubtitleRenderer:
         main_static_draw = ImageDraw.Draw(static_canvas)
         for w in word_positions:
             word_x = start_x + w["local_x"]
+            word_color = highlighter.get_word_color(w["text"], default_color)
             try:
                 main_static_draw.text(
                     (word_x, start_y), w["text"], font=font_normal,
-                    fill="#E0E0E0",
+                    fill=word_color,
                     stroke_width=self.styles.STROKE_WIDTH, stroke_fill=self.styles.STROKE_COLOR
                 )
             except Exception:
-                main_static_draw.text((word_x, start_y), w["text"], font=font_normal, fill="#E0E0E0")
+                main_static_draw.text((word_x, start_y), w["text"], font=font_normal, fill=word_color)
         
         # Simpan offset koordinat internal awal agar fungsi penyorot kata tahu titik acuan gambarnya
         for w in word_positions:
@@ -196,7 +202,11 @@ class SubtitleRenderer:
             words_list = [{"word": "KONTEN", "display": "KONTEN"}]
 
         words_tuple = tuple(w.get("display", w.get("word", "KONTEN")) for w in words_list)
-        active_color = getattr(self.styles, 'ACTIVE_WORD_COLOR', "#FFCC00")
+        
+        from subtitle_engine.highlighter import KeywordHighlighter
+        highlighter = KeywordHighlighter()
+        style_cfg = self.styles.get_style_config(style_type)
+        default_active_color = style_cfg.get("active_color", getattr(self.styles, 'ACTIVE_WORD_COLOR', "#FFCC00"))
         
         safe_scale = round(min(scale_factor, 1.05), 1)
         font_normal = self._get_cached_font(font_path, font_size)
@@ -207,7 +217,7 @@ class SubtitleRenderer:
         if static_key in self.static_layer_cache:
             self.static_layer_cache.move_to_end(static_key)
         else:
-            self.static_layer_cache[static_key] = self._render_static_base(words_list, font_normal, font_active_max)
+            self.static_layer_cache[static_key] = self._render_static_base(words_list, font_normal, font_active_max, style_type)
             if len(self.static_layer_cache) > MAX_STATIC_CACHE:
                 self.static_layer_cache.popitem(last=False)
         
@@ -219,6 +229,10 @@ class SubtitleRenderer:
 
         if 0 <= active_index < len(phrase_storage.word_positions):
             w = phrase_storage.word_positions[active_index]
+            
+            # Tentukan warna aktif secara dinamis: jika keyword, pakai warna keyword. Jika tidak, pakai default_active_color
+            keyword_color = highlighter.get_word_color(w["text"], None)
+            active_color = keyword_color if keyword_color else default_active_color
             
             if safe_scale == 1.0:
                 curr_w, curr_h = w["w_normal"], w["h_normal"]
