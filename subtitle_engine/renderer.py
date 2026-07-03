@@ -180,11 +180,6 @@ class SubtitleRenderer:
             fill=box_fill
         )
 
-        # ── Shadow layer ─────────────────────────────────────────────────────
-        shadow_canvas = Image.new("RGBA", (bbox_w, bbox_h), (0, 0, 0, 0))
-        shadow_draw   = ImageDraw.Draw(shadow_canvas)
-        ox, oy        = self.styles.SHADOW_OFFSET
-
         # ── Posisikan setiap kata & buat word_positions flat (urutan kata) ───
         word_positions = []
         cursor_y = start_y
@@ -196,17 +191,6 @@ class SubtitleRenderer:
             for wd in line:
                 abs_x = cursor_x
                 abs_y = cursor_y
-
-                # Shadow
-                try:
-                    shadow_draw.text(
-                        (abs_x + ox, abs_y + oy), wd["text"],
-                        font=font_normal, fill=self.styles.SHADOW_COLOR,
-                        stroke_width=stroke_w, stroke_fill=self.styles.SHADOW_COLOR,
-                    )
-                except Exception:
-                    shadow_draw.text((abs_x + ox, abs_y + oy), wd["text"],
-                                     font=font_normal, fill=self.styles.SHADOW_COLOR)
 
                 word_positions.append({
                     "text":        wd["text"],
@@ -224,29 +208,6 @@ class SubtitleRenderer:
                 cursor_x += wd["w"] + space_w
 
             cursor_y += lh + line_gap
-
-        # Blur shadow & composite
-        try:
-            shadow_blurred = shadow_canvas.filter(
-                ImageFilter.GaussianBlur(radius=self.styles.SHADOW_BLUR_RADIUS)
-            )
-            static_canvas = Image.alpha_composite(static_canvas, shadow_blurred)
-        except Exception:
-            pass
-
-        # ── Gambar teks normal (non-aktif) ───────────────────────────────────
-        main_draw = ImageDraw.Draw(static_canvas)
-        for wp in word_positions:
-            color = highlighter.get_word_color(wp["text"], default_color)
-            try:
-                main_draw.text(
-                    (wp["abs_x"], wp["abs_y"]), wp["text"],
-                    font=font_normal, fill=color,
-                    stroke_width=stroke_w, stroke_fill=self.styles.STROKE_COLOR,
-                )
-            except Exception:
-                main_draw.text((wp["abs_x"], wp["abs_y"]), wp["text"],
-                               font=font_normal, fill=color)
 
         return PhraseCache(static_canvas, word_positions, bbox_w, bbox_h,
                            line_count=len(lines))
@@ -291,7 +252,8 @@ class SubtitleRenderer:
     ) -> tuple:
         """
         Mengembalikan tuple: (PIL.Image, bbox_w, bbox_h)
-        Canvas sudah berisi teks frase lengkap + highlight kata aktif + glow efek.
+        Menggambar shadow dan teks untuk seluruh kata secara dinamis di atas kanvas dasar kosong
+        agar tidak terjadi tumpang tindih visual ganda (double-text leakage).
         """
         if not words_list:
             words_list = [{"word": "KONTEN", "display": "KONTEN"}]
@@ -303,7 +265,7 @@ class SubtitleRenderer:
         font_active  = (font_normal if safe_scale == 1.0
                         else self._get_cached_font(font_path, int(font_size * safe_scale)))
 
-        # Ambil / buat cache static base
+        # Ambil / buat cache static base (berisi rounded box latar belakang saja)
         static_key = (words_tuple, font_size, style_type)
         if static_key in self.static_layer_cache:
             self.static_layer_cache.move_to_end(static_key)
@@ -317,36 +279,107 @@ class SubtitleRenderer:
 
         phrase_cache = self.static_layer_cache[static_key]
 
-        # Salin canvas dasar (bukan 1080×1920 — hanya canvas mini)
+        # Salin canvas dasar (hanya berisi background box)
         final_frame  = phrase_cache.base_image.copy()
 
+        from subtitle_engine.highlighter import KeywordHighlighter
+        highlighter   = KeywordHighlighter()
+        style_cfg     = self.styles.get_style_config(style_type)
+        default_color = style_cfg.get("default_color", "#FFFFFF")
+        default_active = style_cfg.get("active_color", "#FFCC00")
+        glow_color     = style_cfg.get("glow_color", (255, 204, 0))
+        stroke_w      = self.styles.STROKE_WIDTH
+        ox, oy        = self.styles.SHADOW_OFFSET
+
+        # ── 1. RENDER SHADOW UNTUK SEMUA KATA ──────────────────────────────
+        shadow_canvas = Image.new("RGBA", final_frame.size, (0, 0, 0, 0))
+        shadow_draw   = ImageDraw.Draw(shadow_canvas)
+
+        for idx, wp in enumerate(phrase_cache.word_positions):
+            is_active = (idx == active_index)
+            f_to_use  = font_active if is_active else font_normal
+            
+            # Penyelarasan letak agar tidak meloncat saat penskalaan (scale center alignment)
+            if is_active and safe_scale > 1.0:
+                curr_w = int(wp["w_normal"] * safe_scale)
+                curr_h = int(wp["h_normal"] * safe_scale)
+                rx = wp["abs_x"] + (wp["w_normal"] - curr_w) // 2
+                ry = wp["abs_y"] + (wp["h_normal"] - curr_h) // 2
+            else:
+                rx, ry = wp["abs_x"], wp["abs_y"]
+
+            try:
+                shadow_draw.text(
+                    (rx + ox, ry + oy), wp["text"],
+                    font=f_to_use, fill=self.styles.SHADOW_COLOR,
+                    stroke_width=stroke_w, stroke_fill=self.styles.SHADOW_COLOR,
+                )
+            except Exception:
+                shadow_draw.text((rx + ox, ry + oy), wp["text"], font=f_to_use, fill=self.styles.SHADOW_COLOR)
+
+        try:
+            shadow_blurred = shadow_canvas.filter(ImageFilter.GaussianBlur(radius=self.styles.SHADOW_BLUR_RADIUS))
+            final_frame = Image.alpha_composite(final_frame, shadow_blurred)
+        except Exception:
+            pass
+
+        # ── 2. RENDER ACTIVE WORD GLOW (DI BELAKANG TEKS AKTIF) ───────────
         if 0 <= active_index < len(phrase_cache.word_positions):
             wp = phrase_cache.word_positions[active_index]
+            if safe_scale > 1.0:
+                curr_w = int(wp["w_normal"] * safe_scale)
+                curr_h = int(wp["h_normal"] * safe_scale)
+                rx = wp["abs_x"] + (wp["w_normal"] - curr_w) // 2
+                ry = wp["abs_y"] + (wp["h_normal"] - curr_h) // 2
+            else:
+                rx, ry = wp["abs_x"], wp["abs_y"]
 
-            from subtitle_engine.highlighter import KeywordHighlighter
-            highlighter   = KeywordHighlighter()
-            style_cfg     = self.styles.get_style_config(style_type)
-            default_active = style_cfg.get("active_color", "#FFCC00")
-            glow_color     = style_cfg.get("glow_color", (255, 204, 0))
+            # Buat kanvas glow khusus
+            glow_canvas = Image.new("RGBA", final_frame.size, (0, 0, 0, 0))
+            glow_draw   = ImageDraw.Draw(glow_canvas)
+            glow_fill   = (*glow_color[:3], self.styles.ACTIVE_GLOW_ALPHA)
+            try:
+                glow_draw.text(
+                    (rx, ry), wp["text"],
+                    font=font_active, fill=glow_fill,
+                    stroke_width=stroke_w + 2, stroke_fill=glow_fill,
+                )
+            except Exception:
+                glow_draw.text((rx, ry), wp["text"], font=font_active, fill=glow_fill)
+            try:
+                glow_blurred = glow_canvas.filter(ImageFilter.GaussianBlur(radius=self.styles.ACTIVE_GLOW_BLUR))
+                final_frame = Image.alpha_composite(final_frame, glow_blurred)
+            except Exception:
+                pass
 
-            # Warna kata aktif — keyword overrides default_active
-            keyword_color = highlighter.get_word_color(wp["text"], None)
-            active_color  = keyword_color if keyword_color else default_active
+        # ── 3. RENDER TEKS UTAMA (STROKE + FILL) UNTUK SEMUA KATA ─────────
+        frame_draw = ImageDraw.Draw(final_frame)
+        for idx, wp in enumerate(phrase_cache.word_positions):
+            is_active = (idx == active_index)
+            f_to_use  = font_active if is_active else font_normal
+            
+            if is_active and safe_scale > 1.0:
+                curr_w = int(wp["w_normal"] * safe_scale)
+                curr_h = int(wp["h_normal"] * safe_scale)
+                rx = wp["abs_x"] + (wp["w_normal"] - curr_w) // 2
+                ry = wp["abs_y"] + (wp["h_normal"] - curr_h) // 2
+            else:
+                rx, ry = wp["abs_x"], wp["abs_y"]
 
-            # ── 1. Gambar glow efek dulu (di belakang teks) ─────────────────
-            final_frame = self._draw_active_glow(final_frame, wp, glow_color, font_active)
+            if is_active:
+                keyword_color = highlighter.get_word_color(wp["text"], None)
+                color = keyword_color if keyword_color else default_active
+            else:
+                color = highlighter.get_word_color(wp["text"], default_color)
 
-            # ── 2. Gambar teks aktif di atas glow ───────────────────────────
-            frame_draw = ImageDraw.Draw(final_frame)
             try:
                 frame_draw.text(
-                    (wp["abs_x"], wp["abs_y"]), wp["text"],
-                    font=font_active, fill=active_color,
-                    stroke_width=self.styles.STROKE_WIDTH,
+                    (rx, ry), wp["text"],
+                    font=f_to_use, fill=color,
+                    stroke_width=stroke_w,
                     stroke_fill=self.styles.STROKE_COLOR,
                 )
             except Exception:
-                frame_draw.text((wp["abs_x"], wp["abs_y"]), wp["text"],
-                                font=font_active, fill=active_color)
+                frame_draw.text((rx, ry), wp["text"], font=f_to_use, fill=color)
 
         return final_frame, phrase_cache.bbox_w, phrase_cache.bbox_h

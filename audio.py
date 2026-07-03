@@ -334,12 +334,36 @@ async def generate_voiceover_with_timestamps(
 
     audio_duration = librosa.get_duration(path=audio_path)
 
-    # 4. Cek apakah Edge-TTS mengembalikan WordBoundary — jika kosong, langsung interpolasi
+    # 4. Cek apakah Edge-TTS mengembalikan WordBoundary — jika kosong, coba Whisper lokal
     if not raw_boundaries:
         logger.warning(
             "⚠️ Edge-TTS tidak mengembalikan WordBoundary (raw_boundaries kosong). "
-            "Kemungkinan versi edge-tts berubah atau ada masalah jaringan. "
-            "Melakukan interpolasi linear merata untuk semua %d kata...", len(target_tokens)
+            "Menggunakan local OpenAI Whisper (tiny) sebagai fallback untuk timing presisi..."
+        )
+        try:
+            import whisper
+            # Load model tiny lokal (sangat cepat untuk audio 30-50 detik)
+            model = whisper.load_model("tiny")
+            result = model.transcribe(audio_path, word_timestamps=True)
+            
+            for segment in result.get("segments", []):
+                for w in segment.get("words", []):
+                    word_text = w["word"].strip()
+                    # Bersihkan tanda baca
+                    clean_text = re.sub(r"[^\w']", "", word_text).upper()
+                    if clean_text:
+                        raw_boundaries.append({
+                            "word": word_text,
+                            "start": w["start"],
+                            "duration": max(0.05, w["end"] - w["start"]),
+                        })
+            logger.info("🗣️ Local Whisper berhasil menyelaraskan %d kata dari berkas audio.", len(raw_boundaries))
+        except Exception as whisper_err:
+            logger.error("❌ Fallback Whisper lokal gagal: %s. Melanjutkan dengan interpolasi linear...", whisper_err)
+
+    if not raw_boundaries:
+        logger.warning(
+            "⚠️ raw_boundaries tetap kosong. Melakukan interpolasi linear merata untuk semua %d kata...", len(target_tokens)
         )
         slot = audio_duration / max(len(target_tokens), 1)
         final_timestamps: List[WordTimestamp] = []
