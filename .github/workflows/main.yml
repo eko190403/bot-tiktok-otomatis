@@ -7,6 +7,7 @@ on:
     types:
       - run-bot
       - telegram_trigger
+      - webhook_trigger
 
   schedule:
     # 02:00 UTC = 09:00 WIB

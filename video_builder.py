@@ -345,7 +345,7 @@ async def create_video() -> bool:
             
         all_timestamps = [asdict(ts) for ts in all_timestamps_dataclass]
             
-        from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip, CompositeAudioClip
+        from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip, CompositeAudioClip, ColorClip
         try:
             from moviepy.video.fx.loop import Loop
         except ImportError:
@@ -369,17 +369,21 @@ async def create_video() -> bool:
                 continue
 
         if not moviepy_resources["processed_clips"]:
-            raise RuntimeError("❌ Tidak ada klip video latar belakang yang valid.")
-            
-        moviepy_resources["raw_combined_bg"] = concatenate_videoclips(moviepy_resources["processed_clips"], method="compose")
-        bg_duration = moviepy_resources["raw_combined_bg"].duration
-        
-        if bg_duration < total_duration:
-            loop_factor = int(total_duration / bg_duration) + 1
-            moviepy_resources["looped_bg"] = moviepy_resources["raw_combined_bg"].with_effects([Loop(n=loop_factor)])
-            moviepy_resources["combined_bg"] = moviepy_resources["looped_bg"].subclipped(0, total_duration)
+            logger.warning("⚠️ Tidak ada klip video latar belakang yang valid. Menggunakan background warna solid gelap.")
+            # Lebar 1080, tinggi 1920 (portrait) sesuai setelan video
+            moviepy_resources["combined_bg"] = ColorClip(
+                size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration
+            )
         else:
-            moviepy_resources["combined_bg"] = moviepy_resources["raw_combined_bg"].subclipped(0, total_duration)
+            moviepy_resources["raw_combined_bg"] = concatenate_videoclips(moviepy_resources["processed_clips"], method="compose")
+            bg_duration = moviepy_resources["raw_combined_bg"].duration
+            
+            if bg_duration < total_duration:
+                loop_factor = int(total_duration / bg_duration) + 1
+                moviepy_resources["looped_bg"] = moviepy_resources["raw_combined_bg"].with_effects([Loop(n=loop_factor)])
+                moviepy_resources["combined_bg"] = moviepy_resources["looped_bg"].subclipped(0, total_duration)
+            else:
+                moviepy_resources["combined_bg"] = moviepy_resources["raw_combined_bg"].subclipped(0, total_duration)
 
         # Poin 5: Konsep Smoothing/Interpolasi Teks.
         valid_words = []
