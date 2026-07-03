@@ -83,7 +83,33 @@ def convert_to_playwright_cookies(input_path: str, output_path: str):
     print(f"✅ Cookies dikonversi secara sukses ke format Playwright di: {output_path}")
 
 
-async def upload_to_tiktok(video_path="final_output.mp4", caption=""):
+def get_tiktok_username_from_cookies(cookie_path="cookies.json") -> str:
+    """Membaca cookies.json dan mengekstrak nilai cookie 'unique_id' atau 'unique_id_d' sebagai username."""
+    if not os.path.exists(cookie_path):
+        return "@Akun_Tidak_Diketahui"
+        
+    try:
+        with open(cookie_path, "r", encoding="utf-8") as f:
+            c_data = json.load(f)
+            c_list = c_data.get("cookies", []) if isinstance(c_data, dict) else c_data
+            for c in c_list:
+                if c.get("name") in ["unique_id", "unique_id_d"]:
+                    val = c.get("value", "")
+                    if val:
+                        import urllib.parse
+                        decoded = urllib.parse.unquote(val)
+                        # Bersihkan jika ada format JSON/String aneh
+                        decoded = decoded.strip('"').strip("'")
+                        if not decoded.startswith("@"):
+                            decoded = f"@{decoded}"
+                        return decoded
+    except Exception as e:
+        print(f"⚠️ Gagal mengekstrak username dari cookie: {e}")
+        
+    return "@Akun_TikTok"
+
+
+async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
     print("🚀 Playwright: Membuka browser headless di server GitHub...")
     
     input_cookie = "cookies.json"
@@ -167,16 +193,82 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption=""):
         
         print("⏳ Menunggu proses upload dan enkoding video selesai di server TikTok...")
         # Menunggu tombol "Posting" aktif (menandakan video selesai terunggah)
-        button_post = await page.wait_for_selector("button:has-text('Post')", timeout=120000)
+        # Kita tunggu tombol [data-e2e="post_video_button"] yang tidak memiliki aria-disabled="true"
+        button_post = None
+        selectors_post = [
+            '[data-e2e="post_video_button"]:not([aria-disabled="true"])',
+            'button:has-text("Post"):not([disabled]):not([aria-disabled="true"])',
+            'button:has-text("Posting"):not([disabled]):not([aria-disabled="true"])',
+            'button:has-text("Terbitkan"):not([disabled]):not([aria-disabled="true"])',
+            # Fallback jika selektor strict tidak terdeteksi
+            '[data-e2e="post_video_button"]',
+            'button:has-text("Post")',
+            'button:has-text("Posting")'
+        ]
         
-        # Eksekusi klik tombol posting
+        for sel in selectors_post:
+            try:
+                button_post = await page.wait_for_selector(sel, timeout=10000)
+                if button_post:
+                    is_disabled = await button_post.get_attribute("aria-disabled")
+                    if is_disabled == "true":
+                        continue
+                    print(f"✅ Menemukan tombol posting yang aktif: {sel}")
+                    break
+            except:
+                continue
+
+        # Jika setelah iterasi cepat tidak ketemu tombol aktif, mari tunggu tombol resmi yang aktif secara eksplisit
+        if not button_post:
+            print("⏳ Menunggu tombol posting resmi [data-e2e='post_video_button'] menjadi aktif (maksimal 3 menit)...")
+            try:
+                button_post = await page.wait_for_selector('[data-e2e="post_video_button"]:not([aria-disabled="true"])', timeout=180000)
+            except Exception as e:
+                print(f"⚠️ Gagal menunggu tombol data-e2e aktif: {e}. Mencoba mencari tombol teks 'Post' secara umum...")
+                try:
+                    button_post = await page.wait_for_selector('button:has-text("Post")', timeout=30000)
+                except Exception as e2:
+                    raise RuntimeError(f"❌ Tidak dapat menemukan tombol posting aktif di layar: {e2}")
+
+        # Klik tombol posting
         print("🎯 Klik tombol posting konten!")
         await button_post.click()
         
-        # Beri jeda 5 detik untuk memastikan request selesai dikirim
-        await asyncio.sleep(5)
-        print("🚀 Video sukses terbit di akun TikTok Anda.")
+        # Menunggu konfirmasi sukses dari TikTok
+        print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
+        success_selectors = [
+            'text="Manage posts"',
+            'text="Manage content"',
+            'text="Manage your posts"',
+            'text="Post another video"',
+            'text="Urus postingan"',
+            'text="Kelola konten"',
+            '[data-e2e="upload-success-modal"]'
+        ]
         
+        success_found = False
+        # Polling setiap 1 detik selama maksimal 45 detik
+        for attempt in range(45):
+            for sel in success_selectors:
+                try:
+                    el = page.locator(sel).first
+                    if await el.is_visible():
+                        print(f"🚀 Konfirmasi Sukses Terdeteksi: '{sel}' terlihat di layar!")
+                        success_found = True
+                        break
+                except:
+                    continue
+            if success_found:
+                break
+            await asyncio.sleep(1)
+            
+        if not success_found:
+            print("⚠️ Peringatan: Konfirmasi sukses publikasi tidak muncul secara visual dalam 45 detik. Tombol posting sudah diklik, memberikan waktu penyelamatan tambahan 12 detik...")
+            await asyncio.sleep(12)
+        else:
+            print("🚀 Konfirmasi sukses terverifikasi secara visual.")
+            await asyncio.sleep(3) # Jeda ekstra agar request selesai dikirim sepenuhnya
+            
         await browser.close()
         
         # Bersihkan cookie temporer demi keamanan
@@ -185,3 +277,5 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption=""):
                 os.remove(temp_cookie)
             except OSError:
                 pass
+                
+        return get_tiktok_username_from_cookies(input_cookie)

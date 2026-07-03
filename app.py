@@ -75,12 +75,13 @@ async def main():
                     latest_video = max(video_files, key=os.path.getctime)
                     print(f"🎬 Menemukan video terbaru: {latest_video}. Memulai upload...")
                     try:
-                        await upload_to_tiktok(latest_video, caption=caption)
+                        tiktok_username = await upload_to_tiktok(latest_video, caption=caption)
                         print("🚀 Sukses mengunggah video ke TikTok!")
                         
                         # Kirim notifikasi SUKSES ke Telegram
                         msg = (
                             "🚀 <b>TIKTOK UPLOAD SUKSES!</b>\n\n"
+                            f"👤 <b>Akun TikTok:</b> <code>{tiktok_username}</code>\n"
                             f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
                             f"✍️ <b>Caption & Hashtags:</b>\n<i>{caption}</i>"
                         )
@@ -88,9 +89,14 @@ async def main():
                     except Exception as upload_err:
                         print(f"❌ Gagal mengunggah ke TikTok: {upload_err}")
                         
+                        # Ambil username untuk ditaruh di log error
+                        from uploader import get_tiktok_username_from_cookies
+                        failed_user = get_tiktok_username_from_cookies()
+                        
                         # Kirim notifikasi GAGAL ke Telegram
                         msg = (
                             "⚠️ <b>TIKTOK UPLOAD GAGAL!</b>\n\n"
+                            f"👤 <b>Akun TikTok:</b> <code>{failed_user}</code>\n"
                             f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
                             f"❌ <b>Error Log:</b>\n<code>{upload_err}</code>"
                         )
