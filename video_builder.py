@@ -38,7 +38,7 @@ from downloader import download_video_clips
 from effects import process_background_clip
 from subtitle_engine.orchestrator import SubtitleEngineV2
 from audio import generate_voiceover_with_timestamps, validate_timeline_invariants
-from audio_sync_optimizer import optimize_subtitle_timing
+from audio_sync_optimizer import optimize_subtitle_timing, _to_dict_list, _to_wordtimestamp_list
 
 try:
     import psutil
