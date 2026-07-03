@@ -35,6 +35,33 @@ def send_telegram_message(message: str):
         print(f"⚠️ Gagal mengirim notifikasi status upload ke Telegram: {e}")
 
 
+def send_telegram_photo(photo_path: str, caption: str = ""):
+    """
+    Mengirim file foto ke Telegram menggunakan library requests.
+    """
+    import requests
+    
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "1120755820")
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    
+    if not os.path.exists(photo_path):
+        print(f"⚠️ File foto tidak ditemukan: {photo_path}")
+        return
+        
+    try:
+        with open(photo_path, "rb") as f:
+            files = {"photo": f}
+            data = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
+            response = requests.post(url, files=files, data=data, timeout=15)
+            if response.status_code == 200:
+                print("📨 Notifikasi screenshot berhasil dikirim ke Telegram.")
+            else:
+                print(f"⚠️ Telegram sendPhoto gagal dengan status {response.status_code}: {response.text}")
+    except Exception as e:
+        print(f"⚠️ Gagal mengirim screenshot ke Telegram: {e}")
+
+
 async def main():
     try:
         print("🚀 Memulai Pipeline Pembuatan Video Otomatis...")
@@ -103,6 +130,14 @@ async def main():
                             f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
                         )
                         send_telegram_message(msg)
+                        
+                        # Kirim screenshot kegagalan jika ada berkas hasil tangkapan layar
+                        screenshot_path = "output/error_screenshot.png"
+                        if os.path.exists(screenshot_path):
+                            send_telegram_photo(
+                                screenshot_path,
+                                caption=f"📸 <b>Bukti Kegagalan Layar (TikTok Upload)</b>\nAkun: <code>{failed_user}</code>"
+                            )
                 else:
                     print("⚠️ Tidak ada file video di folder output untuk diunggah.")
             else:
