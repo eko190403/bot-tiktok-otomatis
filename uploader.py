@@ -352,6 +352,12 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             success_found = False
             # Polling setiap 1 detik selama maksimal 45 detik
             for attempt in range(45):
+                # Cek jika URL berubah menjadi halaman daftar konten (upload selesai)
+                if "upload" not in page.url and "login" not in page.url and "signup" not in page.url:
+                    print(f"🚀 Konfirmasi Sukses Terdeteksi (Redirect URL): URL berubah menjadi {page.url}")
+                    success_found = True
+                    break
+                    
                 for sel in success_selectors:
                     try:
                         el = page.locator(sel).first
