@@ -30,47 +30,66 @@ def choose_best_quality(video_files: list) -> str:
     return ""
 
 def download_video_clips(keywords: list, target_count: int = 4) -> list:
-    """Mendownload klip video berdasarkan daftar keyword relevan."""
+    """Mendownload klip video berdasarkan daftar keyword relevan, mendukung multi-download per keyword."""
     os.makedirs(DIR_TEMP, exist_ok=True)
     downloaded_paths = []
     clip_idx = 0
     
-    print(f"📡 Memulai pencarian video Pexels berdasarkan keyword AI: {keywords}")
+    print(f"📡 Memulai pencarian video Pexels berdasarkan keyword AI: {keywords} (Target: {target_count} klip)")
+    
+    # Hitung jumlah klip yang perlu diambil dari masing-masing keyword secara rata
+    num_kws = len(keywords) if keywords else 1
+    clips_per_kw = max(1, (target_count + num_kws - 1) // num_kws)
     
     for kw in keywords:
         if clip_idx >= target_count:
             break
             
-        videos = search_pexels_videos(kw)
+        # Minta 15 video agar ada cukup variasi pilihan
+        videos = search_pexels_videos(kw, per_page=15)
         if not videos:
             continue
             
-        # Ambil satu video acak dari hasil pencarian keyword tersebut
-        vid_data = random.choice(videos)
-        download_url = choose_best_quality(vid_data.get("video_files", []))
+        # Ambil sampel video unik secara acak sesuai kuota klip per keyword
+        sample_size = min(len(videos), clips_per_kw)
+        chosen_videos = random.sample(videos, sample_size)
         
-        if download_url:
-            print(f"📥 Mengunduh klip relevan untuk keyword '{kw}'...")
-            try:
-                resp = requests.get(download_url, timeout=30)
-                if resp.status_code == 200:
-                    file_path = os.path.join(DIR_TEMP, f"bg_clip_{clip_idx}.mp4")
-                    with open(file_path, "wb") as f:
-                        f.write(resp.content)
-                    downloaded_paths.append(file_path)
-                    clip_idx += 1
-            except Exception as e:
-                print(f"⚠️ Gagal mengunduh klip {clip_idx}: {e}")
+        for vid_data in chosen_videos:
+            if clip_idx >= target_count:
+                break
                 
+            download_url = choose_best_quality(vid_data.get("video_files", []))
+            if download_url:
+                print(f"📥 Mengunduh klip {clip_idx + 1}/{target_count} untuk keyword '{kw}'...")
+                try:
+                    resp = requests.get(download_url, timeout=30)
+                    if resp.status_code == 200:
+                        file_path = os.path.join(DIR_TEMP, f"bg_clip_{clip_idx}.mp4")
+                        with open(file_path, "wb") as f:
+                            f.write(resp.content)
+                        downloaded_paths.append(file_path)
+                        clip_idx += 1
+                except Exception as e:
+                    print(f"⚠️ Gagal mengunduh klip {clip_idx}: {e}")
+                    
     # Fallback jika tidak ada keyword yang menghasilkan video
     if not downloaded_paths:
         print("⚠️ Keyword spesifik tidak menghasilkan video. Menggunakan tema fallback...")
-        videos = search_pexels_videos("dark-aesthetic", per_page=10)
-        for i in range(min(target_count, len(videos))):
-            download_url = choose_best_quality(videos[i].get("video_files", []))
-            file_path = os.path.join(DIR_TEMP, f"bg_clip_{i}.mp4")
-            with open(file_path, "wb") as f:
-                f.write(requests.get(download_url).content)
-            downloaded_paths.append(file_path)
+        videos = search_pexels_videos("dark-aesthetic", per_page=15)
+        if videos:
+            sample_size = min(len(videos), target_count)
+            chosen_videos = random.sample(videos, sample_size)
+            for i, vid_data in enumerate(chosen_videos):
+                download_url = choose_best_quality(vid_data.get("video_files", []))
+                if download_url:
+                    try:
+                        file_path = os.path.join(DIR_TEMP, f"bg_clip_{i}.mp4")
+                        resp = requests.get(download_url, timeout=30)
+                        if resp.status_code == 200:
+                            with open(file_path, "wb") as f:
+                                f.write(resp.content)
+                            downloaded_paths.append(file_path)
+                    except Exception as e:
+                        print(f"⚠️ Gagal mengunduh klip fallback {i}: {e}")
             
     return downloaded_paths

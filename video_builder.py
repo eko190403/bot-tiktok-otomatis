@@ -209,12 +209,12 @@ async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: st
     raise RuntimeError("Semua voice Edge-TTS gagal menghasilkan voiceover.")
 
 
-async def run_download_with_retry(loop, keywords: list, max_retry: int = 3) -> list:
-    """Poin 4: Mengaktifkan mekanisme Retry internal untuk menangani network glitch download."""
+async def run_download_with_retry(loop, keywords: list, target_count: int = 4, max_retry: int = 3) -> list:
+    """Poin 4: Mengaktifkan mekanisme Retry internal untuk menangani network glitch download dengan target_count dinamis."""
     for attempt in range(max_retry):
         try:
             return await asyncio.wait_for(
-                loop.run_in_executor(None, download_video_clips, keywords, 4), 
+                loop.run_in_executor(None, download_video_clips, keywords, target_count), 
                 timeout=DOWNLOAD_TIMEOUT
             )
         except asyncio.TimeoutError:
@@ -277,10 +277,16 @@ async def create_video() -> bool:
         with open("temp/video_metadata.json", "w", encoding="utf-8") as f:
             json.dump({"caption": caption}, f, indent=4, ensure_ascii=False)
         
+        # Estimasi durasi untuk menentukan target count background clip (1 clip = 4 detik)
+        total_words = len(hook.split()) + len(story.split()) + len(cta.split())
+        estimated_duration = max(10, total_words / 2.2) # Asumsi kecepatan berbicara 2.2 kata per detik
+        needed_clips = max(4, int(estimated_duration / 4.0) + 1)
+        logger.info("🎬 Menghitung target background clip: estimasi %.1fs -> %d clip (4s/clip)", estimated_duration, needed_clips)
+        
         logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
         loop = asyncio.get_running_loop()
         
-        download_task = run_download_with_retry(loop, keywords, max_retry=3)
+        download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, max_retry=3)
         audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, attempts=3)
         
         results = await asyncio.gather(download_task, audio_task, return_exceptions=True)
@@ -361,7 +367,7 @@ async def create_video() -> bool:
         total_duration = moviepy_resources["audio_clip"].duration
 
         clip_count = len(video_files)
-        duration_per_clip = (total_duration / max(1, clip_count)) + 3.0
+        duration_per_clip = 4.0
         
         for file in video_files:
             try:
