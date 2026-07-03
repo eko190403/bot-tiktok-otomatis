@@ -59,6 +59,17 @@ jobs:
             -d "chat_id=1120755820" \
             -d "text=⏳ Perintah diterima! Video Ruang Pikir sedang mulai diproses dan dirender di Cloud. Mohon tunggu sekitar 2-5 menit..."
 
+      - name: Siapkan Cookies TikTok dari Secret
+        env:
+          TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
+        run: |
+          if [ -n "$TIKTOK_COOKIES" ]; then
+            echo "📝 Menulis berkas cookies.json secara dinamis dari GitHub Secrets..."
+            echo "$TIKTOK_COOKIES" > cookies.json
+          else
+            echo "ℹ️ Secret TIKTOK_COOKIES tidak diset. Menggunakan berkas cookies.json bawaan dari repositori."
+          fi
+
       - name: Jalankan Bot
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}

@@ -26,7 +26,7 @@ except ImportError:
     THREADS_MAX = 4
     SUBTITLE_MIN_ACCURACY = 0.70
     DOWNLOAD_TIMEOUT = 90.0
-    RENDER_TIMEOUT_FACTOR = 15.0 # OPTIMASI TINGKAT EKSTRIM: Memberikan kelonggaran waktu 15x durasi video
+    RENDER_TIMEOUT_FACTOR = 15.0 
     CONFIDENCE_THRESHOLD_HOOK = 0.30
     CONFIDENCE_THRESHOLD_BODY = 0.45
     CONFIDENCE_THRESHOLD_CTA = 0.60
@@ -142,6 +142,25 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True) -> str:
 
 async def generate_structured_script() -> dict:
     logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
+    
+    # Baca riwayat naskah untuk mencegah repetisi ide
+    exclude_prompt = ""
+    history_path = "temp/naskah_history.json"
+    if os.path.exists(history_path):
+        try:
+            with open(history_path, "r", encoding="utf-8") as hf:
+                hist_data = json.load(hf)
+                if hist_data:
+                    # Ambil 15 hook terakhir
+                    recent_hooks = [item["hook"] for item in hist_data if "hook" in item][-15:]
+                    exclude_prompt = (
+                        "\n\nHINDARI MEMBUAT HOOK YANG SAMA ATAU MIRIP DENGAN DAFTAR DI BAWAH INI "
+                        "agar konten selalu unik dan bervariasi:\n" +
+                        "\n".join(f"- {h}" for h in recent_hooks)
+                    )
+        except Exception as e:
+            logger.warning("⚠️ Gagal membaca riwayat naskah: %s", e)
+
     prompt = (
         "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
         "Buat SATU konten edukasi singkat dan viral untuk TikTok Shorts dalam format JSON.\n\n"
@@ -152,7 +171,7 @@ async def generate_structured_script() -> dict:
         "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n"
         "4. 'caption': Judul deskripsi postingan TikTok yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #faktapsikologi #ruangpikir #mindset #stoikisme #fyp #viral). Panjang maksimal 150 karakter.\n\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        "OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', dan 'caption'. Tidak ada teks lain di luar JSON."
+        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', dan 'caption'. Tidak ada teks lain di luar JSON.{exclude_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True)
     return clean_and_parse_json(res)
@@ -276,6 +295,28 @@ async def create_video() -> bool:
         # Simpan metadata caption untuk dibaca uploader di app.py
         with open("temp/video_metadata.json", "w", encoding="utf-8") as f:
             json.dump({"caption": caption}, f, indent=4, ensure_ascii=False)
+            
+        # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten
+        try:
+            history_path = "temp/naskah_history.json"
+            history_data = []
+            if os.path.exists(history_path):
+                with open(history_path, "r", encoding="utf-8") as hf:
+                    history_data = json.load(hf)
+            
+            history_data.append({
+                "timestamp": int(time.time()),
+                "hook": hook,
+                "caption": caption
+            })
+            # Batasi riwayat ke 25 entri terakhir agar file tetap kecil
+            history_data = history_data[-25:]
+            
+            with open(history_path, "w", encoding="utf-8") as hf:
+                json.dump(history_data, hf, indent=4, ensure_ascii=False)
+            logger.info("📝 Naskah berhasil disimpan ke riwayat kontent (naskah_history.json).")
+        except Exception as hist_err:
+            logger.warning("⚠️ Gagal mencatat riwayat naskah: %s", hist_err)
         
         # Estimasi durasi untuk menentukan target count background clip (1 clip = 4 detik)
         total_words = len(hook.split()) + len(story.split()) + len(cta.split())
@@ -447,12 +488,40 @@ async def create_video() -> bool:
                 except Exception as me:
                     logger.warning("⚠️ Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
                     bg_music_clip = None
-        # Gabungkan audio TTS + musik latar
+        # ================= TRANSISI SOUND EFFECTS (SFX) =================
+        sfx_clips = []
+        sfx_path = os.path.join(os.path.dirname(__file__), "assets", "sfx", "swoosh.mp3")
+        if os.path.exists(sfx_path):
+            try:
+                sfx_base = AudioFileClip(sfx_path)
+                moviepy_resources["sfx_base"] = sfx_base
+                # Jeda pergantian klip terjadi setiap 4 detik (duration_per_clip = 4.0)
+                num_transitions = int(total_duration / 4.0)
+                for i in range(1, num_transitions + 1):
+                    t_start = i * 4.0
+                    if t_start < total_duration - 1.0:
+                        # Potong sfx maksimal sepanjang durasi aslinya atau 1.2 detik
+                        clip_len = min(sfx_base.duration, 1.2)
+                        sfx_item = sfx_base.subclipped(0, clip_len).with_start(t_start - 0.4)
+                        sfx_item = sfx_item.with_effects([lambda c: c.multiply_volume(0.20)])
+                        sfx_clips.append(sfx_item)
+                logger.info("🔊 SFX Transisi (Swoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
+            except Exception as sfx_err:
+                logger.warning("⚠️ Gagal memuat SFX transisi: %s", sfx_err)
+                
+        # Gabungkan audio TTS + musik latar + SFX
+        audio_sources = [moviepy_resources["audio_clip"]]
         if bg_music_clip is not None:
-            final_audio = CompositeAudioClip([moviepy_resources["audio_clip"], bg_music_clip])
+            audio_sources.append(bg_music_clip)
+        if sfx_clips:
+            audio_sources.extend(sfx_clips)
+            
+        try:
+            final_audio = CompositeAudioClip(audio_sources)
             moviepy_resources["final_video"] = moviepy_resources["final_video"].with_audio(final_audio)
-            logger.info("✅ Audio final: TTS + Musik Latar digabungkan.")
-        else:
+            logger.info("✅ Audio final: TTS + Musik Latar + %d SFX Transisi digabungkan.", len(sfx_clips))
+        except Exception as mix_err:
+            logger.error("❌ Gagal menggabungkan audio composite: %s. Melanjutkan dengan audio utama.", mix_err)
             moviepy_resources["final_video"] = moviepy_resources["final_video"].with_audio(moviepy_resources["audio_clip"])
         # =========================================================
 

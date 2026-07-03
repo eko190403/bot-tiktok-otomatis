@@ -45,8 +45,13 @@ def download_video_clips(keywords: list, target_count: int = 4) -> list:
         if clip_idx >= target_count:
             break
             
-        # Minta 15 video agar ada cukup variasi pilihan
-        videos = search_pexels_videos(kw, per_page=15)
+        # Poin 1: Sinkronisasi Gaya Visual Estetik (Aesthetic Matching)
+        aesthetic_query = f"{kw} dark cinematic"
+        videos = search_pexels_videos(aesthetic_query, per_page=15)
+        if not videos:
+            # Fallback ke keyword murni jika pencarian estetik tidak mengembalikan video
+            videos = search_pexels_videos(kw, per_page=15)
+            
         if not videos:
             continue
             
