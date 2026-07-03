@@ -83,7 +83,7 @@ def convert_to_playwright_cookies(input_path: str, output_path: str):
     print(f"✅ Cookies dikonversi secara sukses ke format Playwright di: {output_path}")
 
 
-async def upload_to_tiktok(video_path="final_output.mp4"):
+async def upload_to_tiktok(video_path="final_output.mp4", caption=""):
     print("🚀 Playwright: Membuka browser headless di server GitHub...")
     
     input_cookie = "cookies.json"
@@ -121,6 +121,49 @@ async def upload_to_tiktok(video_path="final_output.mp4"):
         # Menemukan elemen input file di halaman TikTok Studio
         file_input = await page.wait_for_selector("input[type='file']")
         await file_input.set_input_files(video_path)
+        
+        # Beri jeda sejenak agar form metadata termuat
+        await asyncio.sleep(3)
+
+        # Masukkan Caption/Deskripsi
+        if caption:
+            print(f"✍️ Menulis deskripsi video: {caption}")
+            try:
+                # Mencoba beberapa selektor alternatif demi ketahanan DOM TikTok
+                selectors = [
+                    '[data-e2e="upload-caption-input"]',
+                    'div[contenteditable="true"]',
+                    '.editor-container div[contenteditable="true"]',
+                    'textarea[placeholder*="caption"]',
+                    'textarea[placeholder*="deskripsi"]'
+                ]
+                caption_element = None
+                for sel in selectors:
+                    try:
+                        caption_element = await page.wait_for_selector(sel, timeout=10000)
+                        if caption_element:
+                            print(f"✅ Menemukan elemen caption dengan selektor: {sel}")
+                            break
+                    except:
+                        continue
+                
+                if caption_element:
+                    # Klik elemen untuk memfokuskan
+                    await caption_element.click()
+                    
+                    # Bersihkan isi teks bawaan (nama file)
+                    # Shortcut Keyboard Control+A lalu Backspace
+                    await page.keyboard.press("Control+A")
+                    await page.keyboard.press("Backspace")
+                    await asyncio.sleep(1)
+                    
+                    # Ketikkan caption secara bertahap (human-like typing)
+                    await page.keyboard.type(caption, delay=60) # delay 60ms per karakter
+                    print("📝 Deskripsi dan Hashtag berhasil diinput.")
+                else:
+                    print("⚠️ Gagal menemukan elemen input caption. Melanjutkan tanpa deskripsi.")
+            except Exception as e:
+                print(f"⚠️ Gagal menginput caption: {e}")
         
         print("⏳ Menunggu proses upload dan enkoding video selesai di server TikTok...")
         # Menunggu tombol "Posting" aktif (menandakan video selesai terunggah)

@@ -149,9 +149,10 @@ async def generate_structured_script() -> dict:
         "ATURAN WAJIB:\n"
         "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 6 kalimat, MAKSIMAL 9 kalimat. Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
-        "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n\n"
+        "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n"
+        "4. 'caption': Judul deskripsi postingan TikTok yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #faktapsikologi #ruangpikir #mindset #stoikisme #fyp #viral). Panjang maksimal 150 karakter.\n\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        "OUTPUT: Hanya JSON murni dengan key 'hook', 'story', dan 'cta'. Tidak ada teks lain di luar JSON."
+        "OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', dan 'caption'. Tidak ada teks lain di luar JSON."
     )
     res = await call_gemini_with_retry(prompt, is_json=True)
     return clean_and_parse_json(res)
@@ -267,9 +268,14 @@ async def create_video() -> bool:
         hook = script_data.get("hook", "FAKTA MENARIK").strip()
         story = script_data.get("story", "").strip()
         cta = script_data.get("cta", "Follow untuk info lainnya").strip()
+        caption = script_data.get("caption", "Fakta Menarik Hari Ini... #faktapsikologi #ruangpikir #fyp").strip()
         
         keywords = await extract_keywords_from_script(story)
         os.makedirs("temp", exist_ok=True)
+        
+        # Simpan metadata caption untuk dibaca uploader di app.py
+        with open("temp/video_metadata.json", "w", encoding="utf-8") as f:
+            json.dump({"caption": caption}, f, indent=4, ensure_ascii=False)
         
         logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
         loop = asyncio.get_running_loop()
