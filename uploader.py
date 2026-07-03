@@ -279,6 +279,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             
             # Tangani popup konfirmasi cek hak cipta / konten ("Turn on automatic content checks?") yang sering muncul setelah klik Post
             await asyncio.sleep(2)
+            checks_modal_active = False
             try:
                 checks_modal_selectors = [
                     'button:has-text("Turn on")',
@@ -294,10 +295,22 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                         if await el.is_visible():
                             print(f"🎬 Klik konfirmasi dialog setelah posting: {sel}")
                             await el.click(timeout=5000, force=True)
-                            await asyncio.sleep(1)
+                            await asyncio.sleep(2)
+                            checks_modal_active = True
                             break
+                    if checks_modal_active:
+                        break
             except Exception as checks_err:
                 print(f"⚠️ Gagal menangani dialog konfirmasi cek konten: {checks_err}")
+                
+            # Jika modal cek konten tadi muncul dan berhasil diklik, kita harus menekan tombol "Post" sekali lagi!
+            if checks_modal_active:
+                print("🎯 Menekan tombol posting konten untuk kedua kalinya (setelah mengaktifkan cek otomatis)...")
+                try:
+                    await button_post.click(force=True)
+                    await asyncio.sleep(1)
+                except Exception as post_again_err:
+                    print(f"⚠️ Gagal menekan tombol posting kedua kali: {post_again_err}")
             
             # Menunggu konfirmasi sukses dari TikTok
             print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
