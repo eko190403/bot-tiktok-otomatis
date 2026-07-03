@@ -109,6 +109,39 @@ def get_tiktok_username_from_cookies(cookie_path="cookies.json") -> str:
     return "@RuangPikir"
 
 
+async def dismiss_modals(page):
+    try:
+        # Tekan Escape beberapa kali untuk menutup modal bawaan
+        await page.keyboard.press("Escape")
+        await asyncio.sleep(0.5)
+        
+        # Selektor umum untuk tombol penutup modal/popup di TikTok
+        close_selectors = [
+            '[aria-label="Close"]',
+            '.tux-icon-close',
+            'button:has-text("Got it")',
+            'button:has-text("Mengerti")',
+            'button:has-text("Tutup")',
+            'button:has-text("Close")',
+            'button:has-text("Lanjutkan")',
+            '.tiktok-modal-close'
+        ]
+        for sel in close_selectors:
+            try:
+                locator = page.locator(sel)
+                count = await locator.count()
+                for i in range(count):
+                    el = locator.nth(i)
+                    if await el.is_visible():
+                        print(f"🎬 Menutup dialog/modal yang menghalangi dengan: {sel}")
+                        await el.click(timeout=3000, force=True)
+                        await asyncio.sleep(0.5)
+            except:
+                continue
+    except Exception as e:
+        print(f"⚠️ Gagal menutup modal: {e}")
+
+
 async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
     print("🚀 Playwright: Membuka browser headless di server GitHub...")
     
@@ -145,6 +178,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
         try:
             print("🌐 Mengakses halaman TikTok Creator Studio Upload...")
             await page.goto("https://www.tiktok.com/creator-center/upload?lang=id-ID", timeout=60000)
+            await dismiss_modals(page)
             
             # Cek apakah berhasil masuk atau malah mental ke halaman login biasa
             if "login" in page.url or "signup" in page.url:
@@ -161,6 +195,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             # Masukkan Caption/Deskripsi
             if caption:
                 print(f"✍️ Menulis deskripsi video: {caption}")
+                await dismiss_modals(page)
                 try:
                     # Mencoba beberapa selektor alternatif demi ketahanan DOM TikTok
                     selectors = [
@@ -181,8 +216,8 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                             continue
                     
                     if caption_element:
-                        # Klik elemen untuk memfokuskan
-                        await caption_element.click()
+                        # Klik elemen untuk memfokuskan (gunakan force=True agar tidak terhalang modal)
+                        await caption_element.click(force=True)
                         
                         # Bersihkan isi teks bawaan (nama file)
                         # Shortcut Keyboard Control+A lalu Backspace
@@ -239,7 +274,8 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
     
             # Klik tombol posting
             print("🎯 Klik tombol posting konten!")
-            await button_post.click()
+            await dismiss_modals(page)
+            await button_post.click(force=True)
             
             # Menunggu konfirmasi sukses dari TikTok
             print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
