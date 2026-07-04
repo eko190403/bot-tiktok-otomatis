@@ -198,22 +198,17 @@ async def generate_structured_script() -> dict:
     return clean_and_parse_json(res)
 
 async def extract_keywords_from_script(script_text: str) -> list:
-    categories = [
-        "dark abstract", "cinematic nature", "space galaxy", "moody urban", 
-        "minimalist", "calm ocean", "mysterious forest", "dark aesthetic", 
-        "stoic statue", "night sky", "abstract light", "vintage texture",
-        "smoke fog", "cyberpunk city", "deep sea"
-    ]
-    categories_str = ", ".join(f'"{c}"' for c in categories)
-    
     prompt = (
-        "You are a visual design expert. Analyze the following TikTok script and choose exactly 4 English search terms "
-        f"from this curated list of aesthetic visual themes: [{categories_str}].\n"
-        "If some themes are highly relevant to the script's mood (e.g. stoic, dark, success, mind), prioritize them. "
-        "You may also fallback to general themes from the list if needed.\n\n"
+        "You are a visual design expert. Analyze the following video script and generate exactly 4 aesthetic English search terms "
+        "that represent the visual mood and specific topics of the script. These terms will be used to search for background "
+        "videos on Pexels.\n\n"
+        "GUIDELINES:\n"
+        "1. Keep search terms simple, usually 1 to 3 words (e.g., 'writing journal', 'neon clock', 'dark forest', 'crying face', 'man thinking', 'stormy weather', 'neon light abstract').\n"
+        "2. Ensure the terms are highly visual, artistic, and match the mood of the text.\n"
+        "3. Avoid abstract words that Pexels might not have (e.g., 'stoicism mindset'). Use visual representations instead (e.g., 'stoic statue', 'thoughtful man', 'calm sea').\n\n"
         f"SCRIPT:\n\"{script_text}\"\n\n"
-        "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 4 themes chosen from the list above. "
-        "Example: [\"dark abstract\", \"stoic statue\", \"night sky\", \"minimalist\"]. "
+        "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 4 search terms.\n"
+        "Example: [\"dark abstract\", \"thoughtful man\", \"neon clock\", \"minimalist study\"].\n"
         "No additional text outside the JSON."
     )
     try:

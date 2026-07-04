@@ -10,9 +10,10 @@ on:
       - webhook_trigger
 
   schedule:
-    # Jalan otomatis 8 kali sehari (setiap 2 jam dari jam 08:00 WIB - 22:00 WIB)
-    # UTC: 01:00, 03:00, 05:00, 07:00, 09:00, 11:00, 13:00, 15:00
-    - cron: '0 1,3,5,7,9,11,13,15 * * *'
+    # Menggunakan Jam Emas (Prime Time) Indonesia agar jangkauan penonton maksimal:
+    # 08:00 WIB (01:00 UTC), 12:00 WIB (05:00 UTC), 15:00 WIB (08:00 UTC), 17:30 WIB (10:30 UTC), 19:30 WIB (12:30 UTC), 21:00 WIB (14:00 UTC)
+    - cron: '0 1,5,8,14 * * *'
+    - cron: '30 10,12 * * *'
 
 jobs:
   build-and-run:
