@@ -203,7 +203,11 @@ async def generate_structured_script() -> dict:
         "Stoikisme (Filosofi Teras)", 
         "Dark Psychology (Trik/Manipulasi)", 
         "Mindset Sukses & Produktivitas", 
-        "Efek/Bias Psikologis dalam Kehidupan"
+        "Efek/Bias Psikologis dalam Kehidupan",
+        "Fakta Mind-Blowing Otak Manusia",
+        "Paradoks Psikologi & Realita",
+        "Fakta Unik Hubungan & Interaksi Sosial",
+        "Bahasa Tubuh & Rahasia Perilaku Manusia"
     ]
     chosen_theme = random.choice(themes)
     logger.info("🎯 Tema terpilih: %s", chosen_theme)
