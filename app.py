@@ -25,7 +25,6 @@ def send_telegram_message(message: str):
         "parse_mode": "HTML"
     }
     
-    import time
     for attempt in range(3):
         try:
             req = urllib.request.Request(
@@ -61,7 +60,6 @@ def send_telegram_photo(photo_path: str, caption: str = ""):
         print(f"⚠️ File foto tidak ditemukan: {photo_path}")
         return
         
-    import time
     for attempt in range(3):
         try:
             with open(photo_path, "rb") as f:
@@ -107,7 +105,6 @@ def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: st
         ]
     }
     
-    import time
     for attempt in range(3):
         try:
             print(f"📡 Mengirim berkas video draf beserta tombol kontrol ke Telegram (percobaan {attempt + 1}/3)...")
@@ -374,7 +371,6 @@ async def main():
             # Mode Draf Jarak Jauh (Telegram Control Panel) jika kedua upload mati
             if not enable_upload and not enable_yt_upload and latest_video:
                 print("📝 Mode Draf Aktif: Mengirim video ke Telegram dengan panel tombol...")
-                import time
                 video_id = f"video_{int(time.time())}"
                 
                 # Kirim ke Telegram dan dapatkan file_id
