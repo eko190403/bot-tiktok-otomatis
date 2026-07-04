@@ -57,26 +57,61 @@ def normalize_for_match(word: str) -> str:
     return w.upper()
 
 
-def apply_phonetic_dictionary(word: str) -> str:
-    """Mengganti kata slang/singkatan dengan versi baku agar pelafalan TTS lebih jelas."""
-    core = normalize_for_match(word)
-    replacement = PHONETIC_DICTIONARY.get(core)
-    if replacement is None:
-        return word
-    # Pertahankan tanda baca penutup (misal koma/titik) dari kata asli
-    trailing_punct = re.search(r"[.,!?;:]+$", word)
-    return replacement + (trailing_punct.group(0) if trailing_punct else "")
+def number_to_words_id(n: int) -> str:
+    if n == 0:
+        return "nol"
+    satuan = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas"]
+    def konversi(x: int) -> str:
+        if x < 12:
+            return satuan[x]
+        elif x < 20:
+            return satuan[x - 10] + " belas"
+        elif x < 100:
+            return satuan[x // 10] + " puluh " + (satuan[x % 10] if x % 10 != 0 else "")
+        elif x < 200:
+            return "seratus " + konversi(x - 100)
+        elif x < 1000:
+            return satuan[x // 100] + " ratus " + konversi(x % 100)
+        elif x < 2000:
+            return "seribu " + konversi(x - 1000)
+        elif x < 1000000:
+            return konversi(x // 1000) + " ribu " + konversi(x % 1000)
+        return str(x)
+    res = konversi(n)
+    return " ".join(res.split())
 
+def expand_token_to_spoken(word: str) -> List[str]:
+    # Bersihkan tanda baca di sekeliling kata
+    clean_word = word.strip(".,!?;:()\"'")
+    
+    # 1. Tangani persentase (e.g. 70%)
+    if "%" in clean_word:
+        base = clean_word.replace("%", "")
+        if base.isdigit():
+            words = number_to_words_id(int(base)).split()
+            words.append("persen")
+            return words
+            
+    # 2. Tangani angka murni
+    if clean_word.isdigit():
+        return number_to_words_id(int(clean_word)).split()
+        
+    # 3. Tangani simbol/slang lain via phonetic dict
+    normalized = normalize_for_match(clean_word)
+    if normalized in PHONETIC_DICTIONARY:
+        return PHONETIC_DICTIONARY[normalized].split()
+        
+    return [clean_word]
 
 def tokenize_section(text: str, section: str) -> List[Dict]:
     """Memecah teks section menjadi token dengan versi display (asli) & spoken (fonetik)."""
     raw_tokens = text.split()
     tokens = []
     for w in raw_tokens:
-        spoken = apply_phonetic_dictionary(w)
-        tokens.append({"display": w, "spoken": spoken, "section": section})
+        spoken_list = expand_token_to_spoken(w)
+        for spoken in spoken_list:
+            tokens.append({"display": w, "spoken": spoken, "section": section})
     return tokens
-
 
 def build_target_sequence(hook: str, story: str, cta: str) -> List[Dict]:
     return (
@@ -287,22 +322,60 @@ def _interpolate_missing(final_timestamps: List[WordTimestamp], audio_duration: 
 
 # --- PIPELINE ---
 
+def build_ssml_string(hook_tokens: List[Dict], story_tokens: List[Dict], cta_tokens: List[Dict], voice: str) -> str:
+    # 1. Bersihkan teks dan bangun per-bagian
+    hook_text = " ".join(t["spoken"] for t in hook_tokens)
+    
+    # Untuk story, cari token dengan tanda baca akhir dan sisipkan jeda
+    story_parts = []
+    current_sentence = []
+    for t in story_tokens:
+        word = t["spoken"]
+        current_sentence.append(word)
+        # Jika display token asli memiliki tanda baca akhir kalimat
+        if any(char in t["display"] for char in [".", "!", "?"]):
+            story_parts.append(" ".join(current_sentence) + ' <break time="400ms"/>')
+            current_sentence = []
+    if current_sentence:
+        story_parts.append(" ".join(current_sentence))
+    story_text = " ".join(story_parts)
+    
+    cta_text = " ".join(t["spoken"] for t in cta_tokens)
+    
+    # 2. Bangun SSML penuh dengan tag prosody untuk intonasi yang intim & menegangkan
+    ssml = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="id-ID">
+        <voice name="{voice}">
+            <prosody rate="-2%" pitch="-1Hz">
+                {hook_text}
+                <break time="750ms"/>
+                {story_text}
+                <break time="500ms"/>
+                {cta_text}
+            </prosody>
+        </voice>
+    </speak>"""
+    return ssml
+
 async def generate_voiceover_with_timestamps(
     hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"
 ) -> Tuple[List[WordTimestamp], SyncMetadata]:
 
-    target_tokens = build_target_sequence(hook, story, cta)
+    hook_tokens = tokenize_section(hook, "hook")
+    story_tokens = tokenize_section(story, "story")
+    cta_tokens = tokenize_section(cta, "cta")
+    
+    target_tokens = hook_tokens + story_tokens + cta_tokens
     if not target_tokens:
         raise RuntimeError("Naskah kosong, tidak ada kata untuk disintesis.")
 
-    spoken_text_for_tts = " ".join(t["spoken"] for t in target_tokens)
+    ssml_text = build_ssml_string(hook_tokens, story_tokens, cta_tokens, voice)
 
     audio_data = bytearray()
     raw_boundaries: List[Dict] = []
 
-    # 1. GENERATE AUDIO VIA EDGE-TTS (memakai teks fonetik agar pelafalan jelas)
+    # 1. GENERATE AUDIO VIA EDGE-TTS DENGAN SSML
     try:
-        communicate = edge_tts.Communicate(spoken_text_for_tts, voice)
+        communicate = edge_tts.Communicate(ssml_text, voice)
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_data.extend(chunk["data"])

@@ -428,7 +428,7 @@ async def generate_structured_script(niche: str = "psychology") -> dict:
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
-        "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta yang akan mengubah cara kamu melihat dunia.'\n"
+        "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. PENTING: Kalimat terakhir dari cta ini HARUS dirancang menggantung di akhir kata dan secara tata bahasa menyambung kembali dengan mulus (seamless loop) ke kata pertama pada kalimat HOOK utama agar video bisa ditonton berulang kali secara melingkar tanpa terputus. Contoh jika HOOK = 'KENAPA KAMU MISKIN', maka akhir CTA bisa berbunyi '...dan itulah alasan utama...' sehingga saat diputar ulang ia tersambung menjadi '...dan itulah alasan utama KENAPA KAMU MISKIN'.\n"
         "4. 'caption': Judul deskripsi postingan TikTok/Shorts yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #ruangpikir #motivation #mindset #fyp #viral). Panjang maksimal 150 karakter.\n"
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
@@ -456,16 +456,15 @@ async def generate_structured_script(niche: str = "psychology") -> dict:
 
 async def extract_keywords_from_script(script_text: str) -> list:
     prompt = (
-        "You are a visual design expert. Analyze the following video script and generate exactly 4 aesthetic English search terms "
-        "that represent the visual mood and specific topics of the script. These terms will be used to search for background "
-        "videos on Pexels.\n\n"
-        "GUIDELINES:\n"
-        "1. Keep search terms simple, usually 1 to 3 words (e.g., 'writing journal', 'neon clock', 'dark forest', 'crying face', 'man thinking', 'stormy weather', 'neon light abstract').\n"
-        "2. Ensure the terms are highly visual, artistic, and match the mood of the text.\n"
-        "3. Avoid abstract words that Pexels might not have (e.g., 'stoicism mindset'). Use visual representations instead (e.g., 'stoic statue', 'thoughtful man', 'calm sea').\n\n"
+        "You are a professional video director and visual storyteller. Analyze the following vertical short video script and generate exactly 4 highly relevant, visually rich, and contextually precise English search terms for Pexels videos.\n\n"
+        "CRITICAL GUIDELINES:\n"
+        "1. MATCH THE METAPHORS & CONTEXT: Do not use generic keywords. If the script discusses 'manipulation' or 'praise', do not search for abstract terms. Instead, search for visual metaphors or direct representations (e.g., 'puppeteer hands', 'fake smile', 'shadow face', 'applause crowd', 'whispering').\n"
+        "2. VISUALLY GRAPPLING: Focus on high-contrast, moody, or cinematic concepts (e.g., 'cinematic dark studio', 'cyberpunk rain', 'lonely silhouette', 'deep thought man').\n"
+        "3. PEXELS FRIENDLY: Keep terms to 2-3 words, descriptive but concrete (avoid terms Pexels won't have like 'subconscious mind'). Use tangible objects/actions (e.g., 'brain model neon', 'hour glass sand', 'locked door key').\n"
+        "4. MOOD CONSISTENCY: Ensure all 4 terms align with the overall tense/mysterious/educational mood of the script.\n\n"
         f"SCRIPT:\n\"{script_text}\"\n\n"
         "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 4 search terms.\n"
-        "Example: [\"dark abstract\", \"thoughtful man\", \"neon clock\", \"minimalist study\"].\n"
+        "Example: [\"whispering shadow\", \"puppeteer strings\", \"anxious expression\", \"neon abstract brain\"].\n"
         "No additional text outside the JSON."
     )
     try:
