@@ -735,9 +735,9 @@ async def create_video() -> bool:
         
         def execute_ffmpeg_render(target_path: str):
             moviepy_resources["final_video"].write_videofile(
-                target_path, fps=30, codec="libx264", preset="ultrafast", # OPTIMASI: Kecepatan maksimal encoding
+                target_path, fps=30, codec="libx264", preset="veryfast", # OPTIMASI: Kecepatan & kompresi seimbang
                 audio_codec="aac", threads=cpu_threads, logger=None,
-                ffmpeg_params=["-crf", "26", "-pix_fmt", "yuv420p"]      # OPTIMASI: Kompresi super ringan untuk GitHub Actions
+                ffmpeg_params=["-crf", "30", "-pix_fmt", "yuv420p"]      # OPTIMASI: Kompresi optimal untuk batas 50MB Telegram
             )
 
         render_timeout = total_duration * RENDER_TIMEOUT_FACTOR
