@@ -240,24 +240,95 @@ async def analyze_comments_with_gemini(comments: list) -> str:
         logger.warning("⚠️ Gagal menganalisis komentar dengan Gemini: %s", e)
         return ""
 
+NICHE_CONFIG = {
+    "psychology": {
+        "name": "Psikologi",
+        "description": "psikologi, mindset, dan perilaku manusia",
+        "themes": [
+            "Fakta Psikologi Menarik", 
+            "Stoikisme (Filosofi Teras)", 
+            "Dark Psychology (Trik/Manipulasi)", 
+            "Efek/Bias Psikologis dalam Kehidupan",
+            "Fakta Mind-Blowing Otak Manusia",
+            "Paradoks Psikologi & Realita",
+            "Fakta Unik Hubungan & Interaksi Sosial",
+            "Bahasa Tubuh & Rahasia Perilaku Manusia"
+        ],
+        "system_prompt": (
+            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi, mindset, dan perilaku manusia.\n"
+            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
+        ),
+        "tags_example": "['stoicism', 'mindset', 'psychology facts', 'dark psychology']",
+        "tags_fallback": ["shorts", "faktapsikologi", "mindset", "ruangpikir"]
+    },
+    "finance": {
+        "name": "Keuangan",
+        "description": "finansial, kebiasaan orang kaya, mindset uang, investasi, dan pengelolaan finansial",
+        "themes": [
+            "Kebiasaan Finansial Orang Kaya",
+            "Mindset Uang & Kelimpahan",
+            "Aturan Finansial 50/30/20",
+            "Cara Kerja Inflasi Secara Sederhana",
+            "Investasi Leher ke Atas",
+            "Kesalahan Keuangan di Usia 20-an",
+            "Pentingnya Dana Darurat",
+            "Rahasia Bebas Finansial (Financial Freedom)"
+        ],
+        "system_prompt": (
+            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang keuangan pribadi, investasi, dan edukasi finansial.\n"
+            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
+        ),
+        "tags_example": "['personal finance', 'investing', 'money habits', 'financial freedom']",
+        "tags_fallback": ["shorts", "keuangan", "investasi", "mindsetuang"]
+    },
+    "motivation": {
+        "name": "Motivasi",
+        "description": "disiplin diri, produktivitas, konsistensi, growth mindset, dan ketangguhan mental",
+        "themes": [
+            "Aturan 1 Persen Setiap Hari",
+            "Disiplin Mengalahkan Motivasi",
+            "Cara Menghancurkan Prokrastinasi (Menunda-nunda)",
+            "Kekuatan Konsistensi",
+            "Growth Mindset vs Fixed Mindset",
+            "Pentingnya Memiliki Rutinitas Pagi",
+            "Menghadapi Kegagalan & Mental Tangguh",
+            "Aturan 5 Detik untuk Bertindak"
+        ],
+        "system_prompt": (
+            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang motivasi, pengembangan diri, dan disiplin.\n"
+            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
+        ),
+        "tags_example": "['motivation', 'discipline', 'growth mindset', 'productivity']",
+        "tags_fallback": ["shorts", "motivasi", "disiplin", "pengembangandiri"]
+    },
+    "science": {
+        "name": "Sains",
+        "description": "sains, fakta ilmiah menarik, luar angkasa, otak manusia, sains populer, dan misteri alam semesta",
+        "themes": [
+            "Misteri Lubang Hitam (Black Hole)",
+            "Bagaimana Otak Menyimpan Memori",
+            "Fakta Menarik Kecepatan Cahaya",
+            "Sisi Gelap Laut Dalam (Deep Sea)",
+            "Teori Relativitas Einstein Secara Sederhana",
+            "Fakta Unik Sistem Saraf Manusia",
+            "Mengapa Kita Mengantuk Saat Hujan",
+            "Keajaiban Kuantum (Quantum Physics)"
+        ],
+        "system_prompt": (
+            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang sains populer, fakta unik ilmiah, dan misteri alam semesta.\n"
+            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
+        ),
+        "tags_example": "['science facts', 'universe', 'brain science', 'space facts']",
+        "tags_fallback": ["shorts", "faktasains", "ilmiah", "antariksa"]
+    }
+}
 
-async def generate_structured_script() -> dict:
-    logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
+async def generate_structured_script(niche: str = "psychology") -> dict:
+    logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis (%s)...", niche)
     import random
     
-    # Pilih tema secara acak di Python untuk pemerataan variasi tema
-    themes = [
-        "Fakta Psikologi Menarik", 
-        "Stoikisme (Filosofi Teras)", 
-        "Dark Psychology (Trik/Manipulasi)", 
-        "Mindset Sukses & Produktivitas", 
-        "Efek/Bias Psikologis dalam Kehidupan",
-        "Fakta Mind-Blowing Otak Manusia",
-        "Paradoks Psikologi & Realita",
-        "Fakta Unik Hubungan & Interaksi Sosial",
-        "Bahasa Tubuh & Rahasia Perilaku Manusia"
-    ]
-    chosen_theme = random.choice(themes)
+    config = NICHE_CONFIG.get(niche, NICHE_CONFIG["psychology"])
+    chosen_theme = random.choice(config["themes"])
     logger.info("🎯 Tema terpilih: %s", chosen_theme)
     
     # Baca riwayat naskah untuk mencegah repetisi ide (lewat Firebase / cadangan Lokal)
@@ -352,15 +423,14 @@ async def generate_structured_script() -> dict:
         logger.warning("⚠️ Gagal mengintegrasikan tren jacking: %s", e)
 
     prompt = (
-        "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
-        "Buat SATU konten edukasi singkat dan viral untuk TikTok Shorts dalam format JSON.\n\n"
+        f"{config['system_prompt']}"
         f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n\n"
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
-        "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n"
-        "4. 'caption': Judul deskripsi postingan TikTok/Shorts yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #faktapsikologi #ruangpikir #mindset #stoikisme #fyp #viral). Panjang maksimal 150 karakter.\n"
-        "5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal ['stoicism', 'mindset', 'psychology facts', 'dark psychology']).\n"
+        "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta yang akan mengubah cara kamu melihat dunia.'\n"
+        "4. 'caption': Judul deskripsi postingan TikTok/Shorts yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #ruangpikir #motivation #mindset #fyp #viral). Panjang maksimal 150 karakter.\n"
+        f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
         "7. 'interactive_comment': Satu kalimat pertanyaan pancingan diskusi yang sangat interaktif dan memicu penonton untuk berdiskusi/menulis komentar di kolom komentar (maks 15 kata). Contoh: 'Apakah kamu pernah memanipulasi seseorang untuk mendapatkan apa yang kamu mau?'\n"
         f"{ab_test_instruction}\n"
@@ -377,6 +447,10 @@ async def generate_structured_script() -> dict:
             firebase_connector.save_hook_candidate(parsed_json["hook_b"])
         except Exception as e:
             logger.warning("⚠️ Gagal menyimpan hook kandidat B ke database: %s", e)
+
+    if isinstance(parsed_json, dict):
+        parsed_json["niche"] = niche
+        parsed_json["theme"] = chosen_theme
 
     return parsed_json
 
@@ -497,7 +571,7 @@ async def kill_zombie_ffmpeg_processes(target_file: str):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
-async def create_video() -> bool:
+async def create_video(niche: str = None) -> bool:
     start_total = time.time()
     moviepy_resources = {"audio_clip": None, "processed_clips": [], "raw_combined_bg": None, "looped_bg": None, "combined_bg": None, "final_video": None}
     video_files = []
@@ -506,6 +580,12 @@ async def create_video() -> bool:
     draft_script_path = os.path.join(DIR_TEMP, "draft_script.json")
     draft_audio_path = os.path.join(DIR_TEMP, "draft_audio.mp3")
     draft_timestamps_path = os.path.join(DIR_TEMP, "draft_timestamps.json")
+    
+    # Pilih niche secara acak jika tidak didefinisikan
+    if not niche:
+        import random
+        niche = random.choice(list(NICHE_CONFIG.keys()))
+    logger.info("🎯 Niche terpilih untuk video ini: %s", niche)
     
     try:
         os.makedirs(DIR_TEMP, exist_ok=True)
@@ -521,7 +601,7 @@ async def create_video() -> bool:
                 logger.warning(" Gagal memuat draf naskah: %s", e)
                 
         if not script_data:
-            script_data = await generate_structured_script()
+            script_data = await generate_structured_script(niche=niche)
             with open(draft_script_path, "w", encoding="utf-8") as f:
                 json.dump(script_data, f, indent=4, ensure_ascii=False)
             logger.info(" Draf naskah disimpan ke cache (%s)", draft_script_path)
@@ -550,7 +630,9 @@ async def create_video() -> bool:
                 "tags": tags,
                 "category_id": category_id,
                 "interactive_comment": interactive_comment,
-                "theme": chosen_visual_theme
+                "theme": chosen_visual_theme,
+                "niche": niche,
+                "hook": hook
             }, f, indent=4, ensure_ascii=False)
             
         # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten (lewat Firebase / cadangan Lokal)

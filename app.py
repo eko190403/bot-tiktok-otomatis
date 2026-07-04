@@ -217,6 +217,8 @@ async def main():
             category_id = "22"
             interactive_comment = ""
             theme = "classic_yellow"
+            niche = "psychology"
+            hook = "FAKTA MENARIK"
             metadata_path = os.path.join(DIR_TEMP, "video_metadata.json")
             if os.path.exists(metadata_path):
                 try:
@@ -228,6 +230,8 @@ async def main():
                         category_id = meta_data.get("category_id", "22")
                         interactive_comment = meta_data.get("interactive_comment", "")
                         theme = meta_data.get("theme", "classic_yellow")
+                        niche = meta_data.get("niche", "psychology")
+                        hook = meta_data.get("hook", "FAKTA MENARIK")
                     os.remove(metadata_path) # Bersihkan setelah dibaca
                 except Exception as meta_err:
                     print(f"⚠️ Gagal membaca/menghapus metadata: {meta_err}")
@@ -236,6 +240,20 @@ async def main():
             import glob
             video_files = glob.glob("output/*.mp4")
             latest_video = max(video_files, key=os.path.getctime) if video_files else None
+
+            # Pembuatan Auto-Thumbnail dari video
+            thumbnail_path = "output/thumbnail.jpg"
+            has_thumbnail = False
+            if latest_video:
+                print("🖼️ Memulai proses pembuatan auto-thumbnail...")
+                try:
+                    from thumbnail_generator import extract_frame_from_video, generate_thumbnail
+                    temp_bg_path = os.path.join(DIR_TEMP, "thumbnail_bg.jpg")
+                    if extract_frame_from_video(latest_video, temp_bg_path, timestamp_sec=1.0):
+                        if generate_thumbnail(hook, temp_bg_path, thumbnail_path, brand_name="Ruang Pikir"):
+                            has_thumbnail = True
+                except Exception as thumb_err:
+                    print(f"⚠️ Gagal membuat auto-thumbnail: {thumb_err}")
 
             # Poin 9: Integrasi Upload Otomatis ke TikTok
             enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
@@ -317,6 +335,15 @@ async def main():
                         
                         # Ekstrak ID dari URL https://youtu.be/ID
                         yt_video_id = youtube_url.split("/")[-1]
+                        
+                        # Unggah custom thumbnail jika sukses dibuat
+                        if has_thumbnail:
+                            try:
+                                from youtube_uploader import upload_thumbnail
+                                await upload_thumbnail(yt_video_id, thumbnail_path)
+                            except Exception as thumb_up_err:
+                                print(f"⚠️ Gagal mengunggah thumbnail ke YouTube: {thumb_up_err}")
+                                
                         # Simpan info publikasi ke draf agar performanya bisa dipantau
                         direct_video_id = f"video_{int(time.time())}"
                         try:
@@ -329,7 +356,8 @@ async def main():
                                 "interactive_comment": interactive_comment,
                                 "theme": theme,
                                 "platform": "youtube",
-                                "platform_video_id": yt_video_id
+                                "platform_video_id": yt_video_id,
+                                "niche": niche
                             }
                             firebase_connector.save_video_draft(direct_video_id, draft_data)
                         except Exception as draft_err:
@@ -391,7 +419,8 @@ async def main():
                         "tags": tags,
                         "category_id": category_id,
                         "interactive_comment": interactive_comment,
-                        "theme": theme
+                        "theme": theme,
+                        "niche": niche
                     }
                     try:
                         firebase_connector.save_video_draft(video_id, draft_data)

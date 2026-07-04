@@ -280,3 +280,50 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2) -> None
                 
     except Exception as e:
         print(f"⚠️ Gagal membalas komentar otomatis di YouTube: {e}")
+
+
+async def upload_thumbnail(video_id: str, thumbnail_path: str) -> bool:
+    """Mengunggah kustom thumbnail untuk video YouTube menggunakan YouTube Data API v3."""
+    if not os.path.exists(thumbnail_path):
+        print(f"⚠️ Berkas thumbnail tidak ditemukan: {thumbnail_path}")
+        return False
+        
+    cred_file = "youtube_credentials.json"
+    if not os.path.exists(cred_file):
+        print("⚠️ youtube_credentials.json tidak ditemukan. Melewati upload thumbnail.")
+        return False
+        
+    try:
+        with open(cred_file, "r") as f:
+            cred_data = json.load(f)
+            
+        credentials = Credentials(
+            token=cred_data.get("token"),
+            refresh_token=cred_data.get("refresh_token"),
+            token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=cred_data.get("client_id"),
+            client_secret=cred_data.get("client_secret")
+        )
+        
+        youtube = build("youtube", "v3", credentials=credentials)
+        
+        media = MediaFileUpload(
+            thumbnail_path,
+            mimetype="image/jpeg"
+        )
+        
+        request = youtube.thumbnails().set(
+            videoId=video_id,
+            media_body=media
+        )
+        
+        import asyncio
+        loop = asyncio.get_event_loop()
+        print(f"🖼️ Mengunggah custom thumbnail untuk Video ID: {video_id}...")
+        response = await loop.run_in_executor(None, request.execute)
+        print("🖼️ Sukses mengunggah custom thumbnail!")
+        return True
+    except Exception as e:
+        print(f"⚠️ Gagal mengunggah thumbnail ke YouTube: {e}")
+        return False
+
