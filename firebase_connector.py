@@ -394,16 +394,21 @@ def get_viral_video_ids(min_views: int = 500, limit: int = 3) -> dict:
 
     if is_firebase_enabled and db is not None:
         try:
+            # Ambil semua draf youtube untuk difilter di memori agar tidak perlu composite index
             docs = db.collection("drafts")\
                      .where("platform", "==", "youtube")\
-                     .where("views", ">=", min_views)\
-                     .where("comments_analyzed", "==", False)\
-                     .limit(limit).stream()
+                     .limit(100).stream()
+            count = 0
             for doc in docs:
                 data = doc.to_dict()
-                yt_id = data.get("platform_video_id")
-                if yt_id:
-                    video_map[doc.id] = yt_id
+                if (data.get("views", 0) >= min_views 
+                        and not data.get("comments_analyzed", False)):
+                    yt_id = data.get("platform_video_id")
+                    if yt_id:
+                        video_map[doc.id] = yt_id
+                        count += 1
+                        if count >= limit:
+                            break
             return video_map
         except Exception as e:
             logger.warning(f"⚠️ Gagal mengambil viral video dari Firestore: {e}")
@@ -461,14 +466,17 @@ def get_latest_comment_insight() -> str:
     """Mengambil insight komentar terbaru dari video yang paling viral."""
     if is_firebase_enabled and db is not None:
         try:
+            # Mengambil draf teranalisis untuk diurutkan di memori agar tidak perlu composite index
             docs = db.collection("drafts")\
                      .where("comments_analyzed", "==", True)\
-                     .order_by("views", direction=firestore.Query.DESCENDING)\
-                     .limit(1).stream()
+                     .limit(50).stream()
+            candidates = []
             for doc in docs:
-                insight = doc.to_dict().get("comment_insight", "")
-                if insight:
-                    return insight
+                data = doc.to_dict()
+                candidates.append(data)
+            candidates.sort(key=lambda x: x.get("views", 0), reverse=True)
+            if candidates:
+                return candidates[0].get("comment_insight", "")
         except Exception as e:
             logger.warning(f"⚠️ Gagal mengambil comment insight dari Firestore: {e}")
 

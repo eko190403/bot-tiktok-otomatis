@@ -198,7 +198,7 @@ def get_indonesia_trending_searches() -> list:
     """Mengambil kata kunci pencarian terpopuler hari ini di Indonesia dari Google Trends RSS."""
     import urllib.request
     import xml.etree.ElementTree as ET
-    url = "https://trends.google.com/trends/trendingsearches/daily/rss?geo=ID"
+    url = "https://trends.google.com/trending/rss?geo=ID"
     try:
         req = urllib.request.Request(
             url,
@@ -332,6 +332,10 @@ async def generate_structured_script() -> dict:
             "\n8. 'hook_b': Hasilkan SATU variasi hook alternatif (versi B) yang berbeda gaya/pendekatan dengan 'hook' utama, tapi membahas subjek yang sama. Format teks harus KAPITAL, maks 10 kata. Contoh: 'JANGAN SAMPAI TANDUK KEPALA KAMU DIATUR ORANG LAIN'\n"
         )
         logger.info("🎯 A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
+
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
+    if hook_candidate:
+        hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
     # ⭐ LEVEL 6 TREND JACKING: Ambil kata kunci yang sedang tren di Indonesia
     trends_prompt = ""
