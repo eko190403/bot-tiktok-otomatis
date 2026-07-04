@@ -167,3 +167,48 @@ async def get_youtube_stats(video_ids: list) -> dict:
     except Exception as e:
         print(f"⚠️ Gagal mengambil statistik dari YouTube API: {e}")
         return {}
+
+
+async def get_top_comments(video_id: str, max_results: int = 20) -> list:
+    """Mengambil komentar teratas dari video YouTube menggunakan YouTube Data API v3."""
+    cred_file = "youtube_credentials.json"
+    if not os.path.exists(cred_file):
+        print("⚠️ youtube_credentials.json tidak ditemukan. Melewati pengambilan komentar.")
+        return []
+        
+    try:
+        with open(cred_file, "r") as f:
+            cred_data = json.load(f)
+            
+        credentials = Credentials(
+            token=cred_data.get("token"),
+            refresh_token=cred_data.get("refresh_token"),
+            token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=cred_data.get("client_id"),
+            client_secret=cred_data.get("client_secret")
+        )
+        
+        youtube = build("youtube", "v3", credentials=credentials)
+        request = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            maxResults=max_results,
+            order="relevance"
+        )
+        
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, request.execute)
+        
+        comments = []
+        for item in response.get("items", []):
+            text = item["snippet"]["topLevelComment"]["snippet"]["textOriginal"]
+            likes = item["snippet"]["topLevelComment"]["snippet"].get("likeCount", 0)
+            comments.append({"text": text, "likes": likes})
+            
+        # Urutkan berdasarkan likes tertinggi
+        comments.sort(key=lambda x: x["likes"], reverse=True)
+        return [c["text"] for c in comments]
+    except Exception as e:
+        print(f"⚠️ Gagal mengambil komentar dari YouTube API: {e}")
+        return []

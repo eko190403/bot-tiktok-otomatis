@@ -155,13 +155,47 @@ async def main():
                 stats = await get_youtube_stats(list(yt_video_map.values()))
                 for draft_id, yt_id in yt_video_map.items():
                     if yt_id in stats:
+                        prev_views = firebase_connector.get_previous_views(draft_id)
                         views = stats[yt_id]["views"]
                         likes = stats[yt_id]["likes"]
                         firebase_connector.update_draft_stats(draft_id, views, likes)
+                        
+                        # 🔥 VIRAL ALERT: Deteksi lonjakan views > 200%
+                        if prev_views > 0 and views >= prev_views * 3:
+                            growth_pct = int((views / prev_views - 1) * 100)
+                            viral_msg = (
+                                f"🔥 <b>VIDEO VIRAL ALERT!</b>\n\n"
+                                f"📈 <b>Lonjakan Views:</b> {prev_views:,} → {views:,} (+{growth_pct}%)\n"
+                                f"👍 <b>Likes:</b> {likes:,}\n\n"
+                                f"🎬 <b>Draft ID:</b> <code>{draft_id}</code>\n"
+                                f"🔗 https://youtu.be/{yt_id}\n\n"
+                                f"💡 Video ini sedang viral! Pertimbangkan membuat konten lanjutan."
+                            )
+                            send_telegram_message(viral_msg)
+                            print(f"🔥 VIRAL ALERT dikirim! Views naik {growth_pct}% untuk {draft_id}")
+                            
                 print("📊 Pembaruan statistik video YouTube selesai.")
         except Exception as stats_err:
             print(f"⚠️ Gagal memperbarui statistik video: {stats_err}")
-        
+
+        # 💬 ANALISIS KOMENTAR: Baca komentar video viral dan ekstrak insight untuk AI
+        try:
+            import firebase_connector
+            from youtube_uploader import get_top_comments
+            viral_map = firebase_connector.get_viral_video_ids(min_views=500, limit=2)
+            if viral_map:
+                print(f"💬 Ditemukan {len(viral_map)} video viral untuk dianalisis komentarnya...")
+                from video_builder import analyze_comments_with_gemini
+                for draft_id, yt_id in viral_map.items():
+                    comments = await get_top_comments(yt_id, max_results=20)
+                    if comments:
+                        insight = await analyze_comments_with_gemini(comments)
+                        if insight:
+                            firebase_connector.mark_comments_analyzed(draft_id, insight)
+                            print(f"💬 Insight komentar disimpan untuk {draft_id}: {insight[:80]}...")
+        except Exception as comment_err:
+            print(f"⚠️ Gagal menganalisis komentar video: {comment_err}")
+
 
         
         # Lakukan import secara lokal di dalam fungsi untuk melacak jika eror berasal dari file import

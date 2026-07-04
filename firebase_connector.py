@@ -365,3 +365,157 @@ def get_active_youtube_video_ids(limit: int = 10) -> dict:
             logger.error(f"⚠️ Gagal membaca active YouTube video dari lokal: {e}")
             
     return video_map
+
+
+def get_previous_views(video_id: str) -> int:
+    """Mengambil jumlah views sebelumnya untuk perbandingan Viral Alert."""
+    if is_firebase_enabled and db is not None:
+        try:
+            doc = db.collection("drafts").document(video_id).get()
+            if doc.exists:
+                return doc.to_dict().get("views", 0)
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal membaca views sebelumnya dari Firestore: {e}")
+
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            return drafts_data.get(video_id, {}).get("views", 0)
+        except Exception:
+            pass
+    return 0
+
+
+def get_viral_video_ids(min_views: int = 500, limit: int = 3) -> dict:
+    """Mengambil video YouTube dengan views tinggi yang belum dianalisis komentarnya."""
+    video_map = {}
+
+    if is_firebase_enabled and db is not None:
+        try:
+            docs = db.collection("drafts")\
+                     .where("platform", "==", "youtube")\
+                     .where("views", ">=", min_views)\
+                     .where("comments_analyzed", "==", False)\
+                     .limit(limit).stream()
+            for doc in docs:
+                data = doc.to_dict()
+                yt_id = data.get("platform_video_id")
+                if yt_id:
+                    video_map[doc.id] = yt_id
+            return video_map
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal mengambil viral video dari Firestore: {e}")
+
+    # Fallback lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if isinstance(drafts_data, dict):
+                count = 0
+                for vid, val in drafts_data.items():
+                    if (val.get("platform") == "youtube"
+                            and val.get("platform_video_id")
+                            and val.get("views", 0) >= min_views
+                            and not val.get("comments_analyzed", False)):
+                        video_map[vid] = val["platform_video_id"]
+                        count += 1
+                        if count >= limit:
+                            break
+        except Exception as e:
+            logger.error(f"⚠️ Gagal membaca viral video dari lokal: {e}")
+
+    return video_map
+
+
+def mark_comments_analyzed(video_id: str, comment_insight: str = "") -> None:
+    """Menandai video sudah dianalisis komentarnya dan menyimpan insight."""
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if video_id in drafts_data:
+                drafts_data[video_id]["comments_analyzed"] = True
+                if comment_insight:
+                    drafts_data[video_id]["comment_insight"] = comment_insight
+            with open(local_drafts_path, "w", encoding="utf-8") as f:
+                json.dump(drafts_data, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"❌ Gagal menandai komentar teranalisis (lokal): {e}")
+
+    if is_firebase_enabled and db is not None:
+        try:
+            db.collection("drafts").document(video_id).update({
+                "comments_analyzed": True,
+                "comment_insight": comment_insight
+            })
+        except Exception as e:
+            logger.error(f"❌ Gagal menandai komentar teranalisis (Firestore): {e}")
+
+
+def get_latest_comment_insight() -> str:
+    """Mengambil insight komentar terbaru dari video yang paling viral."""
+    if is_firebase_enabled and db is not None:
+        try:
+            docs = db.collection("drafts")\
+                     .where("comments_analyzed", "==", True)\
+                     .order_by("views", direction=firestore.Query.DESCENDING)\
+                     .limit(1).stream()
+            for doc in docs:
+                insight = doc.to_dict().get("comment_insight", "")
+                if insight:
+                    return insight
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal mengambil comment insight dari Firestore: {e}")
+
+    # Fallback lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if isinstance(drafts_data, dict):
+                candidates = [
+                    val for val in drafts_data.values()
+                    if val.get("comments_analyzed") and val.get("comment_insight")
+                ]
+                candidates.sort(key=lambda x: x.get("views", 0), reverse=True)
+                if candidates:
+                    return candidates[0]["comment_insight"]
+        except Exception:
+            pass
+    return ""
+
+
+def save_hook_candidate(hook_b: str) -> None:
+    """Menyimpan hook alternatif (versi B) untuk digunakan pada video berikutnya."""
+    local_hook_path = "hook_candidate.json"
+    try:
+        with open(local_hook_path, "w", encoding="utf-8") as f:
+            json.dump({"hook_b": hook_b, "timestamp": int(time.time())}, f, ensure_ascii=False)
+        logger.info("🎯 Hook kandidat B berhasil disimpan.")
+    except Exception as e:
+        logger.error(f"❌ Gagal menyimpan hook kandidat: {e}")
+
+
+def get_best_hook_candidate() -> str:
+    """Mengambil hook kandidat B yang tersimpan jika masih segar (< 7 hari)."""
+    local_hook_path = "hook_candidate.json"
+    if not os.path.exists(local_hook_path):
+        return ""
+    try:
+        with open(local_hook_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        age_seconds = int(time.time()) - data.get("timestamp", 0)
+        if age_seconds < 7 * 86400:
+            hook = data.get("hook_b", "")
+            # Hapus setelah dibaca agar tidak dipakai berulang
+            os.remove(local_hook_path)
+            return hook
+    except Exception as e:
+        logger.error(f"⚠️ Gagal membaca hook kandidat: {e}")
+    return ""

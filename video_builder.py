@@ -193,6 +193,29 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
             raise last_err
         raise RuntimeError("Seluruh penyedia AI (Gemini & Groq) gagal merespon.")
 
+
+async def analyze_comments_with_gemini(comments: list) -> str:
+    """Menganalisis komentar penonton dengan Gemini dan menghasilkan insight konten berikutnya."""
+    if not comments:
+        return ""
+    comments_text = "\n".join(f"- {c}" for c in comments[:15])
+    prompt = (
+        "Kamu adalah analis konten TikTok/YouTube yang ahli.\n"
+        "Berikut adalah komentar-komentar dari penonton pada video edukasi psikologi yang sedang viral:\n\n"
+        f"{comments_text}\n\n"
+        "Analisis komentar di atas dan jawab dalam 2-3 kalimat ringkas:\n"
+        "1. Apa topik atau pertanyaan yang paling sering muncul dari penonton?\n"
+        "2. Berikan 1 rekomendasi ide konten lanjutan yang paling relevan berdasarkan komentar ini.\n\n"
+        "OUTPUT: Jawab langsung dalam bahasa Indonesia, tanpa format JSON, cukup 2-3 kalimat."
+    )
+    try:
+        result = await call_gemini_with_retry(prompt, is_json=False)
+        return result.strip() if result else ""
+    except Exception as e:
+        logger.warning("⚠️ Gagal menganalisis komentar dengan Gemini: %s", e)
+        return ""
+
+
 async def generate_structured_script() -> dict:
     logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
     import random
@@ -251,23 +274,72 @@ async def generate_structured_script() -> dict:
     except Exception as e:
         logger.warning("⚠️ Gagal mengambil naskah populer untuk feedback loop: %s", e)
 
+    # ⭐ LEVEL 5 ADVANCED: Ambil insight dari analisis komentar penonton
+    comment_insight_prompt = ""
+    try:
+        import firebase_connector
+        insight = firebase_connector.get_latest_comment_insight()
+        if insight:
+            comment_insight_prompt = (
+                f"\n\nINSIGHT KOMENTAR PENONTON TERAKHIR (Gunakan ini untuk arah topik konten):\n"
+                f"\"{insight}\"\n"
+                f"Sesuaikan topik atau sudut pandang naskah agar menjawab/merefleksikan insight di atas."
+            )
+            logger.info("⭐ Level 5 Advanced: Menyuntikkan insight komentar penonton.")
+    except Exception as e:
+        logger.warning("⚠️ Gagal mengambil insight komentar: %s", e)
+
+    # ⭐ LEVEL 5 A/B TESTING: Periksa apakah ada hook kandidat B dari percobaan sebelumnya
+    hook_candidate = ""
+    try:
+        import firebase_connector
+        hook_candidate = firebase_connector.get_best_hook_candidate()
+        if hook_candidate:
+            logger.info("🎯 A/B Testing: Menggunakan Hook kandidat B hasil A/B test sebelumnya: '%s'", hook_candidate)
+    except Exception as e:
+        logger.warning("⚠️ Gagal mengambil hook kandidat B: %s", e)
+
+    # Tentukan apakah kita akan memicu pembuatan A/B hook untuk run saat ini (peluang 25%)
+    trigger_ab_test = random.random() < 0.25
+    ab_test_instruction = ""
+    if trigger_ab_test and not hook_candidate:
+        ab_test_instruction = (
+            "\n8. 'hook_b': Hasilkan SATU variasi hook alternatif (versi B) yang berbeda gaya/pendekatan dengan 'hook' utama, tapi membahas subjek yang sama. Format teks harus KAPITAL, maks 10 kata. Contoh: 'JANGAN SAMPAI TANDUK KEPALA KAMU DIATUR ORANG LAIN'\n"
+        )
+        logger.info("🎯 A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
+
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
+    if hook_candidate:
+        hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
+
     prompt = (
         "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
         "Buat SATU konten edukasi singkat dan viral untuk TikTok Shorts dalam format JSON.\n\n"
         f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n\n"
         "ATURAN WAJIB:\n"
-        "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
+        f"{hook_rule}"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
         "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n"
         "4. 'caption': Judul deskripsi postingan TikTok/Shorts yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #faktapsikologi #ruangpikir #mindset #stoikisme #fyp #viral). Panjang maksimal 150 karakter.\n"
         "5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal ['stoicism', 'mindset', 'psychology facts', 'dark psychology']).\n"
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
-        "7. 'interactive_comment': Satu kalimat pertanyaan pancingan diskusi yang sangat interaktif dan memicu penonton untuk berdiskusi/menulis komentar di kolom komentar (maks 15 kata). Contoh: 'Apakah kamu pernah memanipulasi seseorang untuk mendapatkan apa yang kamu mau?'\n\n"
+        "7. 'interactive_comment': Satu kalimat pertanyaan pancingan diskusi yang sangat interaktif dan memicu penonton untuk berdiskusi/menulis komentar di kolom komentar (maks 15 kata). Contoh: 'Apakah kamu pernah memanipulasi seseorang untuk mendapatkan apa yang kamu mau?'\n"
+        f"{ab_test_instruction}\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}"
+        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
-    return clean_and_parse_json(res)
+    parsed_json = clean_and_parse_json(res)
+
+    # Jika Gemini menghasilkan Hook alternatif B, simpan untuk run berikutnya
+    if isinstance(parsed_json, dict) and "hook_b" in parsed_json:
+        try:
+            import firebase_connector
+            firebase_connector.save_hook_candidate(parsed_json["hook_b"])
+        except Exception as e:
+            logger.warning("⚠️ Gagal menyimpan hook kandidat B ke database: %s", e)
+
+    return parsed_json
 
 async def extract_keywords_from_script(script_text: str) -> list:
     prompt = (
