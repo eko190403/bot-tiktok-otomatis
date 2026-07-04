@@ -108,9 +108,18 @@ def tokenize_section(text: str, section: str) -> List[Dict]:
     raw_tokens = text.split()
     tokens = []
     for w in raw_tokens:
+        # Cari tanda baca di akhir kata (misal: "73%,")
+        match = re.search(r"([.,!?]+)$", w)
+        punc = match.group(1) if match else ""
+        
         spoken_list = expand_token_to_spoken(w)
-        for spoken in spoken_list:
-            tokens.append({"display": w, "spoken": spoken, "section": section})
+        if len(spoken_list) > 1:
+            for idx, spoken in enumerate(spoken_list):
+                # Tambahkan tanda baca asli ke kata terakhir hasil ekspansi
+                display_word = spoken + punc if idx == len(spoken_list) - 1 else spoken
+                tokens.append({"display": display_word, "spoken": spoken, "section": section})
+        else:
+            tokens.append({"display": w, "spoken": spoken_list[0], "section": section})
     return tokens
 
 def build_target_sequence(hook: str, story: str, cta: str) -> List[Dict]:
