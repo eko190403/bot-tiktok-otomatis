@@ -42,8 +42,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg imagemagick
           
-          # Membuka izin akses ImageMagick agar MoviePy bisa merender teks/subtitle
-          sudo sed -i 's/domain="path" rights="none"/domain="path" rights="read|write"/' /etc/ImageMagick-6/policy.xml
+          # Membuka izin akses ImageMagick agar MoviePy bisa merender teks/subtitle secara universal
+          sudo find /etc/ImageMagick* -name "policy.xml" -exec sed -i 's/domain="path" rights="none"/domain="path" rights="read|write"/' {} + || true
 
       - name: Install Dependencies
         run: |

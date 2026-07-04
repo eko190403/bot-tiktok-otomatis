@@ -34,7 +34,7 @@ def apply_slow_zoom(clip, speed=0.04):
     return clip.transform(zoom_effect, keep_duration=True)
 
 def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
-    """Memotong, meresize, dan menerapkan efek visual pada satu klip dengan proteksi durasi."""
+    """Memotong, melakukan crop-to-fit (agar tidak gepeng/distorsi), dan meresize video."""
     # 1. Buka klip video mentah dan matikan audionya
     clip = VideoFileClip(file_path).with_audio(None)
     
@@ -45,10 +45,31 @@ def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     # 2. Potong dengan aman tanpa melampaui batas maksimum video asli
     clip = clip.subclipped(0, target_duration)
     
-    # 3. Lakukan resize dimensi dasar video ke tepat (WIDTH, HEIGHT)
+    # 3. Crop-to-fit untuk menghindari video gepeng jika inputnya landscape atau bukan 9:16
+    w, h = clip.size
+    target_ratio = WIDTH / HEIGHT
+    current_ratio = w / h
+    
+    x1, y1, x2, y2 = 0, 0, w, h
+    if current_ratio > target_ratio:
+        # Video terlalu lebar (landscape), potong sisi kiri dan kanan secara simetris
+        new_w = int(h * target_ratio)
+        x_offset = (w - new_w) // 2
+        x1 = x_offset
+        x2 = x_offset + new_w
+    elif current_ratio < target_ratio:
+        # Video terlalu tinggi, potong sisi atas dan bawah secara simetris
+        new_h = int(w / target_ratio)
+        y_offset = (h - new_h) // 2
+        y1 = y_offset
+        y2 = y_offset + new_h
+        
+    clip = clip.cropped(x1=x1, y1=y1, x2=x2, y2=y2)
+    
+    # 4. Lakukan resize dimensi dasar video ke tepat (WIDTH, HEIGHT)
     resized_clip = clip.resized((WIDTH, HEIGHT))
     
-    # 4. Terapkan efek slow zoom
+    # 5. Terapkan efek slow zoom
     final_clip = apply_slow_zoom(resized_clip)
     
     return final_clip
