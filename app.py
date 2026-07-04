@@ -24,18 +24,23 @@ def send_telegram_message(message: str):
         "parse_mode": "HTML"
     }
     
-    try:
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=12) as response:
-            response.read()
-        print("📨 Notifikasi status upload berhasil dikirim ke Telegram.")
-    except Exception as e:
-        print(f"⚠️ Gagal mengirim notifikasi status upload ke Telegram: {e}")
+    import time
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=12) as response:
+                response.read()
+            print("📨 Notifikasi status upload berhasil dikirim ke Telegram.")
+            return
+        except Exception as e:
+            print(f"⚠️ Percobaan {attempt + 1}/3 gagal mengirim notifikasi ke Telegram: {e}")
+            if attempt < 2:
+                time.sleep(2)
 
 
 def send_telegram_photo(photo_path: str, caption: str = ""):
@@ -55,17 +60,22 @@ def send_telegram_photo(photo_path: str, caption: str = ""):
         print(f"⚠️ File foto tidak ditemukan: {photo_path}")
         return
         
-    try:
-        with open(photo_path, "rb") as f:
-            files = {"photo": f}
-            data = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
-            response = requests.post(url, files=files, data=data, timeout=15)
-            if response.status_code == 200:
-                print("📨 Notifikasi screenshot berhasil dikirim ke Telegram.")
-            else:
-                print(f"⚠️ Telegram sendPhoto gagal dengan status {response.status_code}: {response.text}")
-    except Exception as e:
-        print(f"⚠️ Gagal mengirim screenshot ke Telegram: {e}")
+    import time
+    for attempt in range(3):
+        try:
+            with open(photo_path, "rb") as f:
+                files = {"photo": f}
+                data = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
+                response = requests.post(url, files=files, data=data, timeout=15)
+                if response.status_code == 200:
+                    print("📨 Notifikasi screenshot berhasil dikirim ke Telegram.")
+                    return
+                else:
+                    print(f"⚠️ Telegram sendPhoto gagal dengan status {response.status_code} pada percobaan {attempt + 1}/3: {response.text}")
+        except Exception as e:
+            print(f"⚠️ Percobaan {attempt + 1}/3 gagal mengirim screenshot ke Telegram: {e}")
+        if attempt < 2:
+            time.sleep(2)
 
 
 def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: str) -> str:
@@ -96,27 +106,31 @@ def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: st
         ]
     }
     
-    try:
-        print(f"📡 Mengirim berkas video draf beserta tombol kontrol ke Telegram...")
-        with open(video_path, "rb") as f:
-            files = {"video": f}
-            data = {
-                "chat_id": chat_id,
-                "caption": caption,
-                "parse_mode": "HTML",
-                "reply_markup": json.dumps(reply_markup)
-            }
-            response = requests.post(url, files=files, data=data, timeout=60)
-            if response.status_code == 200:
-                res_data = response.json()
-                video_obj = res_data.get("result", {}).get("video", {})
-                file_id = video_obj.get("file_id")
-                print(f"📨 Video draf berhasil dikirim ke Telegram! File ID: {file_id}")
-                return file_id
-            else:
-                print(f"⚠️ Telegram sendVideo gagal dengan status {response.status_code}: {response.text}")
-    except Exception as e:
-        print(f"⚠️ Gagal mengirim video dengan tombol ke Telegram: {e}")
+    import time
+    for attempt in range(3):
+        try:
+            print(f"📡 Mengirim berkas video draf beserta tombol kontrol ke Telegram (percobaan {attempt + 1}/3)...")
+            with open(video_path, "rb") as f:
+                files = {"video": f}
+                data = {
+                    "chat_id": chat_id,
+                    "caption": caption,
+                    "parse_mode": "HTML",
+                    "reply_markup": json.dumps(reply_markup)
+                }
+                response = requests.post(url, files=files, data=data, timeout=60)
+                if response.status_code == 200:
+                    res_data = response.json()
+                    video_obj = res_data.get("result", {}).get("video", {})
+                    file_id = video_obj.get("file_id")
+                    print(f"📨 Video draf berhasil dikirim ke Telegram! File ID: {file_id}")
+                    return file_id
+                else:
+                    print(f"⚠️ Telegram sendVideo gagal dengan status {response.status_code} pada percobaan {attempt + 1}/3: {response.text}")
+        except Exception as e:
+            print(f"⚠️ Percobaan {attempt + 1}/3 gagal mengirim video dengan tombol ke Telegram: {e}")
+        if attempt < 2:
+            time.sleep(3)
     return None
 
 

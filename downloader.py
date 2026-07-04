@@ -11,12 +11,18 @@ def search_pexels_videos(keyword: str, per_page: int = 5) -> list:
     headers = {"Authorization": PEXELS_API_KEY}
     url = f"https://api.pexels.com/videos/search?query={keyword}&per_page={per_page}&orientation=portrait"
     
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code == 200:
-            return response.json().get("videos", [])
-    except Exception as e:
-        print(f"⚠️ Gagal menghubungi Pexels untuk keyword '{keyword}': {e}")
+    import time
+    for attempt in range(3):
+        try:
+            response = requests.get(url, headers=headers, timeout=15)
+            if response.status_code == 200:
+                return response.json().get("videos", [])
+            else:
+                print(f"⚠️ Pexels API mengembalikan status {response.status_code} pada percobaan {attempt + 1}/3.")
+        except Exception as e:
+            print(f"⚠️ Gagal menghubungi Pexels untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
+        if attempt < 2:
+            time.sleep(2)
     return []
 
 def choose_best_quality(video_files: list) -> str:
@@ -85,25 +91,32 @@ def download_video_clips(keywords: list, target_count: int = 4) -> list:
                         print(f"⚠️ Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
                 
                 print(f"📥 Mengunduh klip {clip_idx + 1}/{target_count} untuk keyword '{kw}'...")
-                try:
-                    resp = requests.get(download_url, timeout=30)
-                    if resp.status_code == 200:
-                        with open(file_path, "wb") as f:
-                            f.write(resp.content)
-                        
-                        # Simpan ke cache lokal
-                        if cached_file:
-                            try:
-                                with open(cached_file, "wb") as cf:
-                                    cf.write(resp.content)
-                                print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
-                            except Exception as cache_err:
-                                print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
-                                
-                        downloaded_paths.append(file_path)
-                        clip_idx += 1
-                except Exception as e:
-                    print(f"⚠️ Gagal mengunduh klip {clip_idx}: {e}")
+                import time
+                for attempt in range(3):
+                    try:
+                        resp = requests.get(download_url, timeout=30)
+                        if resp.status_code == 200:
+                            with open(file_path, "wb") as f:
+                                f.write(resp.content)
+                            
+                            # Simpan ke cache lokal
+                            if cached_file:
+                                try:
+                                    with open(cached_file, "wb") as cf:
+                                        cf.write(resp.content)
+                                    print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
+                                except Exception as cache_err:
+                                    print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
+                                    
+                            downloaded_paths.append(file_path)
+                            clip_idx += 1
+                            break
+                        else:
+                            print(f"⚠️ Gagal mengunduh klip (status {resp.status_code}) pada percobaan {attempt + 1}/3.")
+                    except Exception as e:
+                        print(f"⚠️ Gagal mengunduh klip {clip_idx} pada percobaan {attempt + 1}/3: {e}")
+                    if attempt < 2:
+                        time.sleep(2)
                     
     # Fallback jika tidak ada keyword yang menghasilkan video
     if not downloaded_paths:
@@ -154,23 +167,29 @@ def download_video_clips(keywords: list, target_count: int = 4) -> list:
                             except Exception as copy_err:
                                 print(f"⚠️ Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
                                 
-                        try:
-                            print(f"📥 Mengunduh klip fallback {i + 1}/{target_count}...")
-                            resp = requests.get(download_url, timeout=30)
-                            if resp.status_code == 200:
-                                with open(file_path, "wb") as f:
-                                    f.write(resp.content)
-                                    
-                                if cached_file:
-                                    try:
-                                        with open(cached_file, "wb") as cf:
-                                            cf.write(resp.content)
-                                        print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
-                                    except Exception as cache_err:
-                                        print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
+                        import time
+                        for attempt in range(3):
+                            try:
+                                resp = requests.get(download_url, timeout=30)
+                                if resp.status_code == 200:
+                                    with open(file_path, "wb") as f:
+                                        f.write(resp.content)
                                         
-                                downloaded_paths.append(file_path)
-                        except Exception as e:
-                            print(f"⚠️ Gagal mengunduh klip fallback {i}: {e}")
+                                    if cached_file:
+                                        try:
+                                            with open(cached_file, "wb") as cf:
+                                                cf.write(resp.content)
+                                            print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
+                                        except Exception as cache_err:
+                                            print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
+                                            
+                                    downloaded_paths.append(file_path)
+                                    break
+                                else:
+                                    print(f"⚠️ Gagal mengunduh klip fallback (status {resp.status_code}) pada percobaan {attempt + 1}/3.")
+                            except Exception as e:
+                                print(f"⚠️ Gagal mengunduh klip fallback {i} pada percobaan {attempt + 1}/3: {e}")
+                            if attempt < 2:
+                                time.sleep(2)
             
     return downloaded_paths
