@@ -107,48 +107,70 @@ def download_video_clips(keywords: list, target_count: int = 4) -> list:
                     
     # Fallback jika tidak ada keyword yang menghasilkan video
     if not downloaded_paths:
-        print("⚠️ Keyword spesifik tidak menghasilkan video. Menggunakan tema fallback...")
-        videos = search_pexels_videos("dark-aesthetic", per_page=15)
-        if videos:
-            sample_size = min(len(videos), target_count)
-            chosen_videos = random.sample(videos, sample_size)
-            for i, vid_data in enumerate(chosen_videos):
-                vid_id = vid_data.get("id")
-                pool_dir = os.path.join("assets", "video_pool")
-                os.makedirs(pool_dir, exist_ok=True)
-                cached_file = os.path.join(pool_dir, f"{vid_id}.mp4") if vid_id else None
-                
-                download_url = choose_best_quality(vid_data.get("video_files", []))
-                if download_url:
-                    file_path = os.path.join(DIR_TEMP, f"bg_clip_{i}.mp4")
+        print("⚠️ Keyword spesifik tidak menghasilkan video. Mencari klip di folder fallback lokal...")
+        fallback_dir = os.path.join("assets", "fallback_clips")
+        local_fallbacks = []
+        if os.path.exists(fallback_dir):
+            local_fallbacks = [f for f in os.listdir(fallback_dir) if f.lower().endswith(".mp4")]
+            
+        if local_fallbacks:
+            import shutil
+            sample_size = min(len(local_fallbacks), target_count)
+            chosen_local = random.sample(local_fallbacks, sample_size)
+            for i, fname in enumerate(chosen_local):
+                file_path = os.path.join(DIR_TEMP, f"bg_clip_{i}.mp4")
+                src_path = os.path.join(fallback_dir, fname)
+                try:
+                    shutil.copy2(src_path, file_path)
+                    downloaded_paths.append(file_path)
+                    print(f"📦 Menggunakan klip fallback lokal: {src_path} -> {file_path}")
+                except Exception as copy_err:
+                    print(f"⚠️ Gagal menyalin klip fallback lokal: {copy_err}")
                     
-                    if cached_file and os.path.exists(cached_file) and os.path.getsize(cached_file) > 0:
-                        print(f"📦 Menggunakan klip cache Pexels fallback: {cached_file} -> {file_path}")
-                        import shutil
-                        try:
-                            shutil.copy2(cached_file, file_path)
-                            downloaded_paths.append(file_path)
-                            continue
-                        except Exception as copy_err:
-                            print(f"⚠️ Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
-                            
-                    try:
-                        print(f"📥 Mengunduh klip fallback {i + 1}/{target_count}...")
-                        resp = requests.get(download_url, timeout=30)
-                        if resp.status_code == 200:
-                            with open(file_path, "wb") as f:
-                                f.write(resp.content)
+        # Jika tidak ada klip lokal, baru beralih ke pencarian Pexels online dengan kata kunci umum
+        if not downloaded_paths:
+            print("ℹ️ Tidak ada klip lokal. Menggunakan tema fallback Pexels (dark-aesthetic)...")
+            videos = search_pexels_videos("dark-aesthetic", per_page=15)
+            if videos:
+                sample_size = min(len(videos), target_count)
+                chosen_videos = random.sample(videos, sample_size)
+                for i, vid_data in enumerate(chosen_videos):
+                    vid_id = vid_data.get("id")
+                    pool_dir = os.path.join("assets", "video_pool")
+                    os.makedirs(pool_dir, exist_ok=True)
+                    cached_file = os.path.join(pool_dir, f"{vid_id}.mp4") if vid_id else None
+                    
+                    download_url = choose_best_quality(vid_data.get("video_files", []))
+                    if download_url:
+                        file_path = os.path.join(DIR_TEMP, f"bg_clip_{i}.mp4")
+                        
+                        if cached_file and os.path.exists(cached_file) and os.path.getsize(cached_file) > 0:
+                            print(f"📦 Menggunakan klip cache Pexels fallback: {cached_file} -> {file_path}")
+                            import shutil
+                            try:
+                                shutil.copy2(cached_file, file_path)
+                                downloaded_paths.append(file_path)
+                                continue
+                            except Exception as copy_err:
+                                print(f"⚠️ Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
                                 
-                            if cached_file:
-                                try:
-                                    with open(cached_file, "wb") as cf:
-                                        cf.write(resp.content)
-                                    print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
-                                except Exception as cache_err:
-                                    print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
+                        try:
+                            print(f"📥 Mengunduh klip fallback {i + 1}/{target_count}...")
+                            resp = requests.get(download_url, timeout=30)
+                            if resp.status_code == 200:
+                                with open(file_path, "wb") as f:
+                                    f.write(resp.content)
                                     
-                            downloaded_paths.append(file_path)
-                    except Exception as e:
-                        print(f"⚠️ Gagal mengunduh klip fallback {i}: {e}")
+                                if cached_file:
+                                    try:
+                                        with open(cached_file, "wb") as cf:
+                                            cf.write(resp.content)
+                                        print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
+                                    except Exception as cache_err:
+                                        print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
+                                        
+                                downloaded_paths.append(file_path)
+                        except Exception as e:
+                            print(f"⚠️ Gagal mengunduh klip fallback {i}: {e}")
             
     return downloaded_paths

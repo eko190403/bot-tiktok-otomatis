@@ -77,7 +77,10 @@ async def main():
             print("✅ Video Berhasil Dirender Sempurna!")
             
             # Ambil caption hasil rancangan Gemini dari berkas metadata
+            # Ambil metadata hasil rancangan Gemini dari berkas
             caption = ""
+            tags = []
+            category_id = "22"
             metadata_path = "temp/video_metadata.json"
             if os.path.exists(metadata_path):
                 try:
@@ -85,9 +88,11 @@ async def main():
                     with open(metadata_path, "r", encoding="utf-8") as f:
                         meta_data = json.load(f)
                         caption = meta_data.get("caption", "")
+                        tags = meta_data.get("tags", [])
+                        category_id = meta_data.get("category_id", "22")
                     os.remove(metadata_path) # Bersihkan setelah dibaca
                 except Exception as meta_err:
-                    print(f"⚠️ Gagal membaca/menghapus metadata caption: {meta_err}")
+                    print(f"⚠️ Gagal membaca/menghapus metadata: {meta_err}")
 
             # Cari file video terbaru di folder output untuk diunggah (digunakan untuk TikTok & YouTube)
             import glob
@@ -151,7 +156,7 @@ async def main():
                     from youtube_uploader import upload_to_youtube
                     print(f"🎬 Menemukan video terbaru untuk YouTube: {latest_video}. Memulai upload...")
                     try:
-                        youtube_url = await upload_to_youtube(latest_video, caption=caption)
+                        youtube_url = await upload_to_youtube(latest_video, caption=caption, tags=tags, category_id=category_id)
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
                         
                         # Kirim notifikasi SUKSES ke Telegram

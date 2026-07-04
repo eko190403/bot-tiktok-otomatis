@@ -85,6 +85,17 @@ jobs:
             echo " Secret YOUTUBE_CREDENTIALS tidak diset. Menggunakan berkas youtube_credentials.json bawaan dari repositori."
           fi
 
+      - name: Siapkan Akun Layanan Firebase dari Secret
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo " Menulis berkas firebase_service_account.json secara dinamis dari GitHub Secrets..."
+            echo "$FIREBASE_SERVICE_ACCOUNT" > firebase_service_account.json
+          else
+            echo " Secret FIREBASE_SERVICE_ACCOUNT tidak diset. Menggunakan fallback database lokal."
+          fi
+
       - name: Jalankan Bot
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -97,8 +108,9 @@ jobs:
           GEMINI_API_KEY_6: ${{ secrets.GEMINI_API_KEY_6 }}
           GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
           GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
-          ENABLE_TIKTOK_UPLOAD: "false"
-          ENABLE_YOUTUBE_UPLOAD: "false"
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ENABLE_TIKTOK_UPLOAD: "true"
+          ENABLE_YOUTUBE_UPLOAD: "true"
           TELEGRAM_BOT_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
           TELEGRAM_CHAT_ID: "1120755820"
         run: |

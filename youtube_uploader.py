@@ -4,7 +4,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-async def upload_to_youtube(video_path: str, caption: str) -> str:
+async def upload_to_youtube(video_path: str, caption: str, tags: list = None, category_id: str = None) -> str:
     """
     Mengunggah video ke YouTube Shorts menggunakan official YouTube Data API v3.
     OAuth2 credential-based authentication bypasses IP location security checks.
@@ -53,12 +53,19 @@ async def upload_to_youtube(video_path: str, caption: str) -> str:
     # Inisialisasi Google YouTube Service
     youtube = build("youtube", "v3", credentials=credentials)
     
+    # Tentukan tags dan categoryId secara dinamis
+    yt_tags = tags if tags else ["shorts", "faktapsikologi", "mindset", "ruangpikir"]
+    if "shorts" not in [t.lower() for t in yt_tags]:
+        yt_tags.append("shorts")
+        
+    yt_category = category_id if category_id else "22"
+
     body = {
         "snippet": {
             "title": title,
             "description": description,
-            "tags": ["shorts", "faktapsikologi", "mindset", "ruangpikir"],
-            "categoryId": "22"  # Kategori: People & Blogs
+            "tags": yt_tags,
+            "categoryId": yt_category
         },
         "status": {
             "privacyStatus": "public",

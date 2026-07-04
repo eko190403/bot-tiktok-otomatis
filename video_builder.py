@@ -119,6 +119,44 @@ def clean_and_parse_json(raw_text: str) -> dict | list:
     obj, _ = decoder.raw_decode(cleaned[start_idx:])
     return obj
 
+async def call_groq_fallback(prompt: str, is_json: bool = True) -> str:
+    import os
+    import requests
+    import asyncio
+    
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY tidak dikonfigurasi di environment/secrets.")
+        
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # Menggunakan model Llama 3.3 70B yang stabil untuk instruksi terstruktur
+    model = "llama-3.3-70b-versatile"
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 1.0,
+        "response_format": {"type": "json_object"} if is_json else None
+    }
+    
+    loop = asyncio.get_running_loop()
+    try:
+        response = await loop.run_in_executor(
+            None, lambda: requests.post(url, json=payload, headers=headers, timeout=20)
+        )
+        if response.status_code == 200:
+            result = response.json()
+            return result["choices"][0]["message"]["content"].strip()
+        else:
+            raise RuntimeError(f"Groq API mengembalikan status {response.status_code}: {response.text}")
+    except Exception as e:
+        logger.error(f"❌ Groq fallback gagal: {e}")
+        raise e
+
 async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature: float = None) -> str:
     max_attempts = max(5, len(GEMINI_KEYS) * 2)
     config_args = {"response_mime_type": "application/json" if is_json else None}
@@ -126,12 +164,14 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
         config_args["temperature"] = temperature
     config = types.GenerateContentConfig(**config_args)
     
+    last_err = None
     for attempt in range(max_attempts):
         client, idx = await client_pool.get_client_and_rotate()
         try:
             response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
             return response.text.strip()
         except Exception as e:
+            last_err = e
             err_msg = str(e)
             if any(x.lower() in err_msg.lower() for x in RETRY_ERRORS):
                 backoff_delay = 2 ** attempt
@@ -139,9 +179,19 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
                 await client_pool.set_cooldown(idx, duration=60 + backoff_delay)
                 await asyncio.sleep(backoff_delay)
                 continue
-            logger.exception("[%s] Gangguan fatal internal API Gemini", EV_GEMINI_CRASH)
-            raise e
-    raise RuntimeError("Batas maksimum percobaan API Gemini terlampaui.")
+            logger.warning("[%s] Gangguan API Gemini: %s. Mencoba model lain/kunci lain.", EV_GEMINI_CRASH, e)
+            
+    # Jika Gemini gagal total, coba Groq API Fallback
+    logger.warning("⚠️ Semua percobaan Gemini gagal atau rate-limited. Memicu fallback ke Groq API...")
+    try:
+        res = await call_groq_fallback(prompt, is_json)
+        logger.info("✅ Sukses mendapatkan konten cadangan dari Groq API.")
+        return res
+    except Exception as groq_err:
+        logger.error(f"❌ Groq API Fallback gagal juga: {groq_err}")
+        if last_err:
+            raise last_err
+        raise RuntimeError("Seluruh penyedia AI (Gemini & Groq) gagal merespon.")
 
 async def generate_structured_script() -> dict:
     logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
@@ -158,29 +208,25 @@ async def generate_structured_script() -> dict:
     chosen_theme = random.choice(themes)
     logger.info("🎯 Tema terpilih: %s", chosen_theme)
     
-    # Baca riwayat naskah untuk mencegah repetisi ide
+    # Baca riwayat naskah untuk mencegah repetisi ide (lewat Firebase / cadangan Lokal)
     exclude_prompt = ""
-    history_path = "naskah_history.json"
-    if os.path.exists(history_path):
-        try:
-            with open(history_path, "r", encoding="utf-8") as hf:
-                hist_data = json.load(hf)
-                if hist_data:
-                    # Ambil 25 entri terakhir
-                    recent_entries = hist_data[-25:]
-                    recent_hooks = [item["hook"] for item in recent_entries if "hook" in item]
-                    recent_stories = [item["story"] for item in recent_entries if "story" in item]
-                    
-                    exclude_prompt = (
-                        "\n\nHINDARI MEMBUAT HOOK DAN TOPIK YANG SAMA ATAU MIRIP DENGAN DAFTAR DI BAWAH INI "
-                        "agar konten selalu unik, segar, dan bervariasi.\n"
-                        "Daftar Hook terakhir:\n" +
-                        "\n".join(f"- {h}" for h in recent_hooks) +
-                        "\n\nDaftar Story/Penjelasan fakta terakhir:\n" +
-                        "\n".join(f"- {s}" for s in recent_stories)
-                    )
-        except Exception as e:
-            logger.warning(" Gagal membaca riwayat naskah: %s", e)
+    try:
+        import firebase_connector
+        recent_entries = firebase_connector.get_recent_history(25)
+        if recent_entries:
+            recent_hooks = [item["hook"] for item in recent_entries if "hook" in item]
+            recent_stories = [item["story"] for item in recent_entries if "story" in item]
+            
+            exclude_prompt = (
+                "\n\nHINDARI MEMBUAT HOOK DAN TOPIK YANG SAMA ATAU MIRIP DENGAN DAFTAR DI BAWAH INI "
+                "agar konten selalu unik, segar, dan bervariasi.\n"
+                "Daftar Hook terakhir:\n" +
+                "\n".join(f"- {h}" for h in recent_hooks) +
+                "\n\nDaftar Story/Penjelasan fakta terakhir:\n" +
+                "\n".join(f"- {s}" for s in recent_stories)
+            )
+    except Exception as e:
+        logger.warning(" Gagal membaca riwayat naskah: %s", e)
 
     prompt = (
         "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
@@ -190,9 +236,11 @@ async def generate_structured_script() -> dict:
         "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
         "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n"
-        "4. 'caption': Judul deskripsi postingan TikTok yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #faktapsikologi #ruangpikir #mindset #stoikisme #fyp #viral). Panjang maksimal 150 karakter.\n\n"
+        "4. 'caption': Judul deskripsi postingan TikTok/Shorts yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #faktapsikologi #ruangpikir #mindset #stoikisme #fyp #viral). Panjang maksimal 150 karakter.\n"
+        "5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal ['stoicism', 'mindset', 'psychology facts', 'dark psychology']).\n"
+        "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', dan 'caption'. Tidak ada teks lain di luar JSON.{exclude_prompt}"
+        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', dan 'category_id'. Tidak ada teks lain di luar JSON.{exclude_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
     return clean_and_parse_json(res)
@@ -350,30 +398,23 @@ async def create_video() -> bool:
         
         keywords = await extract_keywords_from_script(story)
         
-        # Simpan metadata caption untuk dibaca uploader di app.py
+        # Simpan metadata dinamis untuk dibaca uploader di app.py
+        tags = script_data.get("tags", ["faktapsikologi", "mindset", "stoikisme", "ruangpikir"])
+        category_id = script_data.get("category_id", "22")
         with open("temp/video_metadata.json", "w", encoding="utf-8") as f:
-            json.dump({"caption": caption}, f, indent=4, ensure_ascii=False)
+            json.dump({
+                "caption": caption,
+                "tags": tags,
+                "category_id": category_id
+            }, f, indent=4, ensure_ascii=False)
             
-        # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten
+        # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten (lewat Firebase / cadangan Lokal)
         try:
-            history_path = "naskah_history.json"
-            history_data = []
-            if os.path.exists(history_path):
-                with open(history_path, "r", encoding="utf-8") as hf:
-                    history_data = json.load(hf)
-            
-            # Cek apakah hook ini sudah terdaftar agar tidak duplikat riwayat saat memuat cache
-            if not any(item.get("hook") == hook for item in history_data):
-                history_data.append({
-                    "timestamp": int(time.time()),
-                    "hook": hook,
-                    "caption": caption
-                })
-                # Batasi riwayat ke 25 entri terakhir agar file tetap kecil
-                history_data = history_data[-25:]
-                with open(history_path, "w", encoding="utf-8") as hf:
-                    json.dump(history_data, hf, indent=4, ensure_ascii=False)
-                logger.info(" Naskah berhasil disimpan ke riwayat konten (naskah_history.json).")
+            import firebase_connector
+            # Cek apakah hook ini sudah terdaftar di riwayat terakhir agar tidak mencatat ganda saat memuat cache
+            recent_entries = firebase_connector.get_recent_history(10)
+            if not any(item.get("hook") == hook for item in recent_entries):
+                firebase_connector.save_to_history(hook, story, cta, caption)
         except Exception as hist_err:
             logger.warning(" Gagal mencatat riwayat naskah: %s", hist_err)
         
