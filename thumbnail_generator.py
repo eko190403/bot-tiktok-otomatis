@@ -136,12 +136,11 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
             x = (target_w - line_w) // 2
             y = start_y + (i * line_height)
             
-            # Gambar shadow teks (drop shadow) untuk kontras ekstra
+          
             draw.text((x + 4, y + 4), line, fill=(0, 0, 0), font=font)
-            # Teks utama (Kuning menyala agar mencolok di feed)
+
             draw.text((x, y), line, fill=(255, 204, 0), font=font)
-            
-        # 6. Tambahkan watermark/brand di bagian bawah
+
         try:
             brand_font = ImageFont.truetype("arial.ttf", 28)
         except Exception:

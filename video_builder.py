@@ -786,15 +786,40 @@ async def create_video(niche: str = None) -> bool:
         moviepy_resources["audio_clip"] = AudioFileClip(vo_file_path)
         total_duration = moviepy_resources["audio_clip"].duration
 
-        clip_count = len(video_files)
-        duration_per_clip = 4.0
-        
-        for file in video_files:
+        # Hitung durasi Hook dari timestamps untuk menentukan pacing
+        hook_end = 3.0
+        hook_ts = [ts for ts in all_timestamps_dataclass if ts.section == "hook"]
+        if hook_ts:
+            hook_end = max(ts.end for ts in hook_ts)
+
+        segment_durations = []
+        current_time = 0.0
+        while current_time < total_duration:
+            if current_time < hook_end:
+                dur = min(1.2, hook_end - current_time)
+                # Jika segmen terakhir di hook terlalu pendek, gabungkan saja
+                if segment_durations and current_time < hook_end and (hook_end - current_time) < 0.5:
+                    segment_durations[-1] += (hook_end - current_time)
+                    current_time = hook_end
+                    continue
+            else:
+                dur = min(3.5, total_duration - current_time)
+                # Jika segmen terakhir terlalu pendek, gabungkan dengan sebelumnya
+                if segment_durations and (total_duration - current_time) < 1.0:
+                    segment_durations[-1] += (total_duration - current_time)
+                    break
+            segment_durations.append(dur)
+            current_time += dur
+
+        logger.info("📊 Segmentasi durasi latar belakang: %s", segment_durations)
+
+        for i, dur in enumerate(segment_durations):
+            file = video_files[i % len(video_files)]
             try:
-                processed_clip = process_background_clip(file, duration_per_clip)
+                processed_clip = process_background_clip(file, dur)
                 moviepy_resources["processed_clips"].append(processed_clip)
             except Exception as ce:
-                logger.error(" Kebocoran sub-resource dicegah. Melepas berkas korup [%s]: %s", file, ce)
+                logger.error(" Kebocoran sub-resource dicegah: %s", ce)
                 if 'processed_clip' in locals() and processed_clip is not None:
                     try: processed_clip.close()
                     except: pass

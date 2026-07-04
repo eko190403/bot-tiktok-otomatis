@@ -33,6 +33,60 @@ def apply_slow_zoom(clip, speed=0.04):
         
     return clip.transform(zoom_effect, keep_duration=True)
 
+def find_smart_crop_offset(clip, target_w: int) -> int:
+    """Menemukan x_offset terbaik secara otomatis dengan memindai daerah detail kontras tertinggi."""
+    try:
+        w, h = clip.size
+        if w <= target_w:
+            return 0
+        duration = clip.duration
+        times = [duration * 0.2, duration * 0.5, duration * 0.8]
+        accumulated_edges = np.zeros(w)
+        for t in times:
+            frame = clip.get_frame(t)
+            gray = np.dot(frame[...,:3], [0.2989, 0.5870, 0.1140])
+            edges = np.abs(gray[:, 1:] - gray[:, :-1])
+            column_edges = np.sum(edges, axis=0)
+            accumulated_edges[:len(column_edges)] += column_edges
+            
+        max_edges = 0
+        best_x = (w - target_w) // 2
+        for x in range(0, w - target_w, 20):
+            window_sum = np.sum(accumulated_edges[x : x + target_w])
+            if window_sum > max_edges:
+                max_edges = window_sum
+                best_x = x
+        return best_x
+    except Exception:
+        return (clip.size[0] - target_w) // 2
+
+def find_smart_crop_offset_vertical(clip, target_h: int) -> int:
+    """Menemukan y_offset terbaik secara otomatis untuk pemotongan vertikal."""
+    try:
+        w, h = clip.size
+        if h <= target_h:
+            return 0
+        duration = clip.duration
+        times = [duration * 0.2, duration * 0.5, duration * 0.8]
+        accumulated_edges = np.zeros(h)
+        for t in times:
+            frame = clip.get_frame(t)
+            gray = np.dot(frame[...,:3], [0.2989, 0.5870, 0.1140])
+            edges = np.abs(gray[1:, :] - gray[:-1, :])
+            row_edges = np.sum(edges, axis=1)
+            accumulated_edges[:len(row_edges)] += row_edges
+            
+        max_edges = 0
+        best_y = (h - target_h) // 2
+        for y in range(0, h - target_h, 20):
+            window_sum = np.sum(accumulated_edges[y : y + target_h])
+            if window_sum > max_edges:
+                max_edges = window_sum
+                best_y = y
+        return best_y
+    except Exception:
+        return (clip.size[1] - target_h) // 2
+
 def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     """Memotong, melakukan crop-to-fit (agar tidak gepeng/distorsi), dan meresize video."""
     # 1. Buka klip video mentah dan matikan audionya
@@ -45,22 +99,22 @@ def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     # 2. Potong dengan aman tanpa melampaui batas maksimum video asli
     clip = clip.subclipped(0, target_duration)
     
-    # 3. Crop-to-fit untuk menghindari video gepeng jika inputnya landscape atau bukan 9:16
+    # 3. Crop-to-fit cerdas untuk menghindari video gepeng
     w, h = clip.size
     target_ratio = WIDTH / HEIGHT
     current_ratio = w / h
     
     x1, y1, x2, y2 = 0, 0, w, h
     if current_ratio > target_ratio:
-        # Video terlalu lebar (landscape), potong sisi kiri dan kanan secara simetris
+        # Video terlalu lebar (landscape), potong sisi kiri dan kanan secara pintar
         new_w = int(h * target_ratio)
-        x_offset = (w - new_w) // 2
+        x_offset = find_smart_crop_offset(clip, new_w)
         x1 = x_offset
         x2 = x_offset + new_w
     elif current_ratio < target_ratio:
-        # Video terlalu tinggi, potong sisi atas dan bawah secara simetris
+        # Video terlalu tinggi, potong atas dan bawah secara pintar
         new_h = int(w / target_ratio)
-        y_offset = (h - new_h) // 2
+        y_offset = find_smart_crop_offset_vertical(clip, new_h)
         y1 = y_offset
         y2 = y_offset + new_h
         
