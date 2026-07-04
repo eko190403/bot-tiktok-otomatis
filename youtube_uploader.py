@@ -4,7 +4,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-async def upload_to_youtube(video_path: str, caption: str, tags: list = None, category_id: str = None, comment_text: str = None) -> str:
+async def upload_to_youtube(video_path: str, caption: str, tags: list = None, category_id: str = None, comment_text: str = None, yt_title: str = None, yt_description: str = None) -> str:
     """
     Mengunggah video ke YouTube Shorts menggunakan official YouTube Data API v3.
     OAuth2 credential-based authentication bypasses IP location security checks.
@@ -20,11 +20,17 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
         
     if not caption or not isinstance(caption, str):
         caption = ""
-        
-    # Judul YouTube Shorts dibatasi maksimal 100 karakter dan TIDAK boleh berisi baris baru (newline).
-    # Bersihkan title dari newline, carriage return, dan spasi ganda.
-    clean_title = caption.replace("\r", " ").replace("\n", " ")
-    clean_title = " ".join(clean_title.split())  # Menghapus spasi berlebih/ganda dan trim
+
+    # ─── JUDUL (TITLE) ─────────────────────────────────────────────────────────
+    # Prioritaskan yt_title yang sudah dioptimasi SEO; fallback ke caption jika kosong.
+    if yt_title and isinstance(yt_title, str) and yt_title.strip():
+        raw_title = yt_title.strip()
+    else:
+        raw_title = caption
+
+    # Judul YouTube Shorts dibatasi maksimal 100 karakter dan TIDAK boleh berisi baris baru.
+    clean_title = raw_title.replace("\r", " ").replace("\n", " ")
+    clean_title = " ".join(clean_title.split())
     
     if not clean_title:
         clean_title = "Video Baru Ruang Pikir"
@@ -38,7 +44,14 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
         clean_title = clean_title[:88].strip() + " ... #shorts"
         
     title = clean_title
-    description = caption
+    
+    # ─── DESKRIPSI (DESCRIPTION) ────────────────────────────────────────────────
+    # Gunakan yt_description yang sudah dioptimasi SEO jika tersedia;
+    # fallback ke caption (dengan hashtag) jika tidak ada.
+    if yt_description and isinstance(yt_description, str) and yt_description.strip():
+        description = yt_description.strip()
+    else:
+        description = caption
     
     # Load OAuth2 credentials
     credentials = Credentials(

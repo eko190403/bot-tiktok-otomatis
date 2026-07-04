@@ -81,6 +81,8 @@ async def main():
     tags = draft.get("tags", [])
     category_id = draft.get("category_id", "22")
     interactive_comment = draft.get("interactive_comment", "")
+    yt_title = draft.get("yt_title", "")
+    yt_description = draft.get("yt_description", "")
     
     if not file_id:
         send_telegram_direct_message(chat_id, f"❌ <b>Eror:</b> file_id Telegram tidak ditemukan pada draf <code>{video_id}</code>!")
@@ -104,7 +106,9 @@ async def main():
                 caption=caption,
                 tags=tags,
                 category_id=category_id,
-                comment_text=interactive_comment
+                comment_text=interactive_comment,
+                yt_title=yt_title,
+                yt_description=yt_description
             )
             
             # Catat status publikasi YouTube

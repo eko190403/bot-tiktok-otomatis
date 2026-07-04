@@ -433,9 +433,11 @@ async def generate_structured_script(niche: str = "psychology") -> dict:
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
         "7. 'interactive_comment': Satu kalimat pertanyaan pancingan diskusi yang sangat interaktif dan memicu penonton untuk berdiskusi/menulis komentar di kolom komentar (maks 15 kata). Contoh: 'Apakah kamu pernah memanipulasi seseorang untuk mendapatkan apa yang kamu mau?'\n"
+        "8. 'yt_title': Judul video YouTube yang dioptimasi untuk SEO. Harus kuat, provokatif, mengandung kata kunci utama, dan TIDAK mengandung hashtag. Panjang maksimal 90 karakter. Contoh: 'Fakta Psikologi Gelap yang Tersembunyi di Balik Pujian Bertubi-Tubi'\n"
+        "9. 'yt_description': Deskripsi video YouTube yang lengkap dan dioptimasi untuk mesin pencari (SEO). Struktur: (a) 2 kalimat ringkasan konten yang engaging, (b) poin-poin utama yang dibahas (bullet list), (c) kalimat CTA mengajak subscribe dan follow, (d) semua hashtag yang relevan. Total panjang 300-500 karakter. Tulis dalam Bahasa Indonesia.\n"
         f"{ab_test_instruction}\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
+        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', 'interactive_comment', 'yt_title', dan 'yt_description'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
     parsed_json = clean_and_parse_json(res)

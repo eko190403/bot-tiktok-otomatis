@@ -219,6 +219,8 @@ async def main():
             theme = "classic_yellow"
             niche = "psychology"
             hook = "FAKTA MENARIK"
+            yt_title = ""
+            yt_description = ""
             metadata_path = os.path.join(DIR_TEMP, "video_metadata.json")
             if os.path.exists(metadata_path):
                 try:
@@ -232,6 +234,8 @@ async def main():
                         theme = meta_data.get("theme", "classic_yellow")
                         niche = meta_data.get("niche", "psychology")
                         hook = meta_data.get("hook", "FAKTA MENARIK")
+                        yt_title = meta_data.get("yt_title", "")
+                        yt_description = meta_data.get("yt_description", "")
                     os.remove(metadata_path) # Bersihkan setelah dibaca
                 except Exception as meta_err:
                     print(f"⚠️ Gagal membaca/menghapus metadata: {meta_err}")
@@ -329,7 +333,9 @@ async def main():
                             caption=caption, 
                             tags=tags, 
                             category_id=category_id,
-                            comment_text=interactive_comment
+                            comment_text=interactive_comment,
+                            yt_title=yt_title,
+                            yt_description=yt_description
                         )
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
                         
@@ -357,7 +363,9 @@ async def main():
                                 "theme": theme,
                                 "platform": "youtube",
                                 "platform_video_id": yt_video_id,
-                                "niche": niche
+                                "niche": niche,
+                                "yt_title": yt_title,
+                                "yt_description": yt_description
                             }
                             firebase_connector.save_video_draft(direct_video_id, draft_data)
                         except Exception as draft_err:
