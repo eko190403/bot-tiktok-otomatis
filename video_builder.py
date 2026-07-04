@@ -238,9 +238,10 @@ async def generate_structured_script() -> dict:
         "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. Contoh: 'Kalau kamu relate, simpan video ini. Follow untuk fakta psikologi yang akan mengubah cara kamu melihat dunia.'\n"
         "4. 'caption': Judul deskripsi postingan TikTok/Shorts yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #faktapsikologi #ruangpikir #mindset #stoikisme #fyp #viral). Panjang maksimal 150 karakter.\n"
         "5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal ['stoicism', 'mindset', 'psychology facts', 'dark psychology']).\n"
-        "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n\n"
+        "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
+        "7. 'interactive_comment': Satu kalimat pertanyaan pancingan diskusi yang sangat interaktif dan memicu penonton untuk berdiskusi/menulis komentar di kolom komentar (maks 15 kata). Contoh: 'Apakah kamu pernah memanipulasi seseorang untuk mendapatkan apa yang kamu mau?'\n\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', dan 'category_id'. Tidak ada teks lain di luar JSON.{exclude_prompt}"
+        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Tidak ada teks lain di luar JSON.{exclude_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
     return clean_and_parse_json(res)
@@ -401,11 +402,13 @@ async def create_video() -> bool:
         # Simpan metadata dinamis untuk dibaca uploader di app.py
         tags = script_data.get("tags", ["faktapsikologi", "mindset", "stoikisme", "ruangpikir"])
         category_id = script_data.get("category_id", "22")
+        interactive_comment = script_data.get("interactive_comment", "")
         with open(os.path.join(DIR_TEMP, "video_metadata.json"), "w", encoding="utf-8") as f:
             json.dump({
                 "caption": caption,
                 "tags": tags,
-                "category_id": category_id
+                "category_id": category_id,
+                "interactive_comment": interactive_comment
             }, f, indent=4, ensure_ascii=False)
             
         # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten (lewat Firebase / cadangan Lokal)

@@ -4,7 +4,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-async def upload_to_youtube(video_path: str, caption: str, tags: list = None, category_id: str = None) -> str:
+async def upload_to_youtube(video_path: str, caption: str, tags: list = None, category_id: str = None, comment_text: str = None) -> str:
     """
     Mengunggah video ke YouTube Shorts menggunakan official YouTube Data API v3.
     OAuth2 credential-based authentication bypasses IP location security checks.
@@ -96,5 +96,25 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
     video_id = response.get("id")
     video_url = f"https://youtu.be/{video_id}"
     print(f" Video sukses diunggah ke YouTube Shorts! Video ID: {video_id}")
+    
+    # Kirim komentar otomatis jika disertakan
+    if video_id and comment_text:
+        try:
+            print(f"💬 Menulis komentar otomatis pertama di YouTube...")
+            comment_body = {
+                "snippet": {
+                    "videoId": video_id,
+                    "topLevelComment": {
+                        "snippet": {
+                            "textOriginal": comment_text
+                        }
+                    }
+                }
+            }
+            youtube.commentThreads().insert(part="snippet", body=comment_body).execute()
+            print("💬 Sukses mempublikasikan komentar pertama di YouTube!")
+        except Exception as comm_err:
+            print(f"⚠️ Gagal memposting komentar otomatis pertama: {comm_err}")
+            
     print(f" Tautan Video: {video_url}")
     return video_url

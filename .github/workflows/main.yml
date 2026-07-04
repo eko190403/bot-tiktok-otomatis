@@ -8,6 +8,7 @@ on:
       - run-bot
       - telegram_trigger
       - webhook_trigger
+      - telegram_publish
 
   schedule:
     # Menggunakan Jam Emas (Prime Time) Indonesia agar jangkauan penonton maksimal:
@@ -58,6 +59,7 @@ jobs:
 
       # === LANGKAH BARU: NOTIFIKASI MULAI ===
       - name: Kirim Notifikasi Proses Dimulai ke Telegram
+        if: github.event.action != 'telegram_publish'
         run: |
           curl -v -X POST "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendMessage" \
             -d "chat_id=1120755820" \
@@ -97,6 +99,7 @@ jobs:
           fi
 
       - name: Jalankan Bot
+        if: github.event.action != 'telegram_publish'
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -116,6 +119,20 @@ jobs:
         run: |
           python app.py
 
+      - name: Jalankan Remote Control Publisher (Kirim ke Medsos)
+        if: github.event.action == 'telegram_publish'
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TELEGRAM_BOT_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
+          TELEGRAM_CHAT_ID: "1120755820"
+        run: |
+          python remote_publisher.py \
+            --video_id "${{ github.event.client_payload.video_id }}" \
+            --platform "${{ github.event.client_payload.platform }}" \
+            --chat_id "${{ github.event.client_payload.chat_id }}"
+
       - name: Lihat Hasil Output
         if: always()
         run: |
@@ -123,7 +140,7 @@ jobs:
           ls -lah output || true
 
       - name: Kirim Hasil Video ke Telegram Bot
-        if: success()
+        if: success() && github.event.action != 'telegram_publish'
         run: |
           VIDEO_FILE=$(ls output/*.mp4 | head -n 1)
           
@@ -139,7 +156,7 @@ jobs:
             "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendVideo?chat_id=1120755820"
 
       - name: Upload Hasil Video
-        if: success()
+        if: success() && github.event.action != 'telegram_publish'
         uses: actions/upload-artifact@v4
         with:
           name: video-tiktok-fakta
@@ -147,7 +164,7 @@ jobs:
           retention-days: 7
 
       - name: Commit dan Push Riwayat Naskah ke Repositori
-        if: success()
+        if: success() && github.event.action != 'telegram_publish'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"

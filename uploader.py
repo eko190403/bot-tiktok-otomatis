@@ -142,7 +142,84 @@ async def dismiss_modals(page):
         print(f" Gagal menutup modal: {e}")
 
 
-async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
+async def post_comment_on_latest_video(context, username: str, comment_text: str):
+    """
+    Membuka halaman profil TikTok user, memilih video terbaru,
+    dan menuliskan komentar pertama secara otomatis.
+    """
+    try:
+        print(f"💬 Menyiapkan penulisan komentar otomatis di TikTok untuk {username}...")
+        # Buka halaman profil publik di tab/page baru agar tidak mengganggu page uploader
+        page = await context.new_page()
+        # Bersihkan username dari '@' untuk URL
+        clean_user = username.replace("@", "")
+        profile_url = f"https://www.tiktok.com/@{clean_user}"
+        
+        print(f"📡 Navigasi ke profil: {profile_url}")
+        await page.goto(profile_url, timeout=45000)
+        await asyncio.sleep(6) # Tunggu halaman memuat grid video
+        
+        # Cari elemen video pertama di grid profil
+        video_selector = '[data-e2e="user-post-item"] a, [data-e2e="user-post-item-list"] a, a[href*="/video/"]'
+        first_video = page.locator(video_selector).first
+        
+        if await first_video.is_visible():
+            print("🎬 Menemukan video terbaru di grid profil. Membuka video...")
+            await first_video.click()
+            await asyncio.sleep(5) # Tunggu modal video terbuka
+            
+            # Cari input komentar
+            comment_input_selectors = [
+                '[data-e2e="comment-input"] div[contenteditable="true"]',
+                '[placeholder="Tambahkan komentar..."]',
+                '[placeholder="Add comment..."]',
+                'div[contenteditable="true"]',
+                'input[placeholder*="komentar"]'
+            ]
+            
+            input_found = False
+            for sel in comment_input_selectors:
+                try:
+                    locator = page.locator(sel).first
+                    if await locator.is_visible():
+                        await locator.click()
+                        await locator.fill(comment_text)
+                        input_found = True
+                        print(f"✍️ Mengisi komentar: '{comment_text}'")
+                        break
+                except:
+                    continue
+                    
+            if input_found:
+                await asyncio.sleep(1)
+                # Klik tombol kirim komentar
+                post_btn_selectors = [
+                    '[data-e2e="comment-post"]',
+                    'button:has-text("Post")',
+                    'button:has-text("Kirim")',
+                    'div[data-e2e="comment-post"]'
+                ]
+                for p_sel in post_btn_selectors:
+                    try:
+                        btn = page.locator(p_sel).first
+                        if await btn.is_visible():
+                            await btn.click()
+                            print("💬 Sukses mengklik tombol kirim komentar di TikTok!")
+                            await asyncio.sleep(4) # Tunggu request selesai
+                            break
+                    except:
+                        continue
+            else:
+                print("⚠️ Gagal menemukan kotak input komentar di layar video TikTok.")
+        else:
+            print("⚠️ Tidak ada video yang ditemukan di profil atau video masih dalam antrean proses TikTok.")
+            
+        await page.close()
+    except Exception as comm_err:
+        print(f"⚠️ Gagal memposting komentar di TikTok: {comm_err}")
+
+
+async def upload_to_tiktok(video_path="final_output.mp4", caption="", comment_text: str = None) -> str:
     print(" Playwright: Membuka browser headless di server GitHub...")
     
     input_cookie = "cookies.json"
@@ -398,6 +475,16 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                 
             if not detected_username:
                 detected_username = get_tiktok_username_from_cookies(input_cookie)
+                
+            # Jalankan penulisan komentar otomatis jika sukses
+            if success_found and comment_text and detected_username:
+                try:
+                    # Berikan waktu jeda 10 detik agar sistem TikTok memproses rendering video baru Anda di profil
+                    print("⏳ Menunggu 10 detik agar video terproses sebelum menulis komentar otomatis...")
+                    await asyncio.sleep(10)
+                    await post_comment_on_latest_video(context, detected_username, comment_text)
+                except Exception as comm_proc_err:
+                    print(f"⚠️ Gagal memproses alur komentar otomatis: {comm_proc_err}")
                 
         except Exception as e:
             # Ambil screenshot jika terjadi kegagalan untuk mempermudah debugging di GitHub Actions

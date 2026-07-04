@@ -122,3 +122,55 @@ def save_to_history(hook: str, story: str, cta: str, caption: str) -> None:
         logger.info("🔥 Sukses mencatat naskah baru ke Cloud Firestore.")
     except Exception as e:
         logger.error(f"❌ Gagal menyimpan naskah ke Cloud Firestore: {e}")
+
+
+def save_video_draft(video_id: str, data: dict) -> None:
+    """Menyimpan data draf publikasi video (caption, tags, category_id, file_id, dll) ke Firestore/lokal."""
+    # Simpan ke cadangan lokal dulu
+    local_drafts_path = "video_drafts.json"
+    drafts_data = {}
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+        except:
+            pass
+    drafts_data[video_id] = {**data, "timestamp": int(time.time())}
+    try:
+        with open(local_drafts_path, "w", encoding="utf-8") as f:
+            json.dump(drafts_data, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"❌ Gagal menyimpan draf video lokal: {e}")
+
+    if not is_firebase_enabled or db is None:
+        return
+
+    try:
+        db.collection("drafts").document(video_id).set({
+            "timestamp": int(time.time()),
+            **data
+        })
+        logger.info(f"🔥 Sukses mencatat draf video '{video_id}' ke Cloud Firestore.")
+    except Exception as e:
+        logger.error(f"❌ Gagal menyimpan draf video ke Cloud Firestore: {e}")
+
+
+def get_video_draft(video_id: str) -> dict:
+    """Mengambil data draf video berdasarkan ID dari Firestore atau fallback lokal."""
+    if is_firebase_enabled and db is not None:
+        try:
+            doc = db.collection("drafts").document(video_id).get()
+            if doc.exists:
+                return doc.to_dict()
+        except Exception as e:
+            logger.error(f"⚠️ Gagal membaca draf dari Firestore: {e}. Mencoba fallback lokal.")
+
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+                return drafts_data.get(video_id)
+        except Exception as e:
+            logger.error(f"⚠️ Gagal membaca draf video lokal: {e}")
+    return None
