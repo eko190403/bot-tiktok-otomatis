@@ -4,14 +4,17 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-async def upload_to_youtube(video_path: str, caption: str, tags: list = None, category_id: str = None, comment_text: str = None, yt_title: str = None, yt_description: str = None) -> str:
+async def upload_to_youtube(video_path: str, caption: str, tags: list = None, category_id: str = None, comment_text: str = None, yt_title: str = None, yt_description: str = None, channel_id: str = None) -> str:
     """
     Mengunggah video ke YouTube Shorts menggunakan official YouTube Data API v3.
     OAuth2 credential-based authentication bypasses IP location security checks.
     """
-    print(" YouTube API: Memulai proses unggah video ke YouTube Shorts...")
+    print(f" YouTube API: Memulai proses unggah video untuk channel '{channel_id}'...")
     
-    cred_file = "youtube_credentials.json"
+    if channel_id and channel_id != "ruangpikir":
+        cred_file = f"youtube_credentials_{channel_id}.json"
+    else:
+        cred_file = "youtube_credentials.json"
     if not os.path.exists(cred_file):
         raise FileNotFoundError(" Eror: Berkas youtube_credentials.json tidak ditemukan! Harap lakukan otorisasi di lokal terlebih dahulu.")
         
@@ -295,13 +298,16 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2) -> None
         print(f"⚠️ Gagal membalas komentar otomatis di YouTube: {e}")
 
 
-async def upload_thumbnail(video_id: str, thumbnail_path: str) -> bool:
+async def upload_thumbnail(video_id: str, thumbnail_path: str, channel_id: str = None) -> bool:
     """Mengunggah kustom thumbnail untuk video YouTube menggunakan YouTube Data API v3."""
     if not os.path.exists(thumbnail_path):
         print(f"⚠️ Berkas thumbnail tidak ditemukan: {thumbnail_path}")
         return False
         
-    cred_file = "youtube_credentials.json"
+    if channel_id and channel_id != "ruangpikir":
+        cred_file = f"youtube_credentials_{channel_id}.json"
+    else:
+        cred_file = "youtube_credentials.json"
     if not os.path.exists(cred_file):
         print("⚠️ youtube_credentials.json tidak ditemukan. Melewati upload thumbnail.")
         return False

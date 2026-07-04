@@ -1,0 +1,44 @@
+{
+  "channels": {
+    "ruangpikir": {
+      "name": "Ruang Pikir",
+      "niche": "dark psychology and human behavior secrets",
+      "watermark": "@RuangPikir",
+      "aesthetic_query": "dark cinematic cold moody tone",
+      "voice_id": "id-ID-ArdiNeural",
+      "theme_color": "classic_yellow"
+    },
+    "logikastoik": {
+      "name": "Logika Stoik",
+      "niche": "stoicism philosophy, mental toughness, and ancient wisdom",
+      "watermark": "@LogikaStoik",
+      "aesthetic_query": "ancient greek roman statue warm dramatic lighting vintage cinematic",
+      "voice_id": "id-ID-ArdiNeural",
+      "theme_color": "classic_yellow"
+    },
+    "rahasiafinansial": {
+      "name": "Rahasia Finansial",
+      "niche": "money mindset, wealth building secrets, and high performance habits",
+      "watermark": "@RahasiaFinansial",
+      "aesthetic_query": "luxury dark modern office skyline moody business slow motion",
+      "voice_id": "id-ID-ArdiNeural",
+      "theme_color": "classic_yellow"
+    },
+    "misterisemesta": {
+      "name": "Misteri Semesta",
+      "niche": "space universe mystery, quantum physics paradoxes, and deep science exploration",
+      "watermark": "@MisteriSemesta",
+      "aesthetic_query": "cosmic space nebula galaxy sci-fi deep blue violet cinematic",
+      "voice_id": "id-ID-ArdiNeural",
+      "theme_color": "classic_yellow"
+    },
+    "poladisiplin": {
+      "name": "Pola Disiplin",
+      "niche": "grit, self-discipline, breaking laziness, and building habits",
+      "watermark": "@PolaDisiplin",
+      "aesthetic_query": "minimalist aesthetic clean focus athletic workout monochrome cinematic",
+      "voice_id": "id-ID-ArdiNeural",
+      "theme_color": "classic_yellow"
+    }
+  }
+}

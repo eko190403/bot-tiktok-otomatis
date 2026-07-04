@@ -487,14 +487,21 @@ VOICE_ROTATION = [
     "id-ID-GadisNeural",   # Wanita cadangan 1
 ]
 
-async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: str, attempts: int = 3):
+async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: str, voice_id: str = "id-ID-ArdiNeural", attempts: int = 3):
     """Mencoba menghasilkan voiceover dengan rotasi voice jika gagal atau WordBoundary kosong."""
     import random
     last_exception = None
     
-    # Salin dan acak daftar pengisi suara agar bervariasi setiap run (Pria/Wanita)
+    # Salin dan prioritaskan voice yang dipilih, sisanya diacak
     voices = VOICE_ROTATION.copy()
-    random.shuffle(voices)
+    if voice_id in voices:
+        voices.remove(voice_id)
+        random.shuffle(voices)
+        voices.insert(0, voice_id)
+    else:
+        random.shuffle(voices)
+        if voice_id:
+            voices.insert(0, voice_id)
     
     for voice_idx, voice in enumerate(voices):
         for i in range(attempts):
@@ -516,7 +523,7 @@ async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: st
                     await asyncio.sleep(1.5 + i)
         else:
             # Semua percobaan untuk voice ini gagal, lanjut ke voice berikutnya
-            if voice_idx < len(VOICE_ROTATION) - 1:
+            if voice_idx < len(voices) - 1:
                 logger.warning(" Voice '%s' gagal semua percobaan. Beralih ke voice cadangan...", voice)
                 continue
     # Semua voice sudah dicoba
@@ -525,12 +532,13 @@ async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: st
     raise RuntimeError("Semua voice Edge-TTS gagal menghasilkan voiceover.")
 
 
-async def run_download_with_retry(loop, keywords: list, target_count: int = 4, max_retry: int = 3) -> list:
+
+async def run_download_with_retry(loop, keywords: list, target_count: int = 4, aesthetic_style: str = "dark cinematic cold moody tone", max_retry: int = 3) -> list:
     """Poin 4: Mengaktifkan mekanisme Retry internal untuk menangani network glitch download dengan target_count dinamis."""
     for attempt in range(max_retry):
         try:
             return await asyncio.wait_for(
-                loop.run_in_executor(None, download_video_clips, keywords, target_count), 
+                loop.run_in_executor(None, download_video_clips, keywords, target_count, aesthetic_style), 
                 timeout=DOWNLOAD_TIMEOUT
             )
         except asyncio.TimeoutError:
@@ -572,7 +580,7 @@ async def kill_zombie_ffmpeg_processes(target_file: str):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
-async def create_video(niche: str = None) -> bool:
+async def create_video(channel_id: str = "ruangpikir") -> bool:
     start_total = time.time()
     moviepy_resources = {"audio_clip": None, "processed_clips": [], "raw_combined_bg": None, "looped_bg": None, "combined_bg": None, "final_video": None}
     video_files = []
@@ -582,11 +590,27 @@ async def create_video(niche: str = None) -> bool:
     draft_audio_path = os.path.join(DIR_TEMP, "draft_audio.mp3")
     draft_timestamps_path = os.path.join(DIR_TEMP, "draft_timestamps.json")
     
-    # Pilih niche secara acak jika tidak didefinisikan
-    if not niche:
-        import random
-        niche = random.choice(list(NICHE_CONFIG.keys()))
-    logger.info("🎯 Niche terpilih untuk video ini: %s", niche)
+    # Load channel configuration dynamically
+    from config import get_channel_config
+    channel_cfg = get_channel_config(channel_id)
+    niche_description = channel_cfg.get("niche", "dark psychology and human behavior secrets")
+    aesthetic_style = channel_cfg.get("aesthetic_query", "dark cinematic cold moody tone")
+    voice_id = channel_cfg.get("voice_id", "id-ID-ArdiNeural")
+    watermark_name = channel_cfg.get("watermark", "@RuangPikir")
+    
+    # Map the niche description or channel id to the existing NICHE_CONFIG keys
+    niche_key = "psychology"
+    if "stoic" in channel_id or "stoic" in niche_description:
+        niche_key = "psychology"
+    elif "finance" in channel_id or "money" in niche_description or "finansial" in channel_id:
+        niche_key = "finance"
+    elif "motivation" in niche_description or "disiplin" in channel_id or "grit" in niche_description:
+        niche_key = "motivation"
+    elif "science" in niche_description or "semesta" in channel_id or "universe" in niche_description:
+        niche_key = "science"
+        
+    logger.info("🎯 Channel terpilih: %s (Niche: %s -> Key: %s)", channel_id, niche_description, niche_key)
+
     
     try:
         os.makedirs(DIR_TEMP, exist_ok=True)
@@ -681,7 +705,7 @@ async def create_video(niche: str = None) -> bool:
                 
         if reused_audio_and_timestamps:
             logger.info(" Menjalankan download background secara mandiri (menggunakan audio cache)...")
-            results = await run_download_with_retry(loop, keywords, target_count=needed_clips, max_retry=3)
+            results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
             if not results:
                 logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
                 video_files = []
@@ -689,8 +713,8 @@ async def create_video(niche: str = None) -> bool:
                 video_files = results
         else:
             logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
-            download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, max_retry=3)
-            audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, attempts=3)
+            download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
+            audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, voice_id=voice_id, attempts=3)
             
             results = await asyncio.gather(download_task, audio_task, return_exceptions=True)
             
@@ -972,7 +996,7 @@ async def create_video(niche: str = None) -> bool:
         try:
             from overlay import apply_text_watermark, apply_visual_cta
             moviepy_resources["final_video"] = apply_text_watermark(
-                moviepy_resources["final_video"], channel_name="@RuangPikir"
+                moviepy_resources["final_video"], channel_name=watermark_name
             )
             logger.info(" Watermark channel berhasil ditambahkan.")
             

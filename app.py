@@ -133,8 +133,14 @@ def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: st
 
 
 async def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Bot Video Auto Pipeline")
+    parser.add_argument("--channel", default="ruangpikir", help="Channel ID dari config/channels.json")
+    args, unknown = parser.parse_known_args()
+    channel_id = args.channel
+
     try:
-        print("🚀 Memulai Pipeline Pembuatan Video Otomatis...")
+        print(f"🚀 Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
         
         # Jalankan pembersihan draf lama (> 7 hari) untuk menghemat limit database
         try:
@@ -204,8 +210,8 @@ async def main():
         print("📦 Meng-import modul video_builder...")
         from video_builder import create_video
         
-        print("🎬 Menjalankan fungsi create_video()...")
-        success = await create_video()
+        print(f"🎬 Menjalankan fungsi create_video() untuk channel: {channel_id}...")
+        success = await create_video(channel_id=channel_id)
         
         if success:
             print("✅ Video Berhasil Dirender Sempurna!")
@@ -335,7 +341,8 @@ async def main():
                             category_id=category_id,
                             comment_text=interactive_comment,
                             yt_title=yt_title,
-                            yt_description=yt_description
+                            yt_description=yt_description,
+                            channel_id=channel_id
                         )
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
                         
@@ -346,7 +353,7 @@ async def main():
                         if has_thumbnail:
                             try:
                                 from youtube_uploader import upload_thumbnail
-                                await upload_thumbnail(yt_video_id, thumbnail_path)
+                                await upload_thumbnail(yt_video_id, thumbnail_path, channel_id=channel_id)
                             except Exception as thumb_up_err:
                                 print(f"⚠️ Gagal mengunggah thumbnail ke YouTube: {thumb_up_err}")
                                 
@@ -365,7 +372,8 @@ async def main():
                                 "platform_video_id": yt_video_id,
                                 "niche": niche,
                                 "yt_title": yt_title,
-                                "yt_description": yt_description
+                                "yt_description": yt_description,
+                                "channel_id": channel_id
                             }
                             firebase_connector.save_video_draft(direct_video_id, draft_data)
                         except Exception as draft_err:
@@ -428,7 +436,8 @@ async def main():
                         "category_id": category_id,
                         "interactive_comment": interactive_comment,
                         "theme": theme,
-                        "niche": niche
+                        "niche": niche,
+                        "channel_id": channel_id
                     }
                     try:
                         firebase_connector.save_video_draft(video_id, draft_data)

@@ -35,7 +35,7 @@ def choose_best_quality(video_files: list) -> str:
         return video_files[0].get("link")
     return ""
 
-def download_video_clips(keywords: list, target_count: int = 4) -> list:
+def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style: str = "dark cinematic cold moody tone") -> list:
     """Mendownload klip video berdasarkan daftar keyword relevan, mendukung multi-download per keyword."""
     os.makedirs(DIR_TEMP, exist_ok=True)
     downloaded_paths = []
@@ -52,7 +52,7 @@ def download_video_clips(keywords: list, target_count: int = 4) -> list:
             break
             
         # Poin 1: Sinkronisasi Gaya Visual Estetik (Aesthetic Matching)
-        aesthetic_query = f"{kw} dark cinematic cold moody tone"
+        aesthetic_query = f"{kw} {aesthetic_style}" if aesthetic_style else kw
         videos = search_pexels_videos(aesthetic_query, per_page=15)
         if not videos:
             # Fallback ke keyword murni jika pencarian estetik tidak mengembalikan video
