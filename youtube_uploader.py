@@ -18,6 +18,9 @@ async def upload_to_youtube(video_path: str, caption: str) -> str:
     with open(cred_file, "r") as f:
         cred_data = json.load(f)
         
+    if not caption or not isinstance(caption, str):
+        caption = ""
+        
     # Judul YouTube Shorts dibatasi maksimal 100 karakter dan TIDAK boleh berisi baris baru (newline).
     # Bersihkan title dari newline, carriage return, dan spasi ganda.
     clean_title = caption.replace("\r", " ").replace("\n", " ")
