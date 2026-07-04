@@ -60,17 +60,17 @@ jobs:
         run: |
           curl -v -X POST "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendMessage" \
             -d "chat_id=1120755820" \
-            -d "text=⏳ Perintah diterima! Video Ruang Pikir sedang mulai diproses dan dirender di Cloud. Mohon tunggu sekitar 2-5 menit..."
+            -d "text= Perintah diterima! Video Ruang Pikir sedang mulai diproses dan dirender di Cloud. Mohon tunggu sekitar 2-5 menit..."
 
       - name: Siapkan Cookies TikTok dari Secret
         env:
           TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
         run: |
           if [ -n "$TIKTOK_COOKIES" ]; then
-            echo "📝 Menulis berkas cookies.json secara dinamis dari GitHub Secrets..."
+            echo " Menulis berkas cookies.json secara dinamis dari GitHub Secrets..."
             echo "$TIKTOK_COOKIES" > cookies.json
           else
-            echo "ℹ️ Secret TIKTOK_COOKIES tidak diset. Menggunakan berkas cookies.json bawaan dari repositori."
+            echo " Secret TIKTOK_COOKIES tidak diset. Menggunakan berkas cookies.json bawaan dari repositori."
           fi
 
       - name: Siapkan Kredensial YouTube dari Secret
@@ -78,10 +78,10 @@ jobs:
           YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS }}
         run: |
           if [ -n "$YOUTUBE_CREDENTIALS" ]; then
-            echo "📝 Menulis berkas youtube_credentials.json secara dinamis dari GitHub Secrets..."
+            echo " Menulis berkas youtube_credentials.json secara dinamis dari GitHub Secrets..."
             echo "$YOUTUBE_CREDENTIALS" > youtube_credentials.json
           else
-            echo "ℹ️ Secret YOUTUBE_CREDENTIALS tidak diset. Menggunakan berkas youtube_credentials.json bawaan dari repositori."
+            echo " Secret YOUTUBE_CREDENTIALS tidak diset. Menggunakan berkas youtube_credentials.json bawaan dari repositori."
           fi
 
       - name: Jalankan Bot
@@ -96,7 +96,7 @@ jobs:
           GEMINI_API_KEY_6: ${{ secrets.GEMINI_API_KEY_6 }}
           GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
           GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
-          ENABLE_TIKTOK_UPLOAD: "false"
+          ENABLE_TIKTOK_UPLOAD: "true"
           ENABLE_YOUTUBE_UPLOAD: "true"
           TELEGRAM_BOT_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
           TELEGRAM_CHAT_ID: "1120755820"
@@ -115,14 +115,14 @@ jobs:
           VIDEO_FILE=$(ls output/*.mp4 | head -n 1)
           
           if [ -z "$VIDEO_FILE" ]; then
-            echo "❌ Eror: Tidak ada file video .mp4 di folder output!"
+            echo " Eror: Tidak ada file video .mp4 di folder output!"
             exit 1
           fi
-          
-          echo "🚀 Mengirim $VIDEO_FILE ke Telegram..."
+        
+          echo " Mengirim $VIDEO_FILE ke Telegram..."
           
           curl -v -F video="@${VIDEO_FILE}" \
-            -F caption="✅ Video Ruang Pikir Berhasil Dirender Sempurna dengan Subtitle!" \
+            -F caption=" Video Ruang Pikir Berhasil Dirender Sempurna dengan Subtitle!" \
             "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendVideo?chat_id=1120755820"
 
       - name: Upload Hasil Video
@@ -143,7 +143,7 @@ jobs:
             git commit -m "chore: update riwayat naskah otomatis [skip ci]" || echo "Tidak ada perubahan riwayat naskah."
             git push origin main || echo "Gagal melakukan push riwayat naskah."
           else
-            echo "ℹ️ Berkas naskah_history.json tidak ditemukan."
+            echo " Berkas naskah_history.json tidak ditemukan."
           fi
 
       - name: Kirim Notifikasi GAGAL ke Telegram
@@ -152,4 +152,4 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendMessage" \
             -d "chat_id=1120755820" \
             -d "parse_mode=HTML" \
-            -d "text=❌ <b>PIPELINE GAGAL!</b>%0A%0A⚠️ Bot TikTok mengalami error saat menjalankan workflow.%0A%0A🔗 Cek log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -d "text= <b>PIPELINE GAGAL!</b>%0A%0A Bot TikTok mengalami error saat menjalankan workflow.%0A%0A🔗 Cek log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

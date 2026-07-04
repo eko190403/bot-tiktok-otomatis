@@ -9,11 +9,11 @@ async def upload_to_youtube(video_path: str, caption: str) -> str:
     Mengunggah video ke YouTube Shorts menggunakan official YouTube Data API v3.
     OAuth2 credential-based authentication bypasses IP location security checks.
     """
-    print("🚀 YouTube API: Memulai proses unggah video ke YouTube Shorts...")
+    print(" YouTube API: Memulai proses unggah video ke YouTube Shorts...")
     
     cred_file = "youtube_credentials.json"
     if not os.path.exists(cred_file):
-        raise FileNotFoundError("❌ Eror: Berkas youtube_credentials.json tidak ditemukan! Harap lakukan otorisasi di lokal terlebih dahulu.")
+        raise FileNotFoundError(" Eror: Berkas youtube_credentials.json tidak ditemukan! Harap lakukan otorisasi di lokal terlebih dahulu.")
         
     with open(cred_file, "r") as f:
         cred_data = json.load(f)
@@ -84,10 +84,10 @@ async def upload_to_youtube(video_path: str, caption: str) -> str:
     while response is None:
         status, response = request.next_chunk()
         if status:
-            print(f"⏳ Mengunggah video ke YouTube API: {int(status.progress() * 100)}% selesai...")
+            print(f" Mengunggah video ke YouTube API: {int(status.progress() * 100)}% selesai...")
             
     video_id = response.get("id")
     video_url = f"https://youtu.be/{video_id}"
-    print(f"🚀 Video sukses diunggah ke YouTube Shorts! Video ID: {video_id}")
-    print(f"🔗 Tautan Video: {video_url}")
+    print(f" Video sukses diunggah ke YouTube Shorts! Video ID: {video_id}")
+    print(f" Tautan Video: {video_url}")
     return video_url

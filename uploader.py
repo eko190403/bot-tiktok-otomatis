@@ -80,7 +80,7 @@ def convert_to_playwright_cookies(input_path: str, output_path: str):
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(storage_state, f, indent=4, ensure_ascii=False)
     
-    print(f"✅ Cookies dikonversi secara sukses ke format Playwright di: {output_path}")
+    print(f" Cookies dikonversi secara sukses ke format Playwright di: {output_path}")
 
 
 def get_tiktok_username_from_cookies(cookie_path="cookies.json") -> str:
@@ -104,7 +104,7 @@ def get_tiktok_username_from_cookies(cookie_path="cookies.json") -> str:
                             decoded = f"@{decoded}"
                         return decoded
     except Exception as e:
-        print(f"⚠️ Gagal mengekstrak username dari cookie: {e}")
+        print(f" Gagal mengekstrak username dari cookie: {e}")
         
     return "@RuangPikir"
 
@@ -133,17 +133,17 @@ async def dismiss_modals(page):
                 for i in range(count):
                     el = locator.nth(i)
                     if await el.is_visible():
-                        print(f"🎬 Menutup dialog/modal yang menghalangi dengan: {sel}")
+                        print(f" Menutup dialog/modal yang menghalangi dengan: {sel}")
                         await el.click(timeout=3000, force=True)
                         await asyncio.sleep(0.5)
             except:
                 continue
     except Exception as e:
-        print(f"⚠️ Gagal menutup modal: {e}")
+        print(f" Gagal menutup modal: {e}")
 
 
 async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
-    print("🚀 Playwright: Membuka browser headless di server GitHub...")
+    print(" Playwright: Membuka browser headless di server GitHub...")
     
     input_cookie = "cookies.json"
     temp_cookie = "temp/cookies_playwright.json"
@@ -155,7 +155,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
     try:
         convert_to_playwright_cookies(input_cookie, temp_cookie)
     except Exception as conv_err:
-        print(f"⚠️ Gagal mengonversi cookies: {conv_err}. Mencoba memuat langsung berkas asli...")
+        print(f" Gagal mengonversi cookies: {conv_err}. Mencoba memuat langsung berkas asli...")
         temp_cookie = input_cookie
 
     async with async_playwright() as p:
@@ -176,7 +176,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
         detected_username = None
         
         try:
-            print("🌐 Mengakses halaman TikTok Creator Studio Upload...")
+            print(" Mengakses halaman TikTok Creator Studio Upload...")
             await page.goto("https://www.tiktok.com/creator-center/upload?lang=id-ID", timeout=60000)
             await dismiss_modals(page)
             
@@ -184,7 +184,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             if "login" in page.url or "signup" in page.url:
                 raise RuntimeError("Cookies kedaluwarsa atau tidak valid. TikTok meminta login ulang.")
                 
-            print("📤 Memilih dan mengunggah berkas video...")
+            print(" Memilih dan mengunggah berkas video...")
             # Menemukan elemen input file di halaman TikTok Studio dengan state attached (karena input sering disembunyikan secara visual)
             file_input = await page.wait_for_selector("input[type='file']", state="attached", timeout=45000)
             await file_input.set_input_files(video_path)
@@ -194,7 +194,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
     
             # Masukkan Caption/Deskripsi
             if caption:
-                print(f"✍️ Menulis deskripsi video: {caption}")
+                print(f" Menulis deskripsi video: {caption}")
                 await dismiss_modals(page)
                 try:
                     # Mencoba beberapa selektor alternatif demi ketahanan DOM TikTok
@@ -210,7 +210,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                         try:
                             caption_element = await page.wait_for_selector(sel, timeout=10000)
                             if caption_element:
-                                print(f"✅ Menemukan elemen caption dengan selektor: {sel}")
+                                print(f" Menemukan elemen caption dengan selektor: {sel}")
                                 break
                         except:
                             continue
@@ -227,13 +227,13 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                         
                         # Ketikkan caption secara bertahap (human-like typing)
                         await page.keyboard.type(caption, delay=60) # delay 60ms per karakter
-                        print("📝 Deskripsi dan Hashtag berhasil diinput.")
+                        print(" Deskripsi dan Hashtag berhasil diinput.")
                     else:
-                        print("⚠️ Gagal menemukan elemen input caption. Melanjutkan tanpa deskripsi.")
+                        print(" Gagal menemukan elemen input caption. Melanjutkan tanpa deskripsi.")
                 except Exception as e:
-                    print(f"⚠️ Gagal menginput caption: {e}")
+                    print(f" Gagal menginput caption: {e}")
             
-            print("⏳ Menunggu proses upload dan enkoding video selesai di server TikTok...")
+            print(" Menunggu proses upload dan enkoding video selesai di server TikTok...")
             # Menunggu tombol "Posting" aktif (menandakan video selesai terunggah)
             # Kita tunggu tombol [data-e2e="post_video_button"] yang tidak memiliki aria-disabled="true"
             button_post = None
@@ -255,25 +255,25 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                         is_disabled = await button_post.get_attribute("aria-disabled")
                         if is_disabled == "true":
                             continue
-                        print(f"✅ Menemukan tombol posting yang aktif: {sel}")
+                        print(f" Menemukan tombol posting yang aktif: {sel}")
                         break
                 except:
                     continue
     
             # Jika setelah iterasi cepat tidak ketemu tombol aktif, mari tunggu tombol resmi yang aktif secara eksplisit
             if not button_post:
-                print("⏳ Menunggu tombol posting resmi [data-e2e='post_video_button'] menjadi aktif (maksimal 3 menit)...")
+                print(" Menunggu tombol posting resmi [data-e2e='post_video_button'] menjadi aktif (maksimal 3 menit)...")
                 try:
                     button_post = await page.wait_for_selector('[data-e2e="post_video_button"]:not([aria-disabled="true"])', timeout=180000)
                 except Exception as e:
-                    print(f"⚠️ Gagal menunggu tombol data-e2e aktif: {e}. Mencoba mencari tombol teks 'Post' secara umum...")
+                    print(f" Gagal menunggu tombol data-e2e aktif: {e}. Mencoba mencari tombol teks 'Post' secara umum...")
                     try:
                         button_post = await page.wait_for_selector('button:has-text("Post")', timeout=30000)
                     except Exception as e2:
-                        raise RuntimeError(f"❌ Tidak dapat menemukan tombol posting aktif di layar: {e2}")
+                        raise RuntimeError(f" Tidak dapat menemukan tombol posting aktif di layar: {e2}")
     
             # Klik tombol posting
-            print("🎯 Klik tombol posting konten!")
+            print(" Klik tombol posting konten!")
             await dismiss_modals(page)
             await button_post.click(force=True)
             
@@ -301,16 +301,16 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                     if checks_modal_active:
                         break
             except Exception as checks_err:
-                print(f"⚠️ Gagal menangani dialog konfirmasi cek konten: {checks_err}")
+                print(f" Gagal menangani dialog konfirmasi cek konten: {checks_err}")
                 
             # Jika modal cek konten tadi muncul dan berhasil diklik, kita harus menekan tombol "Post" sekali lagi!
             if checks_modal_active:
-                print("🎯 Menekan tombol posting konten untuk kedua kalinya (setelah mengaktifkan cek otomatis)...")
+                print(" Menekan tombol posting konten untuk kedua kalinya (setelah mengaktifkan cek otomatis)...")
                 try:
                     await button_post.click(force=True)
                     await asyncio.sleep(1)
                 except Exception as post_again_err:
-                    print(f"⚠️ Gagal menekan tombol posting kedua kali: {post_again_err}")
+                    print(f" Gagal menekan tombol posting kedua kali: {post_again_err}")
             
             # Tangani popup konfirmasi posting kedua ("Continue to post?") yang mungkin muncul saat proses check belum selesai
             await asyncio.sleep(2)
@@ -327,15 +327,15 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                     for i in range(count):
                         el = locator.nth(i)
                         if await el.is_visible():
-                            print(f"🎬 Klik konfirmasi posting sekarang (bypass check pending): {sel}")
+                            print(f" Klik konfirmasi posting sekarang (bypass check pending): {sel}")
                             await el.click(timeout=5000, force=True)
                             await asyncio.sleep(1)
                             break
             except Exception as post_now_err:
-                print(f"⚠️ Gagal menangani dialog 'Post now': {post_now_err}")
+                print(f" Gagal menangani dialog 'Post now': {post_now_err}")
             
             # Menunggu konfirmasi sukses dari TikTok
-            print("⏳ Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
+            print(" Menunggu konfirmasi sukses publikasi dari TikTok Creator Studio...")
             success_selectors = [
                 '[data-e2e="upload-success-modal"]',
                 'button:has-text("Post another video")',
@@ -354,7 +354,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
             for attempt in range(45):
                 # Cek jika URL berubah menjadi halaman daftar konten (upload selesai)
                 if "upload" not in page.url and "login" not in page.url and "signup" not in page.url:
-                    print(f"🚀 Konfirmasi Sukses Terdeteksi (Redirect URL): URL berubah menjadi {page.url}")
+                    print(f" Konfirmasi Sukses Terdeteksi (Redirect URL): URL berubah menjadi {page.url}")
                     success_found = True
                     break
                     
@@ -362,7 +362,7 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                     try:
                         el = page.locator(sel).first
                         if await el.is_visible():
-                            print(f"🚀 Konfirmasi Sukses Terdeteksi: '{sel}' terlihat di layar!")
+                            print(f" Konfirmasi Sukses Terdeteksi: '{sel}' terlihat di layar!")
                             success_found = True
                             break
                     except:
@@ -372,10 +372,10 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                 await asyncio.sleep(1)
                 
             if not success_found:
-                print("❌ Konfirmasi sukses publikasi tidak terdeteksi dalam 45 detik!")
+                print(" Konfirmasi sukses publikasi tidak terdeteksi dalam 45 detik!")
                 raise RuntimeError("Konfirmasi sukses publikasi dari TikTok tidak muncul di layar (kemungkinan terhalang dialog konfirmasi posting/copyright check).")
             else:
-                print("🚀 Konfirmasi sukses terverifikasi secara visual.")
+                print(" Konfirmasi sukses terverifikasi secara visual.")
                 await asyncio.sleep(3) # Jeda ekstra agar request selesai dikirim sepenuhnya
                 
             # Deteksi username secara dinamis dari visual layar (Body Text) sebelum menutup browser
@@ -391,23 +391,23 @@ async def upload_to_tiktok(video_path="final_output.mp4", caption="") -> str:
                         continue
                     if len(clean_m) > 2 and len(clean_m) < 30 and "." not in clean_m:
                         detected_username = clean_m
-                        print(f"👤 Berhasil mendeteksi username secara visual dari layar: {detected_username}")
+                        print(f" Berhasil mendeteksi username secara visual dari layar: {detected_username}")
                         break
             except Exception as detect_err:
-                print(f"⚠️ Gagal mendeteksi username secara visual dari layar: {detect_err}")
+                print(f" Gagal mendeteksi username secara visual dari layar: {detect_err}")
                 
             if not detected_username:
                 detected_username = get_tiktok_username_from_cookies(input_cookie)
                 
         except Exception as e:
             # Ambil screenshot jika terjadi kegagalan untuk mempermudah debugging di GitHub Actions
-            print(f"📸 Mengambil screenshot kegagalan karena terjadi eror: {e}")
+            print(f" Mengambil screenshot kegagalan karena terjadi eror: {e}")
             try:
                 os.makedirs("output", exist_ok=True)
                 await page.screenshot(path="output/error_screenshot.png", full_page=True)
-                print("💾 Screenshot berhasil disimpan ke: output/error_screenshot.png")
+                print(" Screenshot berhasil disimpan ke: output/error_screenshot.png")
             except Exception as screenshot_err:
-                print(f"⚠️ Gagal mengambil screenshot: {screenshot_err}")
+                print(f" Gagal mengambil screenshot: {screenshot_err}")
             raise e
         finally:
             await browser.close()
