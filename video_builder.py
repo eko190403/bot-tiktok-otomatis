@@ -119,9 +119,12 @@ def clean_and_parse_json(raw_text: str) -> dict | list:
     obj, _ = decoder.raw_decode(cleaned[start_idx:])
     return obj
 
-async def call_gemini_with_retry(prompt: str, is_json: bool = True) -> str:
+async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature: float = None) -> str:
     max_attempts = max(5, len(GEMINI_KEYS) * 2)
-    config = types.GenerateContentConfig(response_mime_type="application/json" if is_json else None)
+    config_args = {"response_mime_type": "application/json" if is_json else None}
+    if temperature is not None:
+        config_args["temperature"] = temperature
+    config = types.GenerateContentConfig(**config_args)
     
     for attempt in range(max_attempts):
         client, idx = await client_pool.get_client_and_rotate()
@@ -142,6 +145,18 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True) -> str:
 
 async def generate_structured_script() -> dict:
     logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
+    import random
+    
+    # Pilih tema secara acak di Python untuk pemerataan variasi tema
+    themes = [
+        "Fakta Psikologi Menarik", 
+        "Stoikisme (Filosofi Teras)", 
+        "Dark Psychology (Trik/Manipulasi)", 
+        "Mindset Sukses & Produktivitas", 
+        "Efek/Bias Psikologis dalam Kehidupan"
+    ]
+    chosen_theme = random.choice(themes)
+    logger.info("🎯 Tema terpilih: %s", chosen_theme)
     
     # Baca riwayat naskah untuk mencegah repetisi ide
     exclude_prompt = ""
@@ -151,20 +166,26 @@ async def generate_structured_script() -> dict:
             with open(history_path, "r", encoding="utf-8") as hf:
                 hist_data = json.load(hf)
                 if hist_data:
-                    # Ambil 15 hook terakhir
-                    recent_hooks = [item["hook"] for item in hist_data if "hook" in item][-15:]
+                    # Ambil 25 entri terakhir
+                    recent_entries = hist_data[-25:]
+                    recent_hooks = [item["hook"] for item in recent_entries if "hook" in item]
+                    recent_stories = [item["story"] for item in recent_entries if "story" in item]
+                    
                     exclude_prompt = (
-                        "\n\nHINDARI MEMBUAT HOOK YANG SAMA ATAU MIRIP DENGAN DAFTAR DI BAWAH INI "
-                        "agar konten selalu unik dan bervariasi:\n" +
-                        "\n".join(f"- {h}" for h in recent_hooks)
+                        "\n\nHINDARI MEMBUAT HOOK DAN TOPIK YANG SAMA ATAU MIRIP DENGAN DAFTAR DI BAWAH INI "
+                        "agar konten selalu unik, segar, dan bervariasi.\n"
+                        "Daftar Hook terakhir:\n" +
+                        "\n".join(f"- {h}" for h in recent_hooks) +
+                        "\n\nDaftar Story/Penjelasan fakta terakhir:\n" +
+                        "\n".join(f"- {s}" for s in recent_stories)
                     )
         except Exception as e:
-            logger.warning("⚠️ Gagal membaca riwayat naskah: %s", e)
+            logger.warning(" Gagal membaca riwayat naskah: %s", e)
 
     prompt = (
         "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
         "Buat SATU konten edukasi singkat dan viral untuk TikTok Shorts dalam format JSON.\n\n"
-        "TEMA: Pilih SECARA ACAK salah satu dari: Fakta Psikologi, Stoikisme, Dark Psychology, Mindset Sukses, Efek Psikologis.\n\n"
+        f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n\n"
         "ATURAN WAJIB:\n"
         "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
@@ -173,7 +194,7 @@ async def generate_structured_script() -> dict:
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
         f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', dan 'caption'. Tidak ada teks lain di luar JSON.{exclude_prompt}"
     )
-    res = await call_gemini_with_retry(prompt, is_json=True)
+    res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
     return clean_and_parse_json(res)
 
 async def extract_keywords_from_script(script_text: str) -> list:
@@ -230,20 +251,20 @@ async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: st
                 # Jika WordBoundary kosong (akurasi 0), coba voice berikutnya
                 if meta.accuracy == 0.0 and voice_idx < len(voices) - 1:
                     logger.warning(
-                        "⚠️ Voice '%s' tidak menghasilkan WordBoundary. Mencoba voice cadangan '%s'...",
+                        " Voice '%s' tidak menghasilkan WordBoundary. Mencoba voice cadangan '%s'...",
                         voice, voices[voice_idx + 1]
                     )
                     break  # Keluar dari loop percobaan, coba voice berikutnya
                 return result
             except Exception as e:
                 last_exception = e
-                logger.warning("⚠️ Kegagalan Edge-TTS (voice=%s) percobaan %d/%d: %s", voice, i + 1, attempts, e)
+                logger.warning(" Kegagalan Edge-TTS (voice=%s) percobaan %d/%d: %s", voice, i + 1, attempts, e)
                 if i < attempts - 1:
                     await asyncio.sleep(1.5 + i)
         else:
             # Semua percobaan untuk voice ini gagal, lanjut ke voice berikutnya
             if voice_idx < len(VOICE_ROTATION) - 1:
-                logger.warning("⚠️ Voice '%s' gagal semua percobaan. Beralih ke voice cadangan...", voice)
+                logger.warning(" Voice '%s' gagal semua percobaan. Beralih ke voice cadangan...", voice)
                 continue
     # Semua voice sudah dicoba
     if last_exception:
@@ -274,14 +295,14 @@ def safe_close_resources(resources: dict, files_to_delete: list):
             try:
                 obj.close()
             except Exception as ce:
-                logger.error("⚠️ Gagal menutup resource '%s': %s", name, ce)
+                logger.error(" Gagal menutup resource '%s': %s", name, ce)
 
     for file_path in files_to_delete:
         if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
             except Exception as fe:
-                logger.error("⚠️ Gagal menghapus berkas %s: %s", file_path, fe)
+                logger.error(" Gagal menghapus berkas %s: %s", file_path, fe)
 
 async def kill_zombie_ffmpeg_processes(target_file: str):
     """Poin 1: Watchdog OS Tingkat Rendah untuk membunuh proses zombie FFmpeg MoviePy."""
@@ -293,7 +314,7 @@ async def kill_zombie_ffmpeg_processes(target_file: str):
             if 'ffmpeg' in proc.info['name'].lower():
                 for open_file in proc.open_files():
                     if target_file in open_file.path:
-                        logger.error("💀 Membunuh proses zombie FFmpeg PID %d yang mengunci berkas.", proc.pid)
+                        logger.error(" Membunuh proses zombie FFmpeg PID %d yang mengunci berkas.", proc.pid)
                         proc.kill()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
@@ -319,13 +340,13 @@ async def create_video() -> bool:
                     script_data = json.load(f)
                 logger.info("♻️ Menggunakan draf naskah dari cache (%s)", draft_script_path)
             except Exception as e:
-                logger.warning("⚠️ Gagal memuat draf naskah: %s", e)
+                logger.warning(" Gagal memuat draf naskah: %s", e)
                 
         if not script_data:
             script_data = await generate_structured_script()
             with open(draft_script_path, "w", encoding="utf-8") as f:
                 json.dump(script_data, f, indent=4, ensure_ascii=False)
-            logger.info("💾 Draf naskah disimpan ke cache (%s)", draft_script_path)
+            logger.info(" Draf naskah disimpan ke cache (%s)", draft_script_path)
             
         hook = script_data.get("hook", "FAKTA MENARIK").strip()
         story = script_data.get("story", "").strip()
@@ -357,15 +378,15 @@ async def create_video() -> bool:
                 history_data = history_data[-25:]
                 with open(history_path, "w", encoding="utf-8") as hf:
                     json.dump(history_data, hf, indent=4, ensure_ascii=False)
-                logger.info("📝 Naskah berhasil disimpan ke riwayat konten (naskah_history.json).")
+                logger.info(" Naskah berhasil disimpan ke riwayat konten (naskah_history.json).")
         except Exception as hist_err:
-            logger.warning("⚠️ Gagal mencatat riwayat naskah: %s", hist_err)
+            logger.warning(" Gagal mencatat riwayat naskah: %s", hist_err)
         
         # Estimasi durasi untuk menentukan target count background clip (1 clip = 4 detik)
         total_words = len(hook.split()) + len(story.split()) + len(cta.split())
         estimated_duration = max(10, total_words / 2.2) # Asumsi kecepatan berbicara 2.2 kata per detik
         needed_clips = max(4, int(estimated_duration / 4.0) + 1)
-        logger.info("🎬 Menghitung target background clip: estimasi %.1fs -> %d clip (4s/clip)", estimated_duration, needed_clips)
+        logger.info(" Menghitung target background clip: estimasi %.1fs -> %d clip (4s/clip)", estimated_duration, needed_clips)
         
         loop = asyncio.get_running_loop()
         
@@ -392,10 +413,10 @@ async def create_video() -> bool:
                 reused_audio_and_timestamps = True
                 logger.info("♻️ Menggunakan draf audio & timestamps dari cache")
             except Exception as e:
-                logger.warning("⚠️ Gagal memuat cache audio & timestamps: %s. Mengulang proses sintesis.", e)
+                logger.warning(" Gagal memuat cache audio & timestamps: %s. Mengulang proses sintesis.", e)
                 
         if reused_audio_and_timestamps:
-            logger.info("⚡ Menjalankan download background secara mandiri (menggunakan audio cache)...")
+            logger.info(" Menjalankan download background secara mandiri (menggunakan audio cache)...")
             results = await run_download_with_retry(loop, keywords, target_count=needed_clips, max_retry=3)
             if not results:
                 logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
@@ -435,9 +456,9 @@ async def create_video() -> bool:
                         },
                         "timestamps": _to_dict_list(all_timestamps_dataclass)
                     }, f, indent=4, ensure_ascii=False)
-                logger.info("💾 Audio & timestamps disimpan ke cache")
+                logger.info(" Audio & timestamps disimpan ke cache")
             except Exception as cache_save_err:
-                logger.warning("⚠️ Gagal menyimpan cache audio/timestamps: %s", cache_save_err)
+                logger.warning(" Gagal menyimpan cache audio/timestamps: %s", cache_save_err)
 
         if meta.accuracy < SUBTITLE_MIN_ACCURACY:
             logger.warning(
@@ -490,7 +511,7 @@ async def create_video() -> bool:
                 if os.path.exists("assets/default_portrait.mp4") and os.path.getsize("assets/default_portrait.mp4") > 0:
                     video_files = ["assets/default_portrait.mp4"]
                 else:
-                    raise RuntimeError("❌ Tidak ada aset latar belakang yang valid dan lolos inspeksi 0-byte.")
+                    raise RuntimeError(" Tidak ada aset latar belakang yang valid dan lolos inspeksi 0-byte.")
             
         all_timestamps = [asdict(ts) for ts in all_timestamps_dataclass]
             
@@ -511,14 +532,14 @@ async def create_video() -> bool:
                 processed_clip = process_background_clip(file, duration_per_clip)
                 moviepy_resources["processed_clips"].append(processed_clip)
             except Exception as ce:
-                logger.error("⚠️ Kebocoran sub-resource dicegah. Melepas berkas korup [%s]: %s", file, ce)
+                logger.error(" Kebocoran sub-resource dicegah. Melepas berkas korup [%s]: %s", file, ce)
                 if 'processed_clip' in locals() and processed_clip is not None:
                     try: processed_clip.close()
                     except: pass
                 continue
 
         if not moviepy_resources["processed_clips"]:
-            logger.warning("⚠️ Tidak ada klip video latar belakang yang valid. Menggunakan background warna solid gelap.")
+            logger.warning(" Tidak ada klip video latar belakang yang valid. Menggunakan background warna solid gelap.")
             # Lebar 1080, tinggi 1920 (portrait) sesuai setelan video
             moviepy_resources["combined_bg"] = ColorClip(
                 size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration
@@ -565,7 +586,7 @@ async def create_video() -> bool:
         music_files = [f for f in os.listdir(music_dir) if f.lower().endswith(music_extensions)]
         
         if not music_files:
-            logger.info("🎵 Folder assets/music/ kosong. Mengunduh backsound gratis bebas hak cipta secara otomatis...")
+            logger.info(" Folder assets/music/ kosong. Mengunduh backsound gratis bebas hak cipta secara otomatis...")
             import urllib.request
             import random
             
@@ -588,10 +609,10 @@ async def create_video() -> bool:
                 with urllib.request.urlopen(req, timeout=30) as response:
                     with open(download_dest, "wb") as out_file:
                         out_file.write(response.read())
-                logger.info("✅ Berhasil mengunduh backsound otomatis: %s", chosen_track_name)
+                logger.info(" Berhasil mengunduh backsound otomatis: %s", chosen_track_name)
                 music_files = [chosen_track_name]
             except Exception as dl_err:
-                logger.warning("⚠️ Gagal mengunduh backsound otomatis dari Incompetech: %s. Melanjutkan tanpa musik.", dl_err)
+                logger.warning(" Gagal mengunduh backsound otomatis dari Incompetech: %s. Melanjutkan tanpa musik.", dl_err)
                 
         if music_files:
             import random
@@ -613,7 +634,7 @@ async def create_video() -> bool:
                 bg_music_clip = bg_music_clip.with_effects([MultiplyVolume(0.10)])
                 logger.info("🎵 Musik latar berhasil dimuat: %s", chosen_music)
             except Exception as me:
-                logger.warning("⚠️ Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
+                logger.warning(" Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
                 bg_music_clip = None
         # ================= TRANSISI SOUND EFFECTS (SFX) =================
         sfx_clips = []
@@ -633,9 +654,9 @@ async def create_video() -> bool:
                         from moviepy.audio.fx import MultiplyVolume
                         sfx_item = sfx_item.with_effects([MultiplyVolume(0.20)])
                         sfx_clips.append(sfx_item)
-                logger.info("🔊 SFX Transisi (Swoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
+                logger.info(" SFX Transisi (Swoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
             except Exception as sfx_err:
-                logger.warning("⚠️ Gagal memuat SFX transisi: %s", sfx_err)
+                logger.warning(" Gagal memuat SFX transisi: %s", sfx_err)
                 
         # Gabungkan audio TTS + musik latar + SFX
         audio_sources = [moviepy_resources["audio_clip"]]
@@ -647,9 +668,9 @@ async def create_video() -> bool:
         try:
             final_audio = CompositeAudioClip(audio_sources)
             moviepy_resources["final_video"] = moviepy_resources["final_video"].with_audio(final_audio)
-            logger.info("✅ Audio final: TTS + Musik Latar + %d SFX Transisi digabungkan.", len(sfx_clips))
+            logger.info(" Audio final: TTS + Musik Latar + %d SFX Transisi digabungkan.", len(sfx_clips))
         except Exception as mix_err:
-            logger.error("❌ Gagal menggabungkan audio composite: %s. Melanjutkan dengan audio utama.", mix_err)
+            logger.error(" Gagal menggabungkan audio composite: %s. Melanjutkan dengan audio utama.", mix_err)
             moviepy_resources["final_video"] = moviepy_resources["final_video"].with_audio(moviepy_resources["audio_clip"])
         # =========================================================
 
@@ -664,9 +685,9 @@ async def create_video() -> bool:
             moviepy_resources["final_video"] = apply_text_watermark(
                 moviepy_resources["final_video"], channel_name="@RuangPikir"
             )
-            logger.info("🏷️ Watermark channel berhasil ditambahkan.")
+            logger.info(" Watermark channel berhasil ditambahkan.")
         except Exception as wm_err:
-            logger.warning("⚠️ Watermark dilewati: %s", wm_err)
+            logger.warning(" Watermark dilewati: %s", wm_err)
         # ======================================================
 
         os.makedirs(DIR_OUTPUT, exist_ok=True)
