@@ -322,39 +322,37 @@ def _interpolate_missing(final_timestamps: List[WordTimestamp], audio_duration: 
 
 # --- PIPELINE ---
 
-def build_ssml_string(hook_tokens: List[Dict], story_tokens: List[Dict], cta_tokens: List[Dict], voice: str) -> str:
-    # 1. Bersihkan teks dan bangun per-bagian
-    hook_text = " ".join(t["spoken"] for t in hook_tokens)
-    
-    # Untuk story, cari token dengan tanda baca akhir dan sisipkan jeda
+def build_clean_text(hook_tokens: List[Dict], story_tokens: List[Dict], cta_tokens: List[Dict]) -> str:
+    # 1. Bangun Hook dengan tanda jeda dramatis (titik/ellipsis) di akhir
+    hook_text = " ".join(t["spoken"] for t in hook_tokens).strip()
+    if hook_text and not hook_text[-1] in [".", "!", "?", ","]:
+        hook_text += "..."
+
+    # 2. Bangun Story dengan mempertahankan tanda baca akhir kalimat agar TTS menjeda secara alami
     story_parts = []
     current_sentence = []
     for t in story_tokens:
         word = t["spoken"]
         current_sentence.append(word)
-        # Jika display token asli memiliki tanda baca akhir kalimat
-        if any(char in t["display"] for char in [".", "!", "?"]):
-            story_parts.append(" ".join(current_sentence) + ' <break time="400ms"/>')
+        # Jika token display asli memiliki tanda baca akhir kalimat, gunakan untuk jeda
+        if any(char in t["display"] for char in [".", "!", "?", ","]):
+            # Ambil tanda baca asli dari display untuk disisipkan
+            match = re.search(r"([.,!?]+)$", t["display"])
+            punc = match.group(1) if match else "."
+            story_parts.append(" ".join(current_sentence) + punc)
             current_sentence = []
     if current_sentence:
-        story_parts.append(" ".join(current_sentence))
+        story_parts.append(" ".join(current_sentence) + ".")
     story_text = " ".join(story_parts)
-    
-    cta_text = " ".join(t["spoken"] for t in cta_tokens)
-    
-    # 2. Bangun SSML penuh dengan tag prosody untuk intonasi yang intim & menegangkan
-    ssml = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="id-ID">
-        <voice name="{voice}">
-            <prosody rate="-2%" pitch="-1Hz">
-                {hook_text}
-                <break time="750ms"/>
-                {story_text}
-                <break time="500ms"/>
-                {cta_text}
-            </prosody>
-        </voice>
-    </speak>"""
-    return ssml
+
+    # 3. Bangun CTA
+    cta_text = " ".join(t["spoken"] for t in cta_tokens).strip()
+
+    # Gabungkan menjadi satu naskah suara yang utuh tanpa tag XML/SSML
+    full_text = f"{hook_text} {story_text} {cta_text}"
+    # Bersihkan spasi ganda
+    full_text = " ".join(full_text.split())
+    return full_text
 
 async def generate_voiceover_with_timestamps(
     hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"
@@ -368,14 +366,19 @@ async def generate_voiceover_with_timestamps(
     if not target_tokens:
         raise RuntimeError("Naskah kosong, tidak ada kata untuk disintesis.")
 
-    ssml_text = build_ssml_string(hook_tokens, story_tokens, cta_tokens, voice)
+    clean_text = build_clean_text(hook_tokens, story_tokens, cta_tokens)
 
     audio_data = bytearray()
     raw_boundaries: List[Dict] = []
 
-    # 1. GENERATE AUDIO VIA EDGE-TTS DENGAN SSML
+    # 1. GENERATE AUDIO VIA EDGE-TTS DENGAN PARAMETER PROSODY LANGSUNG
     try:
-        communicate = edge_tts.Communicate(ssml_text, voice)
+        communicate = edge_tts.Communicate(
+            text=clean_text,
+            voice=voice,
+            rate="-2%",
+            pitch="-1Hz"
+        )
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_data.extend(chunk["data"])
