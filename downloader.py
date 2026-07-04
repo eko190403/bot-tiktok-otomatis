@@ -52,7 +52,7 @@ def download_video_clips(keywords: list, target_count: int = 4) -> list:
             break
             
         # Poin 1: Sinkronisasi Gaya Visual Estetik (Aesthetic Matching)
-        aesthetic_query = f"{kw} dark cinematic"
+        aesthetic_query = f"{kw} dark cinematic cold moody tone"
         videos = search_pexels_videos(aesthetic_query, per_page=15)
         if not videos:
             # Fallback ke keyword murni jika pencarian estetik tidak mengembalikan video

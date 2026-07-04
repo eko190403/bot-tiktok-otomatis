@@ -74,3 +74,100 @@ def apply_text_watermark(video_clip, channel_name: str = "@RuangPikir"):
             "⚠️ Watermark gagal ditambahkan: %s. Melanjutkan tanpa watermark.", e
         )
         return video_clip
+
+def create_visual_cta_frame(video_width: int, video_height: int) -> np.ndarray:
+    """Membuat frame visual CTA premium (tombol & info share/save) di tengah bawah."""
+    img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Target box di tengah bawah
+    box_w = 700
+    box_h = 240
+    start_x = (video_width - box_w) // 2
+    start_y = int(video_height * 0.55) # Di bawah teks subtitle
+    
+    # 1. Background Box semi transparan
+    draw.rounded_rectangle(
+        [start_x, start_y, start_x + box_w, start_y + box_h],
+        radius=25,
+        fill=(0, 0, 0, 215),
+        outline=(255, 204, 0, 255),
+        width=4
+    )
+    
+    # 2. Cari font tebal
+    font_paths = [
+        "assets/fonts/Oswald-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "arialbd.ttf"
+    ]
+    font_title = None
+    for path in font_paths:
+        try:
+            font_title = ImageFont.truetype(path, size=38)
+            break
+        except Exception:
+            continue
+    if font_title is None:
+        font_title = ImageFont.load_default()
+        
+    font_desc = None
+    for path in font_paths:
+        try:
+            font_desc = ImageFont.truetype(path, size=26)
+            break
+        except Exception:
+            continue
+    if font_desc is None:
+        font_desc = ImageFont.load_default()
+        
+    # 3. Tulis teks CTA
+    title_text = "SIMPAN & BAGIKAN VIDEO INI!"
+    desc_text = "Tap 2x jika fakta ini bermanfaat untukmu"
+    
+    try:
+        t_bbox = draw.textbbox((0, 0), title_text, font=font_title)
+        t_w = t_bbox[2] - t_bbox[0]
+        tx = start_x + (box_w - t_w) // 2
+        ty = start_y + 45
+        draw.text((tx, ty), title_text, font=font_title, fill=(255, 204, 0, 255))
+        
+        d_bbox = draw.textbbox((0, 0), desc_text, font=font_desc)
+        d_w = d_bbox[2] - d_bbox[0]
+        dx = start_x + (box_w - d_w) // 2
+        dy = start_y + 135
+        draw.text((dx, dy), desc_text, font=font_desc, fill=(240, 240, 240, 255))
+    except Exception:
+        draw.text((start_x + 50, start_y + 40), title_text, font=font_title, fill=(255, 204, 0))
+        draw.text((start_x + 50, start_y + 120), desc_text, font=font_desc, fill=(255, 255, 255))
+        
+    return np.array(img)
+
+def apply_visual_cta(video_clip):
+    """Menampilkan overlay CTA visual di 3 detik terakhir video."""
+    try:
+        from moviepy import ImageClip, CompositeVideoClip
+        w = int(video_clip.w)
+        h = int(video_clip.h)
+        duration = video_clip.duration
+        
+        # Buat cta clip muncul di 3 detik terakhir
+        cta_duration = 3.0
+        if duration < cta_duration:
+            cta_duration = duration
+            
+        start_time = duration - cta_duration
+        
+        cta_frame = create_visual_cta_frame(w, h)
+        cta_clip = (
+            ImageClip(cta_frame)
+            .with_start(start_time)
+            .with_duration(cta_duration)
+            .with_opacity(0.95)
+        )
+        return CompositeVideoClip([video_clip, cta_clip])
+    except Exception as e:
+        import logging
+        logging.getLogger("video_pipeline").warning("⚠️ Visual CTA gagal: %s", e)
+        return video_clip
+

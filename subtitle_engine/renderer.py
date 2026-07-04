@@ -370,7 +370,8 @@ class SubtitleRenderer:
                 keyword_color = highlighter.get_word_color(wp["text"], None)
                 color = keyword_color if keyword_color else default_active
             else:
-                color = highlighter.get_word_color(wp["text"], default_color)
+                # Dim inactive words to a cool grey to create a premium karaoke style highlight
+                color = "#9E9E9E"
 
             try:
                 frame_draw.text(

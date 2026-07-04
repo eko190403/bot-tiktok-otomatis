@@ -966,15 +966,18 @@ async def create_video(niche: str = None) -> bool:
         output_file_path = os.path.join(DIR_OUTPUT, output_file_name)
         temp_output_path = f"{output_file_path}.tmp.mp4"
 
-        # ================= WATERMARK CHANNEL =================
+        # ================= WATERMARK & VISUAL CTA =================
         try:
-            from overlay import apply_text_watermark
+            from overlay import apply_text_watermark, apply_visual_cta
             moviepy_resources["final_video"] = apply_text_watermark(
                 moviepy_resources["final_video"], channel_name="@RuangPikir"
             )
             logger.info(" Watermark channel berhasil ditambahkan.")
+            
+            moviepy_resources["final_video"] = apply_visual_cta(moviepy_resources["final_video"])
+            logger.info(" Visual CTA berhasil ditambahkan di 3 detik terakhir video.")
         except Exception as wm_err:
-            logger.warning(" Watermark dilewati: %s", wm_err)
+            logger.warning(" Watermark/CTA dilewati: %s", wm_err)
         # ======================================================
 
         os.makedirs(DIR_OUTPUT, exist_ok=True)

@@ -3,12 +3,18 @@ from config import WIDTH, HEIGHT
 from PIL import Image
 import numpy as np
 
-def apply_slow_zoom(clip, speed=0.04):
-    """Efek Ken Burns (Slow Zoom In) khas TikTok menggunakan PIL & transform untuk menjaga resolusi tetap."""
+def apply_slow_zoom(clip, speed=0.05, zoom_in=True):
+    """Efek Ken Burns (Slow Zoom In / Out) khas TikTok untuk menjaga layar terus bergerak."""
     def zoom_effect(get_frame, t):
         frame = get_frame(t) # Numpy array (H, W, C)
         h, w, c = frame.shape
-        factor = 1.0 + (speed * t)
+        
+        if zoom_in:
+            factor = 1.0 + (speed * t)
+        else:
+            # Zoom out: mulai dari besar ke kecil
+            duration = clip.duration if clip.duration else 4.0
+            factor = 1.0 + (speed * max(0.0, duration - t))
         
         # Hitung ukuran baru hasil zoom
         w_new = int(round(w * factor))
@@ -123,7 +129,9 @@ def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     # 4. Lakukan resize dimensi dasar video ke tepat (WIDTH, HEIGHT)
     resized_clip = clip.resized((WIDTH, HEIGHT))
     
-    # 5. Terapkan efek slow zoom
-    final_clip = apply_slow_zoom(resized_clip)
+    # 5. Terapkan efek slow zoom dengan arah acak
+    import random
+    zoom_dir = random.choice([True, False])
+    final_clip = apply_slow_zoom(resized_clip, speed=0.04, zoom_in=zoom_dir)
     
     return final_clip
