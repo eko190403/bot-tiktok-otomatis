@@ -144,6 +144,25 @@ async def main():
             firebase_connector.cleanup_old_drafts(days=7)
         except Exception as clean_err:
             print(f"⚠️ Gagal menjalankan pembersihan draf otomatis: {clean_err}")
+            
+        # Jalankan pembaruan statistik video YouTube secara otomatis
+        try:
+            import firebase_connector
+            from youtube_uploader import get_youtube_stats
+            yt_video_map = firebase_connector.get_active_youtube_video_ids(limit=10)
+            if yt_video_map:
+                print(f"📊 Menemukan {len(yt_video_map)} video YouTube untuk diperiksa statistiknya...")
+                stats = await get_youtube_stats(list(yt_video_map.values()))
+                for draft_id, yt_id in yt_video_map.items():
+                    if yt_id in stats:
+                        views = stats[yt_id]["views"]
+                        likes = stats[yt_id]["likes"]
+                        firebase_connector.update_draft_stats(draft_id, views, likes)
+                print("📊 Pembaruan statistik video YouTube selesai.")
+        except Exception as stats_err:
+            print(f"⚠️ Gagal memperbarui statistik video: {stats_err}")
+        
+
         
         # Lakukan import secara lokal di dalam fungsi untuk melacak jika eror berasal dari file import
         print("📦 Meng-import modul video_builder...")
@@ -258,6 +277,25 @@ async def main():
                         )
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
                         
+                        # Ekstrak ID dari URL https://youtu.be/ID
+                        yt_video_id = youtube_url.split("/")[-1]
+                        # Simpan info publikasi ke draf agar performanya bisa dipantau
+                        direct_video_id = f"video_{int(time.time())}"
+                        try:
+                            import firebase_connector
+                            draft_data = {
+                                "video_id": direct_video_id,
+                                "caption": caption,
+                                "tags": tags,
+                                "category_id": category_id,
+                                "interactive_comment": interactive_comment,
+                                "platform": "youtube",
+                                "platform_video_id": yt_video_id
+                            }
+                            firebase_connector.save_video_draft(direct_video_id, draft_data)
+                        except Exception as draft_err:
+                            print(f"⚠️ Gagal mencatat draf untuk direct upload: {draft_err}")
+                            
                         # Kirim notifikasi SUKSES ke Telegram
                         msg = (
                             "🚀 <b>YOUTUBE SHORTS UPLOAD SUKSES!</b>\n\n"

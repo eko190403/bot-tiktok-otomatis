@@ -220,3 +220,148 @@ def cleanup_old_drafts(days: int = 7) -> None:
             logger.info(f"🔥 Sukses menghapus {deleted_fs_count} draf kedaluwarsa dari Cloud Firestore.")
     except Exception as e:
         logger.error(f"❌ Gagal membersihkan draf dari Cloud Firestore: {e}")
+
+
+def update_draft_status(video_id: str, platform: str, platform_video_id: str) -> None:
+    """Mencatat platform dan ID video eksternal (misal YouTube video ID) ke draf."""
+    # 1. Update lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if video_id in drafts_data:
+                drafts_data[video_id]["platform"] = platform
+                drafts_data[video_id]["platform_video_id"] = platform_video_id
+                with open(local_drafts_path, "w", encoding="utf-8") as f:
+                    json.dump(drafts_data, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"❌ Gagal memperbarui status draf lokal: {e}")
+
+    # 2. Update Firestore
+    if is_firebase_enabled and db is not None:
+        try:
+            db.collection("drafts").document(video_id).update({
+                "platform": platform,
+                "platform_video_id": platform_video_id
+            })
+            logger.info(f"🔥 Sukses memperbarui status draf '{video_id}' ke Firestore.")
+        except Exception as e:
+            logger.error(f"❌ Gagal memperbarui status draf ke Firestore: {e}")
+
+
+def update_draft_stats(video_id: str, views: int, likes: int) -> None:
+    """Memperbarui statistik jumlah views dan likes pada draf tertentu."""
+    # 1. Update lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if video_id in drafts_data:
+                drafts_data[video_id]["views"] = views
+                drafts_data[video_id]["likes"] = likes
+                drafts_data[video_id]["last_checked"] = int(time.time())
+                with open(local_drafts_path, "w", encoding="utf-8") as f:
+                    json.dump(drafts_data, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"❌ Gagal memperbarui stats draf lokal: {e}")
+
+    # 2. Update Firestore
+    if is_firebase_enabled and db is not None:
+        try:
+            db.collection("drafts").document(video_id).update({
+                "views": views,
+                "likes": likes,
+                "last_checked": int(time.time())
+            })
+        except Exception as e:
+            logger.error(f"❌ Gagal memperbarui stats draf ke Firestore: {e}")
+
+
+def get_top_performing_scripts(limit: int = 3) -> list:
+    """Mengambil naskah-naskah dengan kinerja terbaik (views tertinggi)."""
+    top_scripts = []
+    
+    # 1. Ambil dari Firestore jika aktif
+    if is_firebase_enabled and db is not None:
+        try:
+            docs = db.collection("drafts")\
+                     .where("views", ">", 0)\
+                     .order_by("views", direction=firestore.Query.DESCENDING)\
+                     .limit(limit).stream()
+            for doc in docs:
+                data = doc.to_dict()
+                top_scripts.append({
+                    "caption": data.get("caption", ""),
+                    "views": data.get("views", 0),
+                    "likes": data.get("likes", 0)
+                })
+            if top_scripts:
+                return top_scripts
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal mengambil naskah populer dari Firestore: {e}. Menggunakan lokal.")
+
+    # 2. Fallback ambil dari lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if isinstance(drafts_data, dict):
+                # Filter yang memiliki views
+                valid_drafts = [
+                    val for val in drafts_data.values()
+                    if val.get("views", 0) > 0
+                ]
+                # Urutkan views descending
+                valid_drafts.sort(key=lambda x: x.get("views", 0), reverse=True)
+                for item in valid_drafts[:limit]:
+                    top_scripts.append({
+                        "caption": item.get("caption", ""),
+                        "views": item.get("views", 0),
+                        "likes": item.get("likes", 0)
+                    })
+        except Exception as e:
+            logger.error(f"⚠️ Gagal membaca draf lokal untuk pencarian performa: {e}")
+            
+    return top_scripts
+
+
+def get_active_youtube_video_ids(limit: int = 10) -> dict:
+    """Mengambil peta video_id -> platform_video_id YouTube yang butuh update statistik."""
+    video_map = {}
+    
+    # 1. Ambil dari Firestore
+    if is_firebase_enabled and db is not None:
+        try:
+            docs = db.collection("drafts")\
+                     .where("platform", "==", "youtube")\
+                     .limit(limit).stream()
+            for doc in docs:
+                data = doc.to_dict()
+                yt_id = data.get("platform_video_id")
+                if yt_id:
+                    video_map[doc.id] = yt_id
+            return video_map
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal mengambil active YouTube video dari Firestore: {e}")
+
+    # 2. Fallback lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if isinstance(drafts_data, dict):
+                count = 0
+                for vid, val in drafts_data.items():
+                    if val.get("platform") == "youtube" and val.get("platform_video_id"):
+                        video_map[vid] = val.get("platform_video_id")
+                        count += 1
+                        if count >= limit:
+                            break
+        except Exception as e:
+            logger.error(f"⚠️ Gagal membaca active YouTube video dari lokal: {e}")
+            
+    return video_map

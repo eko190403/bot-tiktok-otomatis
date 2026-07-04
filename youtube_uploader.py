@@ -118,3 +118,52 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
             
     print(f" Tautan Video: {video_url}")
     return video_url
+
+
+async def get_youtube_stats(video_ids: list) -> dict:
+    """Mengambil statistik views dan likes dari daftar video ID YouTube."""
+    if not video_ids:
+        return {}
+        
+    cred_file = "youtube_credentials.json"
+    if not os.path.exists(cred_file):
+        print("⚠️ youtube_credentials.json tidak ditemukan. Melewati update statistik.")
+        return {}
+        
+    try:
+        with open(cred_file, "r") as f:
+            cred_data = json.load(f)
+            
+        credentials = Credentials(
+            token=cred_data.get("token"),
+            refresh_token=cred_data.get("refresh_token"),
+            token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=cred_data.get("client_id"),
+            client_secret=cred_data.get("client_secret")
+        )
+        
+        youtube = build("youtube", "v3", credentials=credentials)
+        
+        # Gabungkan video_ids dengan koma
+        ids_str = ",".join(video_ids)
+        request = youtube.videos().list(
+            part="statistics",
+            id=ids_str
+        )
+        # Jalankan di thread pool executor karena execute() synchronous
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, request.execute)
+        
+        stats = {}
+        for item in response.get("items", []):
+            vid_id = item.get("id")
+            item_stats = item.get("statistics", {})
+            views = int(item_stats.get("viewCount", 0))
+            likes = int(item_stats.get("likeCount", 0))
+            stats[vid_id] = {"views": views, "likes": likes}
+            
+        return stats
+    except Exception as e:
+        print(f"⚠️ Gagal mengambil statistik dari YouTube API: {e}")
+        return {}

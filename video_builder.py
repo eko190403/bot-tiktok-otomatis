@@ -232,6 +232,25 @@ async def generate_structured_script() -> dict:
     except Exception as e:
         logger.warning(" Gagal membaca riwayat naskah: %s", e)
 
+    # ⭐ LEVEL 5: Ambil naskah paling populer sebagai contoh gaya sukses untuk AI
+    performance_prompt = ""
+    try:
+        import firebase_connector
+        top_scripts = firebase_connector.get_top_performing_scripts(limit=3)
+        if top_scripts:
+            performance_prompt = (
+                "\n\nBELAJAR DARI NASKAH SUKSES BERIKUT (dari konten dengan views tertinggi):\n"
+                "Analisis gaya hook, panjang kalimat, dan cara penyampaian naskah-naskah ini, "
+                "lalu buat naskah baru yang meniru POLA penulisannya (bukan isinya):\n"
+            )
+            for i, sc in enumerate(top_scripts, 1):
+                views = sc.get("views", 0)
+                caption = sc.get("caption", "")
+                performance_prompt += f"\n[Naskah Sukses #{i} — {views:,} views]\n{caption}\n"
+            logger.info("⭐ Level 5: Menyuntikkan %d naskah sukses ke prompt Gemini.", len(top_scripts))
+    except Exception as e:
+        logger.warning("⚠️ Gagal mengambil naskah populer untuk feedback loop: %s", e)
+
     prompt = (
         "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
         "Buat SATU konten edukasi singkat dan viral untuk TikTok Shorts dalam format JSON.\n\n"
@@ -245,7 +264,7 @@ async def generate_structured_script() -> dict:
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
         "7. 'interactive_comment': Satu kalimat pertanyaan pancingan diskusi yang sangat interaktif dan memicu penonton untuk berdiskusi/menulis komentar di kolom komentar (maks 15 kata). Contoh: 'Apakah kamu pernah memanipulasi seseorang untuk mendapatkan apa yang kamu mau?'\n\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Tidak ada teks lain di luar JSON.{exclude_prompt}"
+        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
     return clean_and_parse_json(res)

@@ -107,6 +107,13 @@ async def main():
                 comment_text=interactive_comment
             )
             
+            # Catat status publikasi YouTube
+            try:
+                yt_video_id = youtube_url.split("/")[-1]
+                firebase_connector.update_draft_status(video_id, "youtube", yt_video_id)
+            except Exception as e:
+                print(f"⚠️ Gagal memperbarui status publikasi di database: {e}")
+            
             msg = (
                 "🚀 <b>YOUTUBE SHORTS UPLOAD SUKSES via TELEGRAM!</b>\n\n"
                 f"🔗 <b>Tautan Shorts:</b> {youtube_url}\n"
@@ -124,6 +131,12 @@ async def main():
                 comment_text=interactive_comment
             )
             
+            # Catat status publikasi TikTok
+            try:
+                firebase_connector.update_draft_status(video_id, "tiktok", tiktok_username)
+            except Exception as e:
+                print(f"⚠️ Gagal memperbarui status publikasi di database: {e}")
+                
             msg = (
                 "🚀 <b>TIKTOK UPLOAD SUKSES via TELEGRAM!</b>\n\n"
                 f"👤 <b>Akun TikTok:</b> <code>{tiktok_username}</code>\n"
