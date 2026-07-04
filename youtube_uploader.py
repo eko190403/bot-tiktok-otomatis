@@ -212,3 +212,71 @@ async def get_top_comments(video_id: str, max_results: int = 20) -> list:
     except Exception as e:
         print(f"⚠️ Gagal mengambil komentar dari YouTube API: {e}")
         return []
+
+
+async def reply_to_youtube_comments(video_id: str, max_replies: int = 2) -> None:
+    """Mengambil komentar teratas, meminta Gemini merancang balasan, dan memposting balasan otomatis."""
+    cred_file = "youtube_credentials.json"
+    if not os.path.exists(cred_file):
+        return
+        
+    try:
+        with open(cred_file, "r") as f:
+            cred_data = json.load(f)
+            
+        credentials = Credentials(
+            token=cred_data.get("token"),
+            refresh_token=cred_data.get("refresh_token"),
+            token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=cred_data.get("client_id"),
+            client_secret=cred_data.get("client_secret")
+        )
+        
+        youtube = build("youtube", "v3", credentials=credentials)
+        request = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            maxResults=max_replies,
+            order="relevance"
+        )
+        
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, request.execute)
+        
+        from video_builder import call_gemini_with_retry
+        for item in response.get("items", []):
+            top_comment = item["snippet"]["topLevelComment"]
+            parent_id = top_comment["id"]
+            comment_text = top_comment["snippet"]["textOriginal"]
+            author_name = top_comment["snippet"].get("authorDisplayName", "Kawan")
+            
+            total_replies = item["snippet"].get("totalReplyCount", 0)
+            if total_replies > 0:
+                continue
+                
+            prompt = (
+                "Kamu adalah pengelola kanal edukasi psikologi bernama 'Ruang Pikir'.\n"
+                "Balaslah komentar penonton berikut dengan jawaban yang ramah, sopan, mendidik, dan singkat (maks 25 kata):\n\n"
+                f"Nama Penonton: {author_name}\n"
+                f"Komentar: \"{comment_text}\"\n\n"
+                "OUTPUT: Tulis langsung teks balasannya saja dalam Bahasa Indonesia percakapan santai tapi mendidik."
+            )
+            
+            reply_text = await call_gemini_with_retry(prompt, is_json=False)
+            if reply_text:
+                reply_body = {
+                    "snippet": {
+                        "parentId": parent_id,
+                        "textOriginal": reply_text.strip()
+                    }
+                }
+                print(f"💬 Memposting balasan otomatis ke komentar '{comment_text[:40]}...'")
+                await loop.run_in_executor(
+                    None, 
+                    lambda: youtube.comments().insert(part="snippet", body=reply_body).execute()
+                )
+                print("💬 Balasan sukses diposting!")
+                
+    except Exception as e:
+        print(f"⚠️ Gagal membalas komentar otomatis di YouTube: {e}")

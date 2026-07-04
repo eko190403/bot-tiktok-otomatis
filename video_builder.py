@@ -194,6 +194,31 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
         raise RuntimeError("Seluruh penyedia AI (Gemini & Groq) gagal merespon.")
 
 
+def get_indonesia_trending_searches() -> list:
+    """Mengambil kata kunci pencarian terpopuler hari ini di Indonesia dari Google Trends RSS."""
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    url = "https://trends.google.com/trends/trendingsearches/daily/rss?geo=ID"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            xml_data = response.read()
+        
+        root = ET.fromstring(xml_data)
+        trends = []
+        for item in root.findall(".//item"):
+            title = item.find("title")
+            if title is not None and title.text:
+                trends.append(title.text.strip())
+        return trends[:5]
+    except Exception as e:
+        logger.warning("⚠️ Gagal mengambil Google Trends: %s", e)
+        return []
+
+
 async def analyze_comments_with_gemini(comments: list) -> str:
     """Menganalisis komentar penonton dengan Gemini dan menghasilkan insight konten berikutnya."""
     if not comments:
@@ -308,9 +333,19 @@ async def generate_structured_script() -> dict:
         )
         logger.info("🎯 A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
-    if hook_candidate:
-        hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
+    # ⭐ LEVEL 6 TREND JACKING: Ambil kata kunci yang sedang tren di Indonesia
+    trends_prompt = ""
+    try:
+        trends = get_indonesia_trending_searches()
+        if trends:
+            trends_prompt = (
+                f"\n\nKATA KUNCI TREN INDONESIA HARI INI: {', '.join(trends)}\n"
+                f"Jika memungkinkan dan terasa alami, kaitkan atau hubungkan materi konten dengan salah satu tren di atas "
+                f"untuk menunggangi gelombang pencarian (Trend Jacking) tanpa memaksakan."
+            )
+            logger.info("⭐ Level 6: Mengintegrasikan %d tren teratas ke dalam prompt.", len(trends))
+    except Exception as e:
+        logger.warning("⚠️ Gagal mengintegrasikan tren jacking: %s", e)
 
     prompt = (
         "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi dan mindset.\n"
@@ -326,7 +361,7 @@ async def generate_structured_script() -> dict:
         "7. 'interactive_comment': Satu kalimat pertanyaan pancingan diskusi yang sangat interaktif dan memicu penonton untuk berdiskusi/menulis komentar di kolom komentar (maks 15 kata). Contoh: 'Apakah kamu pernah memanipulasi seseorang untuk mendapatkan apa yang kamu mau?'\n"
         f"{ab_test_instruction}\n"
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
-        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}"
+        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', dan 'interactive_comment'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
     parsed_json = clean_and_parse_json(res)
@@ -494,6 +529,13 @@ async def create_video() -> bool:
         
         keywords = await extract_keywords_from_script(story)
         
+        # Memilih tema visual secara acak untuk A/B testing
+        from subtitle_engine.styles import SubtitleStyles
+        import random
+        chosen_visual_theme = random.choice(list(SubtitleStyles.THEMES.keys()))
+        SubtitleStyles.CHOSEN_THEME = chosen_visual_theme
+        logger.info("🎨 A/B Testing: Tema visual terpilih untuk video ini: %s", chosen_visual_theme)
+
         # Simpan metadata dinamis untuk dibaca uploader di app.py
         tags = script_data.get("tags", ["faktapsikologi", "mindset", "stoikisme", "ruangpikir"])
         category_id = script_data.get("category_id", "22")
@@ -503,7 +545,8 @@ async def create_video() -> bool:
                 "caption": caption,
                 "tags": tags,
                 "category_id": category_id,
-                "interactive_comment": interactive_comment
+                "interactive_comment": interactive_comment,
+                "theme": chosen_visual_theme
             }, f, indent=4, ensure_ascii=False)
             
         # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten (lewat Firebase / cadangan Lokal)

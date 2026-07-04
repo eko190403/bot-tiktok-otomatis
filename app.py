@@ -178,15 +178,19 @@ async def main():
         except Exception as stats_err:
             print(f"⚠️ Gagal memperbarui statistik video: {stats_err}")
 
-        # 💬 ANALISIS KOMENTAR: Baca komentar video viral dan ekstrak insight untuk AI
+        # 💬 ANALISIS KOMENTAR & BALASAN OTOMATIS: Baca komentar video viral, buat insight AI, dan balas otomatis
         try:
             import firebase_connector
-            from youtube_uploader import get_top_comments
+            from youtube_uploader import get_top_comments, reply_to_youtube_comments
             viral_map = firebase_connector.get_viral_video_ids(min_views=500, limit=2)
             if viral_map:
                 print(f"💬 Ditemukan {len(viral_map)} video viral untuk dianalisis komentarnya...")
                 from video_builder import analyze_comments_with_gemini
                 for draft_id, yt_id in viral_map.items():
+                    # 1. Jalankan Balasan Otomatis menggunakan Gemini
+                    await reply_to_youtube_comments(yt_id, max_replies=2)
+                    
+                    # 2. Ambil komentar untuk analisis insight naskah
                     comments = await get_top_comments(yt_id, max_results=20)
                     if comments:
                         insight = await analyze_comments_with_gemini(comments)
@@ -194,7 +198,7 @@ async def main():
                             firebase_connector.mark_comments_analyzed(draft_id, insight)
                             print(f"💬 Insight komentar disimpan untuk {draft_id}: {insight[:80]}...")
         except Exception as comment_err:
-            print(f"⚠️ Gagal menganalisis komentar video: {comment_err}")
+            print(f"⚠️ Gagal menganalisis/membalas komentar video: {comment_err}")
 
 
         
@@ -214,6 +218,7 @@ async def main():
             tags = []
             category_id = "22"
             interactive_comment = ""
+            theme = "classic_yellow"
             metadata_path = os.path.join(DIR_TEMP, "video_metadata.json")
             if os.path.exists(metadata_path):
                 try:
@@ -224,6 +229,7 @@ async def main():
                         tags = meta_data.get("tags", [])
                         category_id = meta_data.get("category_id", "22")
                         interactive_comment = meta_data.get("interactive_comment", "")
+                        theme = meta_data.get("theme", "classic_yellow")
                     os.remove(metadata_path) # Bersihkan setelah dibaca
                 except Exception as meta_err:
                     print(f"⚠️ Gagal membaca/menghapus metadata: {meta_err}")
@@ -323,6 +329,7 @@ async def main():
                                 "tags": tags,
                                 "category_id": category_id,
                                 "interactive_comment": interactive_comment,
+                                "theme": theme,
                                 "platform": "youtube",
                                 "platform_video_id": yt_video_id
                             }
@@ -386,7 +393,8 @@ async def main():
                         "caption": caption,
                         "tags": tags,
                         "category_id": category_id,
-                        "interactive_comment": interactive_comment
+                        "interactive_comment": interactive_comment,
+                        "theme": theme
                     }
                     try:
                         firebase_connector.save_video_draft(video_id, draft_data)
