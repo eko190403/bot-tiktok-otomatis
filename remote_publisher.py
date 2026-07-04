@@ -136,6 +136,20 @@ async def main():
         print(f"❌ Gagal mempublikasikan video: {upload_err}")
         escaped_err = html.escape(str(upload_err))
         
+        # Deteksi khusus: Cookie TikTok Kedaluwarsa
+        if platform == "tiktok":
+            cookie_expired_keywords = ["cookies kedaluwarsa", "cookie expired", "login ulang", "login", "signup"]
+            if any(kw in str(upload_err).lower() for kw in cookie_expired_keywords):
+                msg = (
+                    "🔑 <b>COOKIE TIKTOK KEDALUWARSA!</b>\n\n"
+                    "❗ <b>Tindakan yang diperlukan:</b>\n"
+                    "1. Login ulang ke TikTok di browser.\n"
+                    "2. Ekspor cookie menggunakan ekstensi EditThisCookie.\n"
+                    "3. Perbarui secret <code>TIKTOK_COOKIES</code> di GitHub Settings → Secrets."
+                )
+                send_telegram_direct_message(chat_id, msg)
+                sys.exit(1)
+
         msg = (
             f"⚠️ <b>PUBLIKASI {platform_name.upper()} GAGAL!</b>\n\n"
             f"🎬 <b>Draf ID:</b> <code>{video_id}</code>\n"

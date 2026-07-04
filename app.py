@@ -176,15 +176,27 @@ async def main():
                         from uploader import get_tiktok_username_from_cookies
                         failed_user = get_tiktok_username_from_cookies()
                         
-                        # Kirim notifikasi GAGAL ke Telegram
                         import html
                         escaped_err = html.escape(str(upload_err))
-                        msg = (
-                            "⚠️ <b>TIKTOK UPLOAD GAGAL!</b>\n\n"
-                            f"👤 <b>Akun TikTok:</b> <code>{failed_user}</code>\n"
-                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
-                            f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
-                        )
+                        
+                        # Deteksi khusus: Cookie TikTok Kedaluwarsa
+                        cookie_expired_keywords = ["cookies kedaluwarsa", "cookie expired", "login ulang", "login" , "signup"]
+                        if any(kw in str(upload_err).lower() for kw in cookie_expired_keywords):
+                            msg = (
+                                "🔑 <b>COOKIE TIKTOK KEDALUWARSA!</b>\n\n"
+                                f"👤 <b>Akun:</b> <code>{failed_user}</code>\n\n"
+                                "❗ <b>Tindakan yang diperlukan:</b>\n"
+                                "1. Login ulang ke TikTok di browser.\n"
+                                "2. Ekspor cookie menggunakan ekstensi EditThisCookie.\n"
+                                "3. Perbarui secret <code>TIKTOK_COOKIES</code> di GitHub Settings → Secrets."
+                            )
+                        else:
+                            msg = (
+                                "⚠️ <b>TIKTOK UPLOAD GAGAL!</b>\n\n"
+                                f"👤 <b>Akun TikTok:</b> <code>{failed_user}</code>\n"
+                                f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
+                                f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
+                            )
                         send_telegram_message(msg)
                         
                         # Kirim screenshot kegagalan jika ada berkas hasil tangkapan layar
