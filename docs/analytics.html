@@ -36,6 +36,7 @@
         snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
 
         if (docs.length === 0) {
+          document.getElementById("loading-state").style.display = "none";
           document.getElementById("empty-state").style.display = "block";
           document.getElementById("dashboard-content").style.display = "none";
           return;
