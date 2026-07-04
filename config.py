@@ -13,8 +13,14 @@ STROKE_WIDTH = 5
 
 # Path Directories
 DIR_ASSETS = "assets"
-DIR_TEMP = "temp"
 DIR_OUTPUT = "output"
+
+import sys
+if sys.platform.startswith("win"):
+    DIR_TEMP = "temp"
+else:
+    # Menggunakan RAM Disk (/dev/shm) di Linux (GitHub Actions) untuk mempercepat rendering file I/O
+    DIR_TEMP = "/dev/shm/temp" if os.path.exists("/dev/shm") else "temp"
 
 # API Keys - Mendukung rotasi otomatis dari GEMINI_API_KEY_1 sampai GEMINI_API_KEY_8
 GEMINI_KEYS = []

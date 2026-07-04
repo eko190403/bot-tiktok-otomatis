@@ -78,10 +78,11 @@ async def main():
             
             # Ambil caption hasil rancangan Gemini dari berkas metadata
             # Ambil metadata hasil rancangan Gemini dari berkas
+            from config import DIR_TEMP
             caption = ""
             tags = []
             category_id = "22"
-            metadata_path = "temp/video_metadata.json"
+            metadata_path = os.path.join(DIR_TEMP, "video_metadata.json")
             if os.path.exists(metadata_path):
                 try:
                     import json

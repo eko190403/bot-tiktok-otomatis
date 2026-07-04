@@ -10,7 +10,7 @@ import librosa
 from google import genai
 from google.genai import types
 
-from config import GEMINI_KEYS, DIR_OUTPUT, FONT_SIZE_HOOK, FONT_SIZE_BODY
+from config import GEMINI_KEYS, DIR_OUTPUT, FONT_SIZE_HOOK, FONT_SIZE_BODY, DIR_TEMP
 
 try:
     from config import (
@@ -367,13 +367,13 @@ async def create_video() -> bool:
     moviepy_resources = {"audio_clip": None, "processed_clips": [], "raw_combined_bg": None, "looped_bg": None, "combined_bg": None, "final_video": None}
     video_files = []
     timestamp_suffix = int(time.time())
-    vo_file_path = f"temp/vo_{timestamp_suffix}.mp3"
-    draft_script_path = "temp/draft_script.json"
-    draft_audio_path = "temp/draft_audio.mp3"
-    draft_timestamps_path = "temp/draft_timestamps.json"
+    vo_file_path = os.path.join(DIR_TEMP, f"vo_{timestamp_suffix}.mp3")
+    draft_script_path = os.path.join(DIR_TEMP, "draft_script.json")
+    draft_audio_path = os.path.join(DIR_TEMP, "draft_audio.mp3")
+    draft_timestamps_path = os.path.join(DIR_TEMP, "draft_timestamps.json")
     
     try:
-        os.makedirs("temp", exist_ok=True)
+        os.makedirs(DIR_TEMP, exist_ok=True)
         
         # 1. Cek naskah di cache
         script_data = None
@@ -401,7 +401,7 @@ async def create_video() -> bool:
         # Simpan metadata dinamis untuk dibaca uploader di app.py
         tags = script_data.get("tags", ["faktapsikologi", "mindset", "stoikisme", "ruangpikir"])
         category_id = script_data.get("category_id", "22")
-        with open("temp/video_metadata.json", "w", encoding="utf-8") as f:
+        with open(os.path.join(DIR_TEMP, "video_metadata.json"), "w", encoding="utf-8") as f:
             json.dump({
                 "caption": caption,
                 "tags": tags,
