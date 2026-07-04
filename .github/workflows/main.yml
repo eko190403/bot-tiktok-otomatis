@@ -97,8 +97,8 @@ jobs:
           GEMINI_API_KEY_6: ${{ secrets.GEMINI_API_KEY_6 }}
           GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
           GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
-          ENABLE_TIKTOK_UPLOAD: "true"
-          ENABLE_YOUTUBE_UPLOAD: "true"
+          ENABLE_TIKTOK_UPLOAD: "false"
+          ENABLE_YOUTUBE_UPLOAD: "false"
           TELEGRAM_BOT_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
           TELEGRAM_CHAT_ID: "1120755820"
         run: |
