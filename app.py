@@ -124,6 +124,13 @@ async def main():
     try:
         print("🚀 Memulai Pipeline Pembuatan Video Otomatis...")
         
+        # Jalankan pembersihan draf lama (> 7 hari) untuk menghemat limit database
+        try:
+            import firebase_connector
+            firebase_connector.cleanup_old_drafts(days=7)
+        except Exception as clean_err:
+            print(f"⚠️ Gagal menjalankan pembersihan draf otomatis: {clean_err}")
+        
         # Lakukan import secara lokal di dalam fungsi untuk melacak jika eror berasal dari file import
         print("📦 Meng-import modul video_builder...")
         from video_builder import create_video

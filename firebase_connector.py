@@ -174,3 +174,49 @@ def get_video_draft(video_id: str) -> dict:
         except Exception as e:
             logger.error(f"⚠️ Gagal membaca draf video lokal: {e}")
     return None
+
+
+def cleanup_old_drafts(days: int = 7) -> None:
+    """Menghapus draf lama dari Firestore dan file lokal yang usianya melebihi batas hari tertentu."""
+    cutoff_time = int(time.time()) - (days * 86400)
+    
+    # 1. Bersihkan draf lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
+        try:
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if isinstance(drafts_data, dict):
+                cleaned_drafts = {
+                    vid: val for vid, val in drafts_data.items()
+                    if val.get("timestamp", 0) >= cutoff_time
+                }
+                deleted_count = len(drafts_data) - len(cleaned_drafts)
+                if deleted_count > 0:
+                    with open(local_drafts_path, "w", encoding="utf-8") as f:
+                        json.dump(cleaned_drafts, f, indent=4, ensure_ascii=False)
+                    logger.info(f"🧹 Sukses menghapus {deleted_count} draf video lokal yang kedaluwarsa.")
+        except Exception as e:
+            logger.error(f"❌ Gagal membersihkan draf video lokal: {e}")
+
+    # 2. Bersihkan draf Firestore
+    if not is_firebase_enabled or db is None:
+        return
+
+    try:
+        # Ambil draf yang lebih lama dari waktu cutoff
+        docs = db.collection("drafts").where("timestamp", "<", cutoff_time).stream()
+        deleted_fs_count = 0
+        batch = db.batch()
+        for doc in docs:
+            batch.delete(doc.reference)
+            deleted_fs_count += 1
+            if deleted_fs_count % 400 == 0:
+                batch.commit()
+                batch = db.batch()
+        if deleted_fs_count % 400 != 0:
+            batch.commit()
+        if deleted_fs_count > 0:
+            logger.info(f"🔥 Sukses menghapus {deleted_fs_count} draf kedaluwarsa dari Cloud Firestore.")
+    except Exception as e:
+        logger.error(f"❌ Gagal membersihkan draf dari Cloud Firestore: {e}")
