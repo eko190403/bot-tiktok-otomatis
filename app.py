@@ -11,8 +11,11 @@ def send_telegram_message(message: str):
     import urllib.request
     import json
     
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID", "1120755820")
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        print("⚠️ TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Notifikasi dilewati.")
+        return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     
     payload = {
@@ -41,8 +44,11 @@ def send_telegram_photo(photo_path: str, caption: str = ""):
     """
     import requests
     
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID", "1120755820")
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        print("⚠️ TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Notifikasi dilewati.")
+        return
     url = f"https://api.telegram.org/bot{token}/sendPhoto"
     
     if not os.path.exists(photo_path):
@@ -70,8 +76,11 @@ def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: st
     import requests
     import json
     
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID", "1120755820")
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        print("⚠️ TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Video tidak bisa dikirim.")
+        return None
     url = f"https://api.telegram.org/bot{token}/sendVideo"
     
     if not os.path.exists(video_path):

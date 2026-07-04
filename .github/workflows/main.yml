@@ -57,13 +57,14 @@ jobs:
         run: |
           python -m playwright install --with-deps chromium
 
-      # === LANGKAH BARU: NOTIFIKASI MULAI ===
       - name: Kirim Notifikasi Proses Dimulai ke Telegram
         if: github.event.action != 'telegram_publish'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
-          curl -v -X POST "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendMessage" \
-            -d "chat_id=1120755820" \
-            -d "text= Perintah diterima! Video Ruang Pikir sedang mulai diproses dan dirender di Cloud. Mohon tunggu sekitar 2-5 menit..."
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=Perintah diterima! Video Ruang Pikir sedang mulai diproses dan dirender di Cloud. Mohon tunggu sekitar 2-5 menit..."
 
       - name: Siapkan Cookies TikTok dari Secret
         env:
@@ -114,8 +115,8 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           ENABLE_TIKTOK_UPLOAD: "false"
           ENABLE_YOUTUBE_UPLOAD: "false"
-          TELEGRAM_BOT_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
-          TELEGRAM_CHAT_ID: "1120755820"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python app.py
 
@@ -125,8 +126,8 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          TELEGRAM_BOT_TOKEN: "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A"
-          TELEGRAM_CHAT_ID: "1120755820"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python remote_publisher.py \
             --video_id "${{ github.event.client_payload.video_id }}" \
@@ -139,21 +140,6 @@ jobs:
           echo "Isi folder output:"
           ls -lah output || true
 
-      - name: Kirim Hasil Video ke Telegram Bot
-        if: success() && github.event.action != 'telegram_publish'
-        run: |
-          VIDEO_FILE=$(ls output/*.mp4 | head -n 1)
-          
-          if [ -z "$VIDEO_FILE" ]; then
-            echo " Eror: Tidak ada file video .mp4 di folder output!"
-            exit 1
-          fi
-        
-          echo " Mengirim $VIDEO_FILE ke Telegram..."
-          
-          curl -v -F video="@${VIDEO_FILE}" \
-            -F caption=" Video Ruang Pikir Berhasil Dirender Sempurna dengan Subtitle!" \
-            "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendVideo?chat_id=1120755820"
 
       - name: Upload Hasil Video
         if: success() && github.event.action != 'telegram_publish'
@@ -178,8 +164,10 @@ jobs:
 
       - name: Kirim Notifikasi GAGAL ke Telegram
         if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
-          curl -s -X POST "https://api.telegram.org/bot8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A/sendMessage" \
-            -d "chat_id=1120755820" \
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text= <b>PIPELINE GAGAL!</b>%0A%0A Bot TikTok mengalami error saat menjalankan workflow.%0A%0A🔗 Cek log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -d "text=<b>PIPELINE GAGAL!</b>%0A%0A Bot TikTok mengalami error saat menjalankan workflow.%0A%0A🔗 Cek log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

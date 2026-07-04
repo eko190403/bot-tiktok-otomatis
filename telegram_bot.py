@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # Muat file .env jika berjalan di komputer lokal
 load_dotenv()
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 GITHUB_TOKEN = os.getenv("GH_PAT_TOKEN")    # Personal Access Token (Classic) dari GitHub
 GITHUB_REPO = os.getenv("GH_REPO")          # Format: username/nama-repo
 

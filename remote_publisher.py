@@ -7,7 +7,7 @@ import requests
 import html
 
 # Konfigurasi token Telegram
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8644685615:AAERnJkiFVLR0HhFxmj5HTFmYhsmtytso1A")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 def send_telegram_direct_message(chat_id: str, text: str):
     """Mengirim pesan langsung ke chat ID Telegram Vio."""
