@@ -8,9 +8,16 @@ on:
 jobs:
   prune-used-clips:
     runs-on: ubuntu-latest
+    concurrency:
+      group: bot-tiktok-pipeline
+      cancel-in-progress: false
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,3 +41,10 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           python scripts/prune_used_clips.py --days 90
+
+      - name: Commit data files (safe)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/git_safe_commit.sh || true
+          scripts/git_safe_commit.sh "chore: prune used_clips [auto]"
