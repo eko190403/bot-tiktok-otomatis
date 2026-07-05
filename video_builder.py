@@ -626,7 +626,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 logger.warning(" Gagal memuat draf naskah: %s", e)
                 
         if not script_data:
-            script_data = await generate_structured_script(niche=niche)
+            script_data = await generate_structured_script(niche=niche_key)
             with open(draft_script_path, "w", encoding="utf-8") as f:
                 json.dump(script_data, f, indent=4, ensure_ascii=False)
             logger.info(" Draf naskah disimpan ke cache (%s)", draft_script_path)

@@ -4,7 +4,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 def main():
     print("====================================================")
-    print("🚀 YouTube OAuth2 Authorizer (Local Script)")
+    print("YouTube OAuth2 Authorizer (Local Script)")
     print("====================================================")
     print("Skrip ini akan membuka browser lokal Anda untuk memberikan")
     print("izin akses upload video ke channel YouTube Anda.")
@@ -12,7 +12,7 @@ def main():
     
     secret_file = "client_secret.json"
     if not os.path.exists(secret_file):
-        print(f"❌ Eror: Berkas '{secret_file}' tidak ditemukan!")
+        print(f"Eror: Berkas '{secret_file}' tidak ditemukan!")
         print("\nCara mendapatkan berkas client_secret.json:")
         print("1. Buka Google Cloud Console: https://console.cloud.google.com/")
         print("2. Buat proyek baru, lalu cari dan aktifkan 'YouTube Data API v3'.")
@@ -24,8 +24,12 @@ def main():
         print("7. Pindahkan berkas tersebut ke folder proyek ini dan ubah namanya menjadi 'client_secret.json'.")
         return
 
-    # SCOPES yang dibutuhkan untuk upload video ke YouTube
-    scopes = ["https://www.googleapis.com/auth/youtube.upload"]
+    # SCOPES yang dibutuhkan untuk upload video, membaca statistik, dan komentar
+    scopes = [
+        "https://www.googleapis.com/auth/youtube.upload",
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+        "https://www.googleapis.com/auth/youtube.readonly"
+    ]
     
     flow = InstalledAppFlow.from_client_secrets_file(secret_file, scopes)
     credentials = flow.run_local_server(port=0)
