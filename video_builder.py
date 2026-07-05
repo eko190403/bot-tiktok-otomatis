@@ -997,13 +997,19 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         # ================= WATERMARK & VISUAL CTA =================
         try:
             from overlay import apply_text_watermark, apply_visual_cta
+            import config as _config
+
             moviepy_resources["final_video"] = apply_text_watermark(
                 moviepy_resources["final_video"], channel_name=watermark_name
             )
             logger.info(" Watermark channel berhasil ditambahkan.")
-            
-            moviepy_resources["final_video"] = apply_visual_cta(moviepy_resources["final_video"])
-            logger.info(" Visual CTA berhasil ditambahkan di 3 detik terakhir video.")
+
+            # Hanya tampilkan visual CTA jika diizinkan oleh konfigurasi
+            if getattr(_config, "ENABLE_VISUAL_CTA", True):
+                moviepy_resources["final_video"] = apply_visual_cta(moviepy_resources["final_video"])
+                logger.info(" Visual CTA berhasil ditambahkan di 3 detik terakhir video.")
+            else:
+                logger.info(" Visual CTA dinonaktifkan oleh konfigurasi.")
         except Exception as wm_err:
             logger.warning(" Watermark/CTA dilewati: %s", wm_err)
         # ======================================================
