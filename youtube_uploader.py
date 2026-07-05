@@ -11,12 +11,9 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
     """
     print(f" YouTube API: Memulai proses unggah video untuk channel '{channel_id}'...")
     
-    if channel_id and channel_id != "ruangpikir":
-        cred_file = f"youtube_credentials_{channel_id}.json"
-    else:
-        cred_file = "youtube_credentials.json"
+    cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
-        raise FileNotFoundError(" Eror: Berkas youtube_credentials.json tidak ditemukan! Harap lakukan otorisasi di lokal terlebih dahulu.")
+        raise FileNotFoundError(f" Eror: Berkas {cred_file} tidak ditemukan! Harap lakukan otorisasi di lokal terlebih dahulu.")
         
     with open(cred_file, "r") as f:
         cred_data = json.load(f)
@@ -141,9 +138,9 @@ async def get_youtube_stats(video_ids: list) -> dict:
     if not video_ids:
         return {}
         
-    cred_file = "youtube_credentials.json"
+    cred_file = "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
-        print("⚠️ youtube_credentials.json tidak ditemukan. Melewati update statistik.")
+        print(f"⚠️ {cred_file} tidak ditemukan. Melewati update statistik.")
         return {}
         
     try:
@@ -187,9 +184,9 @@ async def get_youtube_stats(video_ids: list) -> dict:
 
 async def get_top_comments(video_id: str, max_results: int = 20) -> list:
     """Mengambil komentar teratas dari video YouTube menggunakan YouTube Data API v3."""
-    cred_file = "youtube_credentials.json"
+    cred_file = "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
-        print("⚠️ youtube_credentials.json tidak ditemukan. Melewati pengambilan komentar.")
+        print(f"⚠️ {cred_file} tidak ditemukan. Melewati pengambilan komentar.")
         return []
         
     try:
@@ -232,7 +229,7 @@ async def get_top_comments(video_id: str, max_results: int = 20) -> list:
 
 async def reply_to_youtube_comments(video_id: str, max_replies: int = 2) -> None:
     """Mengambil komentar teratas, meminta Gemini merancang balasan, dan memposting balasan otomatis."""
-    cred_file = "youtube_credentials.json"
+    cred_file = "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
         return
         
@@ -304,12 +301,9 @@ async def upload_thumbnail(video_id: str, thumbnail_path: str, channel_id: str =
         print(f"⚠️ Berkas thumbnail tidak ditemukan: {thumbnail_path}")
         return False
         
-    if channel_id and channel_id != "ruangpikir":
-        cred_file = f"youtube_credentials_{channel_id}.json"
-    else:
-        cred_file = "youtube_credentials.json"
+    cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
-        print("⚠️ youtube_credentials.json tidak ditemukan. Melewati upload thumbnail.")
+        print(f"⚠️ {cred_file} tidak ditemukan. Melewati upload thumbnail.")
         return False
         
     try:
