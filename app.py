@@ -267,7 +267,7 @@ async def main():
 
             # Poin 9: Integrasi Upload Otomatis ke TikTok
             enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
-            if enable_upload:
+            if enable_upload and channel_id == "ruangpikir":
                 if latest_video:
                     print("📤 Memicu pengunggahan otomatis ke TikTok...")
                     from uploader import upload_to_tiktok
