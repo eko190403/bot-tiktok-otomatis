@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: check-secrets
+        name: check-secrets
+        entry: python scripts/check_secrets.py
+        language: system
+        files: ''
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        entry: trailing-whitespace-fixer
+        language: python
+        types: [text]
