@@ -27,6 +27,8 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
+    env:
+      ENABLE_VISUAL_CTA: "false"
 
     steps:
       - name: Checkout Repository
