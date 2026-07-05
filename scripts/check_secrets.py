@@ -15,8 +15,6 @@ PATTERNS = [
 # Files to ignore to prevent false-positives (this script may appear in git ls-files)
 IGNORE_PATHS = {
     "scripts/check_secrets.py",
-    # If docs contain embedded example keys or analytics snippets, add them here
-    "docs/analytics.html",
 }
 
 def scan_file(path):
