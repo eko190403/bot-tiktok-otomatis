@@ -163,14 +163,6 @@ jobs:
           echo "Isi folder output:"
           ls -lah output || true
 
-      - name: Commit data files (safe)
-        if: success() && github.event.action != 'telegram_publish'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          chmod +x scripts/git_safe_commit.sh || true
-          scripts/git_safe_commit.sh "chore: update data files [auto]"
-
 
       - name: Upload Hasil Video
         if: success() && github.event.action != 'telegram_publish'
