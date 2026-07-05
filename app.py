@@ -136,27 +136,30 @@ async def main():
     import argparse
     parser = argparse.ArgumentParser(description="Bot Video Auto Pipeline")
     parser.add_argument("--channel", default="ruangpikir", help="Channel ID dari config/channels.json")
+    parser.add_argument("--force", action="store_true", help="Paksa jalankan pipeline meskipun baru saja upload")
     args, unknown = parser.parse_known_args()
     channel_id = args.channel
 
     try:
         print(f"🚀 Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
         
-        # ⏱️ COOLDOWN CHECK: Skip jika channel sudah upload dalam 2 jam terakhir
-        try:
-            import firebase_connector
-            from datetime import datetime, timezone, timedelta
-            last_upload = firebase_connector.get_last_upload_time(channel_id)
-            if last_upload:
-                cooldown_hours = 2
-                now = datetime.now(timezone.utc)
-                diff = now - last_upload
-                if diff < timedelta(hours=cooldown_hours):
-                    sisa = int((timedelta(hours=cooldown_hours) - diff).total_seconds() / 60)
-                    print(f"⏱️ [{channel_id}] Cooldown aktif! Sudah upload {int(diff.total_seconds()/60)} menit lalu. Skip. (sisa cooldown: {sisa} menit)")
+        # Cegah double upload berdekatan khusus untuk trigger jadwal otomatis (cron schedule)
+        import os
+        import time
+        import firebase_connector
+        
+        is_schedule = os.getenv("GITHUB_EVENT_NAME") == "schedule"
+        if is_schedule and not args.force:
+            last_upload = firebase_connector.get_last_upload_timestamp(channel_id)
+            if last_upload > 0:
+                elapsed_seconds = time.time() - last_upload
+                # Batasi minimal 3 jam (10800 detik) antar upload otomatis
+                if elapsed_seconds < 10800:
+                    hours_ago = elapsed_seconds / 3600
+                    print(f"⚠️ Channel {channel_id} baru saja mengunggah video {hours_ago:.2f} jam yang lalu.")
+                    print("ℹ️ Lewati jadwal otomatis kali ini untuk mencegah upload berdekatan. Selesai.")
                     return
-        except Exception as cooldown_err:
-            print(f"⚠️ Gagal memeriksa cooldown: {cooldown_err}")
+
         
         # Jalankan pembersihan draf lama (> 7 hari) untuk menghemat limit database
         try:
@@ -373,13 +376,6 @@ async def main():
                             channel_id=channel_id
                         )
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
-                        
-                        # ⏱️ Catat waktu upload untuk sistem cooldown
-                        try:
-                            import firebase_connector
-                            firebase_connector.record_upload_time(channel_id)
-                        except Exception as rec_err:
-                            print(f"⚠️ Gagal mencatat waktu upload cooldown: {rec_err}")
                         
                         # Ekstrak ID dari URL https://youtu.be/ID
                         yt_video_id = youtube_url.split("/")[-1]

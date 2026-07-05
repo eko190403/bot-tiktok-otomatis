@@ -529,58 +529,34 @@ def get_best_hook_candidate() -> str:
     return ""
 
 
-def get_last_upload_time(channel_id: str):
-    """Mengambil waktu upload terakhir untuk channel tertentu dari Firestore atau file lokal."""
-    from datetime import datetime, timezone
-    
-    # Coba dari Firestore
-    if is_firebase_enabled and db:
+def get_last_upload_timestamp(channel_id: str) -> int:
+    """Mengambil timestamp video terakhir yang dibuat untuk channel tertentu."""
+    if is_firebase_enabled and db is not None:
         try:
-            doc = db.collection("channel_cooldown").document(channel_id).get()
-            if doc.exists:
-                ts = doc.to_dict().get("last_upload_at")
-                if ts:
-                    # Firestore Timestamp → datetime
-                    if hasattr(ts, "ToDatetime"):
-                        return ts.ToDatetime().replace(tzinfo=timezone.utc)
-                    return ts
+            docs = db.collection("drafts")\
+                     .where("channel_id", "==", channel_id)\
+                     .order_by("timestamp", direction=firestore.Query.DESCENDING)\
+                     .limit(1)\
+                     .stream()
+            for doc in docs:
+                return doc.to_dict().get("timestamp", 0)
         except Exception as e:
-            logger.warning(f"⚠️ Gagal membaca cooldown dari Firestore: {e}")
-    
-    # Fallback: file lokal
-    cooldown_path = f"cooldown_{channel_id}.json"
-    if os.path.exists(cooldown_path):
-        try:
-            with open(cooldown_path, "r") as f:
-                data = json.load(f)
-            ts = data.get("last_upload_at", 0)
-            return datetime.fromtimestamp(ts, tz=timezone.utc)
-        except Exception as e:
-            logger.warning(f"⚠️ Gagal membaca cooldown lokal: {e}")
-    return None
+            logger.error(f"⚠️ Gagal membaca timestamp terakhir dari Firestore: {e}. Mencoba fallback lokal.")
 
-
-def record_upload_time(channel_id: str) -> None:
-    """Mencatat waktu upload sekarang untuk channel tertentu ke Firestore dan file lokal."""
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
-    
-    # Simpan ke Firestore
-    if is_firebase_enabled and db:
+    # Fallback lokal
+    local_drafts_path = "video_drafts.json"
+    if os.path.exists(local_drafts_path):
         try:
-            db.collection("channel_cooldown").document(channel_id).set({
-                "last_upload_at": now,
-                "channel_id": channel_id
-            })
-            logger.info(f"⏱️ Waktu upload channel '{channel_id}' dicatat ke Firestore.")
+            with open(local_drafts_path, "r", encoding="utf-8") as f:
+                drafts_data = json.load(f)
+            if isinstance(drafts_data, dict):
+                channel_drafts = [
+                    val for val in drafts_data.values()
+                    if val.get("channel_id") == channel_id
+                ]
+                if channel_drafts:
+                    return max(val.get("timestamp", 0) for val in channel_drafts)
         except Exception as e:
-            logger.warning(f"⚠️ Gagal mencatat cooldown ke Firestore: {e}")
-    
-    # Simpan juga ke file lokal sebagai backup
-    try:
-        cooldown_path = f"cooldown_{channel_id}.json"
-        with open(cooldown_path, "w") as f:
-            json.dump({"last_upload_at": now.timestamp(), "channel_id": channel_id}, f)
-    except Exception as e:
-        logger.warning(f"⚠️ Gagal mencatat cooldown lokal: {e}")
+            logger.error(f"⚠️ Gagal membaca timestamp terakhir lokal: {e}")
+    return 0
 
