@@ -62,3 +62,8 @@ def get_channel_config(channel_id: str = "ruangpikir") -> dict:
         "theme_color": "classic_yellow"
     }
 
+
+# Feature toggles
+# Set via environment variable ENABLE_VISUAL_CTA (true/false). Default: true
+ENABLE_VISUAL_CTA = str(os.getenv("ENABLE_VISUAL_CTA", "true")).lower() in ("1", "true", "yes")
+
