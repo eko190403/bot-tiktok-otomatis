@@ -251,19 +251,31 @@ async def main():
             video_files = glob.glob("output/*.mp4")
             latest_video = max(video_files, key=os.path.getctime) if video_files else None
 
-            # Pembuatan Auto-Thumbnail dari video
+            # Pembuatan Thumbnail: ambil frame bersih dari detik ke-2 video
             thumbnail_path = "output/thumbnail.jpg"
             has_thumbnail = False
             if latest_video:
                 print("🖼️ Memulai proses pembuatan auto-thumbnail...")
                 try:
-                    from thumbnail_generator import extract_frame_from_video, generate_thumbnail
-                    temp_bg_path = os.path.join(DIR_TEMP, "thumbnail_bg.jpg")
-                    if extract_frame_from_video(latest_video, temp_bg_path, timestamp_sec=1.0):
-                        if generate_thumbnail(hook, temp_bg_path, thumbnail_path, brand_name="Ruang Pikir"):
-                            has_thumbnail = True
+                    import subprocess
+                    result = subprocess.run(
+                        [
+                            "ffmpeg", "-y",
+                            "-ss", "2",
+                            "-i", latest_video,
+                            "-vframes", "1",
+                            "-q:v", "2",
+                            thumbnail_path
+                        ],
+                        capture_output=True, text=True
+                    )
+                    if os.path.exists(thumbnail_path):
+                        has_thumbnail = True
+                        print(f"✨ Thumbnail berhasil dibuat: {thumbnail_path}")
+                    else:
+                        print(f"⚠️ FFmpeg gagal membuat thumbnail: {result.stderr[-200:]}")
                 except Exception as thumb_err:
-                    print(f"⚠️ Gagal membuat auto-thumbnail: {thumb_err}")
+                    print(f"⚠️ Gagal membuat thumbnail: {thumb_err}")
 
             # Poin 9: Integrasi Upload Otomatis ke TikTok
             enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
