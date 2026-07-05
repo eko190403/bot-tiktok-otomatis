@@ -20,6 +20,9 @@ on:
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
+    concurrency:
+      group: bot-tiktok-pipeline
+      cancel-in-progress: false
     permissions:
       contents: write
 
