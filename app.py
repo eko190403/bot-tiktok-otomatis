@@ -142,6 +142,22 @@ async def main():
     try:
         print(f"🚀 Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
         
+        # ⏱️ COOLDOWN CHECK: Skip jika channel sudah upload dalam 2 jam terakhir
+        try:
+            import firebase_connector
+            from datetime import datetime, timezone, timedelta
+            last_upload = firebase_connector.get_last_upload_time(channel_id)
+            if last_upload:
+                cooldown_hours = 2
+                now = datetime.now(timezone.utc)
+                diff = now - last_upload
+                if diff < timedelta(hours=cooldown_hours):
+                    sisa = int((timedelta(hours=cooldown_hours) - diff).total_seconds() / 60)
+                    print(f"⏱️ [{channel_id}] Cooldown aktif! Sudah upload {int(diff.total_seconds()/60)} menit lalu. Skip. (sisa cooldown: {sisa} menit)")
+                    return
+        except Exception as cooldown_err:
+            print(f"⚠️ Gagal memeriksa cooldown: {cooldown_err}")
+        
         # Jalankan pembersihan draf lama (> 7 hari) untuk menghemat limit database
         try:
             import firebase_connector
@@ -357,6 +373,13 @@ async def main():
                             channel_id=channel_id
                         )
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
+                        
+                        # ⏱️ Catat waktu upload untuk sistem cooldown
+                        try:
+                            import firebase_connector
+                            firebase_connector.record_upload_time(channel_id)
+                        except Exception as rec_err:
+                            print(f"⚠️ Gagal mencatat waktu upload cooldown: {rec_err}")
                         
                         # Ekstrak ID dari URL https://youtu.be/ID
                         yt_video_id = youtube_url.split("/")[-1]

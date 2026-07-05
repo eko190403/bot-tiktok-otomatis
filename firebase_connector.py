@@ -527,3 +527,60 @@ def get_best_hook_candidate() -> str:
     except Exception as e:
         logger.error(f"⚠️ Gagal membaca hook kandidat: {e}")
     return ""
+
+
+def get_last_upload_time(channel_id: str):
+    """Mengambil waktu upload terakhir untuk channel tertentu dari Firestore atau file lokal."""
+    from datetime import datetime, timezone
+    
+    # Coba dari Firestore
+    if is_firebase_enabled and db:
+        try:
+            doc = db.collection("channel_cooldown").document(channel_id).get()
+            if doc.exists:
+                ts = doc.to_dict().get("last_upload_at")
+                if ts:
+                    # Firestore Timestamp → datetime
+                    if hasattr(ts, "ToDatetime"):
+                        return ts.ToDatetime().replace(tzinfo=timezone.utc)
+                    return ts
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal membaca cooldown dari Firestore: {e}")
+    
+    # Fallback: file lokal
+    cooldown_path = f"cooldown_{channel_id}.json"
+    if os.path.exists(cooldown_path):
+        try:
+            with open(cooldown_path, "r") as f:
+                data = json.load(f)
+            ts = data.get("last_upload_at", 0)
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal membaca cooldown lokal: {e}")
+    return None
+
+
+def record_upload_time(channel_id: str) -> None:
+    """Mencatat waktu upload sekarang untuk channel tertentu ke Firestore dan file lokal."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    
+    # Simpan ke Firestore
+    if is_firebase_enabled and db:
+        try:
+            db.collection("channel_cooldown").document(channel_id).set({
+                "last_upload_at": now,
+                "channel_id": channel_id
+            })
+            logger.info(f"⏱️ Waktu upload channel '{channel_id}' dicatat ke Firestore.")
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal mencatat cooldown ke Firestore: {e}")
+    
+    # Simpan juga ke file lokal sebagai backup
+    try:
+        cooldown_path = f"cooldown_{channel_id}.json"
+        with open(cooldown_path, "w") as f:
+            json.dump({"last_upload_at": now.timestamp(), "channel_id": channel_id}, f)
+    except Exception as e:
+        logger.warning(f"⚠️ Gagal mencatat cooldown lokal: {e}")
+
