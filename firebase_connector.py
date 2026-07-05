@@ -423,3 +423,25 @@ def mark_clip_used(clip_id: str) -> None:
     except Exception as e:
         logger.error(f"❌ Gagal menandai klip terpakai di Firestore: {e}")
 
+
+def cleanup_used_clips(days: int = 90) -> None:
+    """Hapus entri `used_clips` yang lebih tua dari `days` hari."""
+    if not _require_firestore("cleanup_used_clips"):
+        return
+    cutoff = int(time.time()) - (days * 86400)
+    try:
+        docs = db.collection("used_clips").where("used_at", "<", cutoff).stream()
+        batch = db.batch()
+        count = 0
+        for doc in docs:
+            batch.delete(doc.reference)
+            count += 1
+            if count % 400 == 0:
+                batch.commit()
+                batch = db.batch()
+        if count % 400 != 0:
+            batch.commit()
+        logger.info(f"🧹 Berhasil menghapus {count} entri used_clips yang kedaluwarsa dari Firestore.")
+    except Exception as e:
+        logger.error(f"❌ Gagal membersihkan used_clips dari Firestore: {e}")
+
