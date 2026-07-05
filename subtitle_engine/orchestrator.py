@@ -69,7 +69,7 @@ class SubtitleEngineV2:
             phrases.append(current_phrase)
         return phrases
 
-    def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body") -> list:
+    def generate_subtitle_clips(self, section_words: list, font_size: int, style_type: str = "body", max_total_duration: float | None = None) -> list:
         """
         Subtitle Clip Generator V3:
         - Per-style phrase grouping
@@ -105,6 +105,11 @@ class SubtitleEngineV2:
             phrase_display_start = max(0.0, phrase[0]["start"] - visual_offset)
             phrase_display_end   = phrase[-1]["end"] + hold_padding
 
+            # Jika disediakan, pastikan phrase tidak melewati total durasi video/audio
+            if isinstance(max_total_duration, (int, float)):
+                if phrase_display_end > max_total_duration:
+                    phrase_display_end = max_total_duration
+
             if p_idx < len(grouped_phrases) - 1:
                 next_phrase_start  = grouped_phrases[p_idx + 1][0]["start"] - visual_offset
                 phrase_display_end = min(phrase_display_end, next_phrase_start)
@@ -123,6 +128,15 @@ class SubtitleEngineV2:
                     highlight_end = min(highlight_end, next_word_target)
 
                 word_duration = max(0.12, highlight_end - highlight_start)
+
+                # Potong durasi kata jika melewati batas total durasi
+                if isinstance(max_total_duration, (int, float)) and highlight_start >= max_total_duration:
+                    # Kata mulai di luar batas waktu, lewati
+                    continue
+                if isinstance(max_total_duration, (int, float)) and (highlight_start + word_duration) > max_total_duration:
+                    word_duration = max(0.0, max_total_duration - highlight_start)
+                    if word_duration <= 0.001:
+                        continue
 
                 # ── Render frame subtitle (canvas mini) ──────────────────────
                 frame_img, bbox_w, bbox_h = self.renderer.create_progressive_frame(

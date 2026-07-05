@@ -80,11 +80,13 @@ def create_visual_cta_frame(video_width: int, video_height: int) -> np.ndarray:
     img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # Target box di tengah bawah
-    box_w = 700
-    box_h = 240
+    # Target box di tengah bawah — dibuat sedikit lebih kecil dan diangkat
+    # supaya tidak menutupi UI platform (like/comment/share) pada beberapa aplikasi.
+    box_w = min(640, video_width - 120)
+    box_h = 180
     start_x = (video_width - box_w) // 2
-    start_y = int(video_height * 0.55) # Di bawah teks subtitle
+    # Angkat sedikit dari bottom agar area action/platform UI tetap terlihat
+    start_y = int(video_height * 0.48)
     
     # 1. Background Box semi transparan
     draw.rounded_rectangle(
@@ -121,9 +123,9 @@ def create_visual_cta_frame(video_width: int, video_height: int) -> np.ndarray:
     if font_desc is None:
         font_desc = ImageFont.load_default()
         
-    # 3. Tulis teks CTA
+    # 3. Tulis teks CTA (singkat) — jangan tutupi area interaksi platform
     title_text = "SIMPAN & BAGIKAN VIDEO INI!"
-    desc_text = "Tap 2x jika fakta ini bermanfaat untukmu"
+    desc_text = "Tap 2x jika info ini berguna"
     
     try:
         t_bbox = draw.textbbox((0, 0), title_text, font=font_title)

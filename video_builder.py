@@ -886,9 +886,10 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         engine_v3 = SubtitleEngineV2()
         all_text_clips = []
 
-        all_text_clips.extend(engine_v3.generate_subtitle_clips(hook_words, font_size=FONT_SIZE_HOOK, style_type="hook"))
-        all_text_clips.extend(engine_v3.generate_subtitle_clips(story_words, font_size=FONT_SIZE_BODY, style_type="body"))
-        all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_words, font_size=FONT_SIZE_BODY, style_type="cta"))
+        # Pastikan subtitle tidak melampaui durasi final (hindari trailing frames)
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(hook_words, font_size=FONT_SIZE_HOOK, style_type="hook", max_total_duration=total_duration))
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(story_words, font_size=FONT_SIZE_BODY, style_type="body", max_total_duration=total_duration))
+        all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_words, font_size=FONT_SIZE_BODY, style_type="cta", max_total_duration=total_duration))
 
         moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips, use_bgclip=True)
 
@@ -1012,6 +1013,12 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 logger.info(" Visual CTA dinonaktifkan oleh konfigurasi.")
         except Exception as wm_err:
             logger.warning(" Watermark/CTA dilewati: %s", wm_err)
+        # Pastikan durasi final video persis sama dengan durasi audio (hindari padding/freep frames)
+        try:
+            moviepy_resources["final_video"] = moviepy_resources["final_video"].set_duration(total_duration)
+        except Exception:
+            # Jika set_duration gagal, lanjutkan tanpa crash (MoviePy versi tertentu kadang bermasalah)
+            logger.debug("Tidak bisa memaksa set_duration pada final_video, melanjutkan.")
         # ======================================================
 
         os.makedirs(DIR_OUTPUT, exist_ok=True)
