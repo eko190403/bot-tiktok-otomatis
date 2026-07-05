@@ -64,7 +64,7 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "text=Perintah diterima! Video Ruang Pikir sedang mulai diproses dan dirender di Cloud. Mohon tunggu sekitar 2-5 menit..."
+            -d "text=Perintah diterima! Bot mulai memproses 5 channel (Ruang Pikir, Logika Stoik, Rahasia Finansial, Misteri Semesta, Pola Disiplin). Mohon tunggu..."
 
       - name: Siapkan Cookies TikTok dari Secret
         env:
@@ -79,14 +79,18 @@ jobs:
 
       - name: Siapkan Kredensial YouTube dari Secret
         env:
-          YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS }}
+          YT_CREDS_RUANGPIKIR: ${{ secrets.YT_CREDS_RUANGPIKIR }}
+          YT_CREDS_LOGIKASTOIK: ${{ secrets.YT_CREDS_LOGIKASTOIK }}
+          YT_CREDS_RAHASIAFINANSIAL: ${{ secrets.YT_CREDS_RAHASIAFINANSIAL }}
+          YT_CREDS_MISTERISEMESTA: ${{ secrets.YT_CREDS_MISTERISEMESTA }}
+          YT_CREDS_POLADISIPLIN: ${{ secrets.YT_CREDS_POLADISIPLIN }}
         run: |
-          if [ -n "$YOUTUBE_CREDENTIALS" ]; then
-            echo " Menulis berkas youtube_credentials.json secara dinamis dari GitHub Secrets..."
-            echo "$YOUTUBE_CREDENTIALS" > youtube_credentials.json
-          else
-            echo " Secret YOUTUBE_CREDENTIALS tidak diset. Menggunakan berkas youtube_credentials.json bawaan dari repositori."
-          fi
+          echo "Menyiapkan kredensial YouTube untuk semua channel..."
+          [ -n "$YT_CREDS_RUANGPIKIR" ] && echo "$YT_CREDS_RUANGPIKIR" > youtube_credentials_ruangpikir.json || echo "⚠️ Secret YT_CREDS_RUANGPIKIR belum di-set"
+          [ -n "$YT_CREDS_LOGIKASTOIK" ] && echo "$YT_CREDS_LOGIKASTOIK" > youtube_credentials_logikastoik.json || echo "⚠️ Secret YT_CREDS_LOGIKASTOIK belum di-set"
+          [ -n "$YT_CREDS_RAHASIAFINANSIAL" ] && echo "$YT_CREDS_RAHASIAFINANSIAL" > youtube_credentials_rahasiafinansial.json || echo "⚠️ Secret YT_CREDS_RAHASIAFINANSIAL belum di-set"
+          [ -n "$YT_CREDS_MISTERISEMESTA" ] && echo "$YT_CREDS_MISTERISEMESTA" > youtube_credentials_misterisemesta.json || echo "⚠️ Secret YT_CREDS_MISTERISEMESTA belum di-set"
+          [ -n "$YT_CREDS_POLADISIPLIN" ] && echo "$YT_CREDS_POLADISIPLIN" > youtube_credentials_poladisiplin.json || echo "⚠️ Secret YT_CREDS_POLADISIPLIN belum di-set"
 
       - name: Siapkan Akun Layanan Firebase dari Secret
         env:
@@ -118,7 +122,20 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python app.py
+          echo "🚀 Menjalankan pipeline untuk Ruang Pikir..."
+          python app.py --channel ruangpikir || echo "⚠️ Gagal di ruangpikir, lanjut ke channel berikutnya..."
+          
+          echo "🚀 Menjalankan pipeline untuk Logika Stoik..."
+          python app.py --channel logikastoik || echo "⚠️ Gagal di logikastoik, lanjut ke channel berikutnya..."
+          
+          echo "🚀 Menjalankan pipeline untuk Rahasia Finansial..."
+          python app.py --channel rahasiafinansial || echo "⚠️ Gagal di rahasiafinansial, lanjut ke channel berikutnya..."
+          
+          echo "🚀 Menjalankan pipeline untuk Misteri Semesta..."
+          python app.py --channel misterisemesta || echo "⚠️ Gagal di misterisemesta, lanjut ke channel berikutnya..."
+          
+          echo "🚀 Menjalankan pipeline untuk Pola Disiplin..."
+          python app.py --channel poladisiplin || echo "⚠️ Gagal di poladisiplin, selesai."
 
       - name: Jalankan Remote Control Publisher (Kirim ke Medsos)
         if: github.event.action == 'telegram_publish'
