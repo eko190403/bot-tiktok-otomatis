@@ -96,3 +96,28 @@ Konfigurasikan secrets berikut di repositori GitHub atau variabel lingkungan lok
 | `YOUTUBE_CREDENTIALS` | String JSON berisi kredensial OAuth2 client |
 | `TIKTOK_COOKIES` | String JSON berisi sesi cookies TikTok |
 | `FIREBASE_SERVICE_ACCOUNT` | Kredensial Service Account Firebase |
+
+---
+
+## Pengaturan Developer (Pre-commit)
+
+Untuk mencegah commit yang tidak sengaja berisi kredensial, repositori ini sudah menyertakan scanner sederhana dan konfigurasi pre-commit.
+
+Langkah cepat untuk mengaktifkan pada mesin development Anda:
+
+- Pasang `pre-commit`:
+
+```bash
+python -m pip install --user pre-commit
+```
+
+- Instal hook pre-commit di repo (jalankan sekali per clone):
+
+```bash
+pre-commit install
+```
+
+Setelah terpasang, setiap `git commit` akan menjalankan `scripts/check_secrets.py` dan hook lain yang terdaftar. Jika scanner menemukan pola yang diduga kredensial, commit akan diblokir dan Anda diminta memindahkan secret ke GitHub Secrets sebelum melanjutkan.
+
+Catatan: CI juga menjalankan scanner ini pada setiap push/PR, jadi PR yang berisi kredensial akan gagal di pipeline.
+
