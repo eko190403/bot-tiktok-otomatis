@@ -11,10 +11,11 @@ on:
       - telegram_publish
 
   schedule:
-    # Menggunakan Jam Emas (Prime Time) Indonesia agar jangkauan penonton maksimal:
-    # 08:00 WIB (01:00 UTC), 12:00 WIB (05:00 UTC), 15:00 WIB (08:00 UTC), 17:30 WIB (10:30 UTC), 19:30 WIB (12:30 UTC), 21:00 WIB (14:00 UTC)
-    - cron: '0 1,5,8,14 * * *'
-    - cron: '30 10,12 * * *'
+    # Menggunakan Jam Emas (Prime Time) Indonesia:
+    # Pagi: 07:00 WIB (00:00 UTC)
+    # Siang: 12:00 WIB (05:00 UTC)
+    # Malam: 19:00 WIB (12:00 UTC)
+    - cron: '0 0,5,12 * * *'
 
 jobs:
   build-and-run:
