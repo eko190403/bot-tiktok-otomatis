@@ -16,6 +16,8 @@ on:
     # Siang: 12:00 WIB (05:00 UTC)
     # Malam: 19:00 WIB (12:00 UTC)
     - cron: '0 0,5,12 * * *'
+    # Cron mingguan untuk pembersihan draf lama (Senin 03:00 WIB -> 20:00 UTC)
+    - cron: '0 20 * * 1'
 
 jobs:
   build-and-run:
@@ -170,18 +172,10 @@ jobs:
           path: output/
           retention-days: 7
 
-      - name: Commit dan Push Riwayat Naskah ke Repositori
+      - name: Firestore single source reminder
         if: success() && github.event.action != 'telegram_publish'
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -f naskah_history.json ]; then
-            git add naskah_history.json
-            git commit -m "chore: update riwayat naskah otomatis [skip ci]" || echo "Tidak ada perubahan riwayat naskah."
-            git push origin main || echo "Gagal melakukan push riwayat naskah."
-          else
-            echo " Berkas naskah_history.json tidak ditemukan."
-          fi
+          echo "Menggunakan Firestore sebagai single source of truth — tidak meng-commit naskah_history.json lokal."
 
       - name: Kirim Notifikasi GAGAL ke Telegram
         if: failure()

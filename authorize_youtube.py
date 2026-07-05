@@ -1,10 +1,16 @@
 import os
 import json
+import argparse
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 def main():
+    parser = argparse.ArgumentParser(description="YouTube OAuth2 Authorizer")
+    parser.add_argument("--channel", type=str, required=True, help="ID channel (contoh: logikastoik)")
+    args = parser.parse_args()
+    channel_id = args.channel.lower()
+
     print("====================================================")
-    print("YouTube OAuth2 Authorizer (Local Script)")
+    print(f"YouTube OAuth2 Authorizer untuk Channel: {channel_id}")
     print("====================================================")
     print("Skrip ini akan membuka browser lokal Anda untuk memberikan")
     print("izin akses upload video ke channel YouTube Anda.")
@@ -43,16 +49,16 @@ def main():
         "client_secret": credentials.client_secret
     }
     
-    output_file = "youtube_credentials.json"
+    output_file = f"youtube_credentials_{channel_id}.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(cred_data, f, indent=4, ensure_ascii=False)
         
     print("\n✅ Otorisasi Sukses!")
     print(f"💾 Kredensial penting tersimpan di: {output_file}")
     print("\n⚠️ PERINGATAN KEAMANAN:")
-    print("1. Jangan pernah memasukkan (commit) berkas 'youtube_credentials.json' atau 'client_secret.json' ke GitHub!")
-    print("2. Buka berkas 'youtube_credentials.json', salin seluruh isinya, dan masukkan ke")
-    print("   GitHub Secrets repositori Anda dengan nama rahasia 'YOUTUBE_CREDENTIALS'.")
+    print(f"1. Jangan pernah memasukkan (commit) berkas '{output_file}' atau 'client_secret.json' ke GitHub!")
+    print(f"2. Buka berkas '{output_file}', salin seluruh isinya, dan masukkan ke")
+    print(f"   GitHub Secrets repositori Anda dengan nama rahasia 'YOUTUBE_CREDENTIALS_{channel_id.upper()}'.")
 
 if __name__ == "__main__":
     main()

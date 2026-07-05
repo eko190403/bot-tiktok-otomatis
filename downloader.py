@@ -2,6 +2,10 @@ import os
 import random
 import requests
 from config import PEXELS_API_KEY, DIR_TEMP
+try:
+    import firebase_connector
+except Exception:
+    firebase_connector = None
 
 def search_pexels_videos(keyword: str, per_page: int = 5) -> list:
     """Mencari video portrait di Pexels berdasarkan keyword dari Gemini."""
@@ -70,6 +74,14 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                 break
                 
             vid_id = vid_data.get("id")
+            # Jika Firestore tersedia, lewati klip yang sudah pernah dipakai
+            try:
+                if vid_id and firebase_connector and getattr(firebase_connector, "is_clip_used", None):
+                    if firebase_connector.is_clip_used(vid_id):
+                        print(f"⛔ Klip Pexels {vid_id} sudah pernah dipakai. Lewati.")
+                        continue
+            except Exception as e:
+                print(f"⚠️ Gagal memeriksa used_clips: {e}")
             pool_dir = os.path.join("assets", "video_pool")
             os.makedirs(pool_dir, exist_ok=True)
             cached_file = os.path.join(pool_dir, f"{vid_id}.mp4") if vid_id else None
@@ -85,6 +97,12 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                     try:
                         shutil.copy2(cached_file, file_path)
                         downloaded_paths.append(file_path)
+                        # tandai sebagai dipakai di Firestore
+                        try:
+                            if vid_id and firebase_connector and getattr(firebase_connector, "mark_clip_used", None):
+                                firebase_connector.mark_clip_used(vid_id)
+                        except Exception:
+                            pass
                         clip_idx += 1
                         continue
                     except Exception as copy_err:
@@ -98,7 +116,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                         if resp.status_code == 200:
                             with open(file_path, "wb") as f:
                                 f.write(resp.content)
-                            
+
                             # Simpan ke cache lokal
                             if cached_file:
                                 try:
@@ -107,8 +125,15 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                                     print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
                                 except Exception as cache_err:
                                     print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
-                                    
+
                             downloaded_paths.append(file_path)
+                            # tandai sebagai dipakai di Firestore
+                            try:
+                                if vid_id and firebase_connector and getattr(firebase_connector, "mark_clip_used", None):
+                                    firebase_connector.mark_clip_used(vid_id)
+                            except Exception:
+                                pass
+
                             clip_idx += 1
                             break
                         else:

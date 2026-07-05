@@ -349,3 +349,26 @@ def get_last_upload_timestamp(channel_id: str) -> int:
         logger.error(f"⚠️ Gagal membaca timestamp terakhir dari Firestore: {e}")
     return 0
 
+
+def is_clip_used(clip_id: str) -> bool:
+    """Periksa apakah klip Pexels (berdasarkan ID) pernah dipakai sebelumnya."""
+    if not _require_firestore("is_clip_used"):
+        return False
+    try:
+        doc = db.collection("used_clips").document(str(clip_id)).get()
+        return doc.exists
+    except Exception as e:
+        logger.warning(f"⚠️ Gagal memeriksa used_clips di Firestore: {e}")
+        return False
+
+
+def mark_clip_used(clip_id: str) -> None:
+    """Tandai klip Pexels sebagai sudah dipakai (simpan timestamp)."""
+    if not _require_firestore("mark_clip_used"):
+        return
+    try:
+        db.collection("used_clips").document(str(clip_id)).set({"used_at": int(time.time())})
+        logger.info(f"🔖 Klip Pexels '{clip_id}' ditandai sebagai sudah dipakai.")
+    except Exception as e:
+        logger.error(f"❌ Gagal menandai klip terpakai di Firestore: {e}")
+
