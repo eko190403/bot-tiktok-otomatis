@@ -487,7 +487,7 @@ VOICE_ROTATION = [
     "id-ID-GadisNeural",   # Wanita cadangan 1
 ]
 
-async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: str, voice_id: str = "id-ID-ArdiNeural", attempts: int = 3):
+async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: str, voice_id: str = "id-ID-ArdiNeural", voice_rate: str = "+0%", voice_pitch: str = "+0Hz", attempts: int = 3):
     """Mencoba menghasilkan voiceover dengan rotasi voice jika gagal atau WordBoundary kosong."""
     import random
     last_exception = None
@@ -506,7 +506,7 @@ async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: st
     for voice_idx, voice in enumerate(voices):
         for i in range(attempts):
             try:
-                result = await generate_voiceover_with_timestamps(hook, story, cta, path, voice=voice)
+                result = await generate_voiceover_with_timestamps(hook, story, cta, path, voice=voice, rate=voice_rate, pitch=voice_pitch)
                 timestamps, meta = result
                 # Jika WordBoundary kosong (akurasi 0), coba voice berikutnya
                 if meta.accuracy == 0.0 and voice_idx < len(voices) - 1:
@@ -596,6 +596,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
     niche_description = channel_cfg.get("niche", "dark psychology and human behavior secrets")
     aesthetic_style = channel_cfg.get("aesthetic_query", "dark cinematic cold moody tone")
     voice_id = channel_cfg.get("voice_id", "id-ID-ArdiNeural")
+    voice_rate = channel_cfg.get("voice_rate", "+0%")
+    voice_pitch = channel_cfg.get("voice_pitch", "+0Hz")
     watermark_name = channel_cfg.get("watermark", "@RuangPikir")
     
     # Map the niche description or channel id to the existing NICHE_CONFIG keys
@@ -714,7 +716,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         else:
             logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
             download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
-            audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, voice_id=voice_id, attempts=3)
+            audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, voice_id=voice_id, voice_rate=voice_rate, voice_pitch=voice_pitch, attempts=3)
             
             results = await asyncio.gather(download_task, audio_task, return_exceptions=True)
             

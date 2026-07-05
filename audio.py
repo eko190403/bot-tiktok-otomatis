@@ -409,7 +409,7 @@ def build_clean_text(hook_tokens: List[Dict], story_tokens: List[Dict], cta_toke
     return full_text
 
 async def generate_voiceover_with_timestamps(
-    hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural"
+    hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural", rate: str = "+0%", pitch: str = "+0Hz"
 ) -> Tuple[List[WordTimestamp], SyncMetadata]:
 
     hook_tokens = tokenize_section(hook, "hook")
@@ -430,8 +430,8 @@ async def generate_voiceover_with_timestamps(
         communicate = edge_tts.Communicate(
             text=clean_text,
             voice=voice,
-            rate="-2%",
-            pitch="-1Hz"
+            rate=rate,
+            pitch=pitch
         )
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
