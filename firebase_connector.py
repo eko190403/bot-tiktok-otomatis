@@ -350,6 +350,57 @@ def get_last_upload_timestamp(channel_id: str) -> int:
     return 0
 
 
+# ─────────────────────────────────────────────
+# THEME PERFORMANCE (Visual A/B Analytics helpers)
+# ─────────────────────────────────────────────
+
+def record_theme_performance(theme: str, views: int = 0, likes: int = 0) -> None:
+    """Simpan satu data performa tema ke koleksi 'theme_stats'.
+
+    Digunakan oleh pipeline setelah video dipublish untuk agregasi sederhana.
+    """
+    if not _require_firestore("record_theme_performance"):
+        return
+    try:
+        db.collection("theme_stats").add({
+            "timestamp": int(time.time()),
+            "theme": theme,
+            "views": int(views) if views else 0,
+            "likes": int(likes) if likes else 0,
+        })
+        logger.info(f"📊 Theme performance recorded: {theme} (views={views}, likes={likes})")
+    except Exception as e:
+        logger.warning(f"⚠️ Gagal menyimpan theme performance ke Firestore: {e}")
+
+
+def get_top_themes(limit: int = 5) -> list:
+    """Ambil top theme berdasarkan total views dari koleksi 'theme_stats'.
+
+    Karena Firestore tidak mendukung agregasi server-side sederhana, fungsi ini
+    membaca dokumen recent dan melakukan agregasi di sisi klien.
+    """
+    if not _require_firestore("get_top_themes"):
+        return []
+    try:
+        docs = db.collection("theme_stats").stream()
+        agg = {}
+        for d in docs:
+            data = d.to_dict()
+            t = data.get("theme")
+            if not t:
+                continue
+            s = agg.setdefault(t, {"views": 0, "likes": 0, "count": 0})
+            s["views"] += int(data.get("views", 0))
+            s["likes"] += int(data.get("likes", 0))
+            s["count"] += 1
+
+        sorted_items = sorted(agg.items(), key=lambda x: x[1]["views"], reverse=True)[:limit]
+        return [{"theme": k, **v} for k, v in sorted_items]
+    except Exception as e:
+        logger.warning(f"⚠️ Gagal mengagregasi theme performance dari Firestore: {e}")
+        return []
+
+
 def is_clip_used(clip_id: str) -> bool:
     """Periksa apakah klip Pexels (berdasarkan ID) pernah dipakai sebelumnya."""
     if not _require_firestore("is_clip_used"):
