@@ -934,7 +934,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         music_dir = os.path.join(os.path.dirname(__file__), "assets", "music")
         
         # 1. Soft Swish / Glitch untuk transisi visual
-        trans_path = os.path.join(music_dir, "glitch.wav" if niche_key == "psychology" else "soft_swish.wav")
+        trans_path = os.path.join(music_dir, "glitch.wav" if channel_id == "ruangpikir" else "soft_swish.wav")
         if os.path.exists(trans_path):
             try:
                 trans_raw = AudioFileClip(trans_path)
@@ -949,7 +949,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                         # Terapkan efek DULU, baru set start dan end agar tidak tertimpa wrapper
                         from moviepy.audio.fx import MultiplyVolume
                         sfx_item = trans_base.subclipped(0, clip_len).with_effects([MultiplyVolume(0.12)])
-                        s_time = t_transition - (0.05 if niche_key == "psychology" else 0.2)
+                        s_time = t_transition - (0.05 if channel_id == "ruangpikir" else 0.2)
                         sfx_item = sfx_item.with_start(s_time).with_end(s_time + clip_len)
                         
                         # Probabilitas 60% agar tidak selalu muncul
