@@ -366,7 +366,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
             logger.warning("⚠️ Gagal menyimpan hook kandidat B ke database: %s", e)
 
     if isinstance(parsed_json, dict):
-        parsed_json["niche"] = niche
+        parsed_json["niche"] = config.get("niche", "Unknown")
         parsed_json["theme"] = chosen_theme
 
     return parsed_json
