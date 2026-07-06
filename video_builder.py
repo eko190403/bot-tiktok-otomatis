@@ -240,94 +240,13 @@ async def analyze_comments_with_gemini(comments: list) -> str:
         logger.warning("⚠️ Gagal menganalisis komentar dengan Gemini: %s", e)
         return ""
 
-NICHE_CONFIG = {
-    "psychology": {
-        "name": "Psikologi",
-        "description": "psikologi, mindset, dan perilaku manusia",
-        "themes": [
-            "Fakta Psikologi Menarik", 
-            "Stoikisme (Filosofi Teras)", 
-            "Dark Psychology (Trik/Manipulasi)", 
-            "Efek/Bias Psikologis dalam Kehidupan",
-            "Fakta Mind-Blowing Otak Manusia",
-            "Paradoks Psikologi & Realita",
-            "Fakta Unik Hubungan & Interaksi Sosial",
-            "Bahasa Tubuh & Rahasia Perilaku Manusia"
-        ],
-        "system_prompt": (
-            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang psikologi, mindset, dan perilaku manusia.\n"
-            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
-        ),
-        "tags_example": "['stoicism', 'mindset', 'psychology facts', 'dark psychology']",
-        "tags_fallback": ["shorts", "faktapsikologi", "mindset", "ruangpikir"]
-    },
-    "finance": {
-        "name": "Keuangan",
-        "description": "finansial, kebiasaan orang kaya, mindset uang, investasi, dan pengelolaan finansial",
-        "themes": [
-            "Kebiasaan Finansial Orang Kaya",
-            "Mindset Uang & Kelimpahan",
-            "Aturan Finansial 50/30/20",
-            "Cara Kerja Inflasi Secara Sederhana",
-            "Investasi Leher ke Atas",
-            "Kesalahan Keuangan di Usia 20-an",
-            "Pentingnya Dana Darurat",
-            "Rahasia Bebas Finansial (Financial Freedom)"
-        ],
-        "system_prompt": (
-            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang keuangan pribadi, investasi, dan edukasi finansial.\n"
-            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
-        ),
-        "tags_example": "['personal finance', 'investing', 'money habits', 'financial freedom']",
-        "tags_fallback": ["shorts", "keuangan", "investasi", "mindsetuang"]
-    },
-    "motivation": {
-        "name": "Motivasi",
-        "description": "disiplin diri, produktivitas, konsistensi, growth mindset, dan ketangguhan mental",
-        "themes": [
-            "Aturan 1 Persen Setiap Hari",
-            "Disiplin Mengalahkan Motivasi",
-            "Cara Menghancurkan Prokrastinasi (Menunda-nunda)",
-            "Kekuatan Konsistensi",
-            "Growth Mindset vs Fixed Mindset",
-            "Pentingnya Memiliki Rutinitas Pagi",
-            "Menghadapi Kegagalan & Mental Tangguh",
-            "Aturan 5 Detik untuk Bertindak"
-        ],
-        "system_prompt": (
-            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang motivasi, pengembangan diri, dan disiplin.\n"
-            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
-        ),
-        "tags_example": "['motivation', 'discipline', 'growth mindset', 'productivity']",
-        "tags_fallback": ["shorts", "motivasi", "disiplin", "pengembangandiri"]
-    },
-    "science": {
-        "name": "Sains",
-        "description": "sains, fakta ilmiah menarik, luar angkasa, otak manusia, sains populer, dan misteri alam semesta",
-        "themes": [
-            "Misteri Lubang Hitam (Black Hole)",
-            "Bagaimana Otak Menyimpan Memori",
-            "Fakta Menarik Kecepatan Cahaya",
-            "Sisi Gelap Laut Dalam (Deep Sea)",
-            "Teori Relativitas Einstein Secara Sederhana",
-            "Fakta Unik Sistem Saraf Manusia",
-            "Mengapa Kita Mengantuk Saat Hujan",
-            "Keajaiban Kuantum (Quantum Physics)"
-        ],
-        "system_prompt": (
-            "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang sains populer, fakta unik ilmiah, dan misteri alam semesta.\n"
-            "Buat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n"
-        ),
-        "tags_example": "['science facts', 'universe', 'brain science', 'space facts']",
-        "tags_fallback": ["shorts", "faktasains", "ilmiah", "antariksa"]
-    }
-}
+# NICHE_CONFIG dipindahkan ke config/channels.json
 
-async def generate_structured_script(niche: str = "psychology") -> dict:
-    logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis (%s)...", niche)
+async def generate_structured_script(channel_cfg: dict) -> dict:
+    logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
     import random
     
-    config = NICHE_CONFIG.get(niche, NICHE_CONFIG["psychology"])
+    config = channel_cfg
     chosen_theme = random.choice(config["themes"])
     logger.info("🎯 Tema terpilih: %s", chosen_theme)
     
@@ -596,18 +515,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
     voice_pitch = channel_cfg.get("voice_pitch", "+0Hz")
     watermark_name = channel_cfg.get("watermark", "@RuangPikir")
     
-    # Map the niche description or channel id to the existing NICHE_CONFIG keys
-    niche_key = "psychology"
-    if "stoic" in channel_id or "stoic" in niche_description:
-        niche_key = "psychology"
-    elif "finance" in channel_id or "money" in niche_description or "finansial" in channel_id:
-        niche_key = "finance"
-    elif "motivation" in niche_description or "disiplin" in channel_id or "grit" in niche_description:
-        niche_key = "motivation"
-    elif "science" in niche_description or "semesta" in channel_id or "universe" in niche_description:
-        niche_key = "science"
-        
-    logger.info("🎯 Channel terpilih: %s (Niche: %s -> Key: %s)", channel_id, niche_description, niche_key)
+    logger.info("🎯 Channel terpilih: %s (Niche: %s)", channel_id, niche_description)
 
     
     try:
@@ -624,7 +532,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 logger.warning(" Gagal memuat draf naskah: %s", e)
                 
         if not script_data:
-            script_data = await generate_structured_script(niche=niche_key)
+            script_data = await generate_structured_script(channel_cfg)
             with open(draft_script_path, "w", encoding="utf-8") as f:
                 json.dump(script_data, f, indent=4, ensure_ascii=False)
             logger.info(" Draf naskah disimpan ke cache (%s)", draft_script_path)

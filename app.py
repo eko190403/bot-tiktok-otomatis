@@ -159,6 +159,18 @@ async def main():
                     print(f"⚠️ Channel {channel_id} baru saja mengunggah video {hours_ago:.2f} jam yang lalu.")
                     print("ℹ️ Lewati jadwal otomatis kali ini untuk mencegah upload berdekatan. Selesai.")
                     return
+                    
+        # 🛡️ PRIME TIME SCHEDULER: Jangan publikasi di jam tidur (01:00 - 06:00 WIB)
+        if is_schedule and not args.force:
+            from datetime import datetime, timezone, timedelta
+            wib_timezone = timezone(timedelta(hours=7))
+            current_wib = datetime.now(wib_timezone)
+            hour = current_wib.hour
+            
+            if 1 <= hour <= 6:
+                print(f"😴 Saat ini jam {hour:02d}:00 WIB. Waktunya penonton tidur.")
+                print("ℹ️ Membatalkan eksekusi otomatis untuk mencegah video sepi. Selesai.")
+                return
 
         
         # Jalankan pembersihan draf lama (> 7 hari) untuk menghemat limit database
