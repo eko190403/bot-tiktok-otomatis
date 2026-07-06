@@ -972,7 +972,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                         # Center the transition SFX
                         sfx_item = trans_base.subclipped(0, clip_len).with_start(t_transition - (0.05 if niche_key == "psychology" else 0.2))
                         from moviepy.audio.fx import MultiplyVolume
-                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.12)])  # Volume 12%
+                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.12)]).with_end(t_transition - (0.05 if niche_key == "psychology" else 0.2) + clip_len)
                         
                         # Probabilitas 60% agar tidak selalu muncul
                         if random.random() < 0.6:
@@ -989,7 +989,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 moviepy_resources["sub_base"] = sub_base
                 sfx_item = sub_base.subclipped(0, min(sub_base.duration, 2.0)).with_start(0.0)
                 from moviepy.audio.fx import MultiplyVolume
-                sfx_item = sfx_item.with_effects([MultiplyVolume(0.20)]) # 20%
+                sfx_item = sfx_item.with_effects([MultiplyVolume(0.20)]).with_end(min(sub_base.duration, 2.0))
                 sfx_clips.append(sfx_item)
             except Exception as e:
                 logger.warning(" Gagal memuat Sub Drop: %s", e)
@@ -1006,7 +1006,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 for t in np.arange(2.0, total_duration - 2.0, 4.0):
                     sfx_item = hb_base.subclipped(0, hb_len).with_start(float(t))
                     from moviepy.audio.fx import MultiplyVolume
-                    sfx_item = sfx_item.with_effects([MultiplyVolume(0.15)]) # 15%
+                    sfx_item = sfx_item.with_effects([MultiplyVolume(0.15)]).with_end(float(t) + hb_len)
                     sfx_clips.append(sfx_item)
             except Exception as e:
                 logger.warning(" Gagal memuat Heartbeat: %s", e)
@@ -1023,7 +1023,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     if start_t < total_duration:
                         sfx_item = tick_base.subclipped(0, tick_len).with_start(start_t)
                         from moviepy.audio.fx import MultiplyVolume
-                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.08)]) # sangat pelan
+                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.08)]).with_end(start_t + tick_len)
                         sfx_clips.append(sfx_item)
                 logger.info(" SFX Ticks berhasil ditambahkan untuk %d kata.", len(all_timestamps))
             except Exception as e:
