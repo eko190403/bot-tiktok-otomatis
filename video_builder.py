@@ -34,7 +34,7 @@ except ImportError:
 # Memastikan RENDER_TIMEOUT_FACTOR tetap tinggi jika ter-import dari config lama
 RENDER_TIMEOUT_FACTOR = 15.0 
 
-from downloader import download_video_clips
+from downloader import download_video_clips, download_youtube_retention_video
 from effects import process_background_clip
 from subtitle_engine.orchestrator import SubtitleEngineV2
 from audio import generate_voiceover_with_timestamps, validate_timeline_invariants
@@ -448,6 +448,16 @@ async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: st
 
 
 
+async def run_retention_download(loop, keyword: str) -> list:
+    """Mengunduh video retention via yt-dlp secara asinkron (blocking wrapper)."""
+    try:
+        filename = await loop.run_in_executor(None, download_youtube_retention_video, keyword)
+        if filename:
+            return [filename]
+    except Exception as e:
+        logger.warning("⚠️ Gagal mengunduh retention video: %s", e)
+    return []
+
 async def run_download_with_retry(loop, keywords: list, target_count: int = 4, aesthetic_style: str = "dark cinematic cold moody tone", max_retry: int = 3) -> list:
     """Poin 4: Mengaktifkan mekanisme Retry internal untuk menangani network glitch download dengan target_count dinamis."""
     for attempt in range(max_retry):
@@ -609,9 +619,16 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             except Exception as e:
                 logger.warning(" Gagal memuat cache audio & timestamps: %s. Mengulang proses sintesis.", e)
                 
+        bg_type = channel_cfg.get("background_type", "pexels")
+        retention_keyword = channel_cfg.get("retention_keyword", "")
+        
         if reused_audio_and_timestamps:
             logger.info(" Menjalankan download background secara mandiri (menggunakan audio cache)...")
-            results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
+            if bg_type == "retention":
+                results = await run_retention_download(loop, retention_keyword)
+            else:
+                results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
+                
             if not results:
                 logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
                 video_files = []
@@ -619,7 +636,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 video_files = results
         else:
             logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
-            download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
+            if bg_type == "retention":
+                download_task = run_retention_download(loop, retention_keyword)
+            else:
+                download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
+                
             audio_task = generate_voiceover_resilient(hook, story, cta, vo_file_path, voice_id=voice_id, voice_rate=voice_rate, voice_pitch=voice_pitch, attempts=3)
             
             results = await asyncio.gather(download_task, audio_task, return_exceptions=True)
@@ -750,34 +771,80 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
 
         logger.info("📊 Segmentasi durasi latar belakang: %s", segment_durations)
 
-        for i, dur in enumerate(segment_durations):
-            file = video_files[i % len(video_files)]
-            try:
-                processed_clip = process_background_clip(file, dur)
-                moviepy_resources["processed_clips"].append(processed_clip)
-            except Exception as ce:
-                logger.error(" Kebocoran sub-resource dicegah: %s", ce)
-                if 'processed_clip' in locals() and processed_clip is not None:
-                    try: processed_clip.close()
-                    except: pass
-                continue
-
-        if not moviepy_resources["processed_clips"]:
-            logger.warning(" Tidak ada klip video latar belakang yang valid. Menggunakan background warna solid gelap.")
-            # Lebar 1080, tinggi 1920 (portrait) sesuai setelan video
-            moviepy_resources["combined_bg"] = ColorClip(
-                size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration
-            )
-        else:
-            moviepy_resources["raw_combined_bg"] = concatenate_videoclips(moviepy_resources["processed_clips"], method="compose")
-            bg_duration = moviepy_resources["raw_combined_bg"].duration
+        if bg_type == "retention" and video_files:
+            # Mode Layar Penuh (ASMR/Gameplay)
+            import random
+            from moviepy import VideoFileClip
+            from moviepy.video.fx.colorx import Colorx
             
-            if bg_duration < total_duration:
-                loop_factor = int(total_duration / bg_duration) + 1
-                moviepy_resources["looped_bg"] = moviepy_resources["raw_combined_bg"].with_effects([Loop(n=loop_factor)])
-                moviepy_resources["combined_bg"] = moviepy_resources["looped_bg"].subclipped(0, total_duration)
+            file = video_files[0]
+            try:
+                retention_clip = VideoFileClip(file).with_audio(None)
+                max_start = max(0, retention_clip.duration - total_duration)
+                start_time = random.uniform(0, max_start)
+                
+                # Potong klip
+                sliced_clip = retention_clip.subclipped(start_time, start_time + total_duration)
+                
+                # Crop to fit portrait (1080x1920)
+                from effects import find_smart_crop_offset, find_smart_crop_offset_vertical
+                w, h = sliced_clip.size
+                target_ratio = WIDTH / HEIGHT
+                current_ratio = w / h
+                x1, y1, x2, y2 = 0, 0, w, h
+                
+                if current_ratio > target_ratio:
+                    new_w = int(h * target_ratio)
+                    x_offset = find_smart_crop_offset(sliced_clip, new_w)
+                    x1 = x_offset
+                    x2 = x_offset + new_w
+                elif current_ratio < target_ratio:
+                    new_h = int(w / target_ratio)
+                    y_offset = find_smart_crop_offset_vertical(sliced_clip, new_h)
+                    y1 = y_offset
+                    y2 = y_offset + new_h
+                    
+                cropped = sliced_clip.cropped(x1=x1, y1=y1, x2=x2, y2=y2).resized((WIDTH, HEIGHT))
+                
+                # Gelapkan (dark overlay) sebesar 30% agar teks terbaca jelas
+                darkened = cropped.with_effects([Colorx(0.7)])
+                
+                moviepy_resources["combined_bg"] = darkened
+                moviepy_resources["processed_clips"].append(darkened) # for resource tracking
+                logger.info("🎬 Menggunakan Full-Screen Retention Background (Start: %.1fs)", start_time)
+            except Exception as e:
+                logger.error("❌ Gagal memproses retention background: %s", e)
+                moviepy_resources["combined_bg"] = ColorClip(size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration)
+        else:
+            # Mode Klasik (Pexels / Pixabay)
+            for i, dur in enumerate(segment_durations):
+                file = video_files[i % len(video_files)]
+                try:
+                    processed_clip = process_background_clip(file, dur)
+                    moviepy_resources["processed_clips"].append(processed_clip)
+                except Exception as ce:
+                    logger.error(" Kebocoran sub-resource dicegah: %s", ce)
+                    if 'processed_clip' in locals() and processed_clip is not None:
+                        try: processed_clip.close()
+                        except: pass
+                    continue
+    
+            if not moviepy_resources["processed_clips"]:
+                logger.warning(" Tidak ada klip video latar belakang yang valid. Menggunakan background warna solid gelap.")
+                # Lebar 1080, tinggi 1920 (portrait) sesuai setelan video
+                moviepy_resources["combined_bg"] = ColorClip(
+                    size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration
+                )
             else:
-                moviepy_resources["combined_bg"] = moviepy_resources["raw_combined_bg"].subclipped(0, total_duration)
+                moviepy_resources["raw_combined_bg"] = concatenate_videoclips(moviepy_resources["processed_clips"], method="compose")
+                bg_duration = moviepy_resources["raw_combined_bg"].duration
+                
+                if bg_duration < total_duration:
+                    loop_factor = int(total_duration / bg_duration) + 1
+                    moviepy_resources["looped_bg"] = moviepy_resources["raw_combined_bg"].with_effects([Loop(n=loop_factor)])
+                    moviepy_resources["combined_bg"] = moviepy_resources["looped_bg"].subclipped(0, total_duration)
+                else:
+                    moviepy_resources["combined_bg"] = moviepy_resources["raw_combined_bg"].subclipped(0, total_duration)
 
         # Poin 5: Konsep Smoothing/Interpolasi Teks.
         valid_words = []

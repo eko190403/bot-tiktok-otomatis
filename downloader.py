@@ -93,6 +93,47 @@ def choose_best_quality(video_files: list) -> str:
         return video_files[0].get("link")
     return ""
 
+def download_youtube_retention_video(keyword: str) -> str:
+    """Mengunduh video panjang dari YouTube menggunakan yt-dlp untuk retention background."""
+    import yt_dlp
+    
+    retention_dir = os.path.join(os.path.dirname(__file__), "assets", "retention")
+    os.makedirs(retention_dir, exist_ok=True)
+    
+    # Cek apakah sudah ada file mp4 di direktori (Gunakan yang ada agar tidak download ulang)
+    existing_files = [f for f in os.listdir(retention_dir) if f.endswith(".mp4")]
+    if existing_files:
+        print(f"📦 Menggunakan video retention yang sudah ada di cache: {existing_files[0]}")
+        return os.path.join(retention_dir, existing_files[0])
+        
+    print(f"📡 Mencari dan mengunduh video retention dari YouTube: '{keyword}'...")
+    
+    ydl_opts = {
+        'format': 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]',
+        'outtmpl': os.path.join(retention_dir, '%(id)s.%(ext)s'),
+        'noplaylist': True,
+        'quiet': False,
+        'max_downloads': 1
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # ytsearch1: mencari dan mengambil 1 hasil pertama
+            info = ydl.extract_info(f"ytsearch1:{keyword}", download=True)
+            if 'entries' in info and len(info['entries']) > 0:
+                entry = info['entries'][0]
+                filename = ydl.prepare_filename(entry)
+                print(f"✅ Berhasil mengunduh retention video: {filename}")
+                return filename
+            elif 'id' in info:
+                filename = ydl.prepare_filename(info)
+                print(f"✅ Berhasil mengunduh retention video: {filename}")
+                return filename
+    except Exception as e:
+        print(f"⚠️ Gagal mengunduh video retention YouTube: {e}")
+        
+    return ""
+
 def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style: str = "dark cinematic cold moody tone") -> list:
     """Mendownload klip video berdasarkan daftar keyword relevan, mendukung multi-download per keyword."""
     os.makedirs(DIR_TEMP, exist_ok=True)
