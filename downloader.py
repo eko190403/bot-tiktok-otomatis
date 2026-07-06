@@ -65,12 +65,19 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
         if not videos:
             continue
             
-        # Ambil sampel video unik secara acak sesuai kuota klip per keyword
-        sample_size = min(len(videos), clips_per_kw)
-        chosen_videos = random.sample(videos, sample_size)
+        # Acak seluruh video hasil pencarian agar bervariasi
+        random.shuffle(videos)
         
-        for vid_data in chosen_videos:
+        # Lacak jumlah klip yang berhasil didapat untuk keyword ini
+        kws_clip_count = 0
+        
+        for vid_data in videos:
+            # Berhenti jika kuota total keseluruhan klip sudah terpenuhi
             if clip_idx >= target_count:
+                break
+                
+            # Berhenti jika kuota klip untuk keyword ini sudah terpenuhi (agar jatah keyword lain tidak terambil semua)
+            if kws_clip_count >= clips_per_kw:
                 break
                 
             vid_id = vid_data.get("id")
@@ -104,6 +111,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                         except Exception:
                             pass
                         clip_idx += 1
+                        kws_clip_count += 1
                         continue
                     except Exception as copy_err:
                         print(f"⚠️ Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
@@ -135,6 +143,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                                 pass
 
                             clip_idx += 1
+                            kws_clip_count += 1
                             break
                         else:
                             print(f"⚠️ Gagal mengunduh klip (status {resp.status_code}) pada percobaan {attempt + 1}/3.")
@@ -143,15 +152,59 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                     if attempt < 2:
                         time.sleep(2)
                     
-    # Fallback jika jumlah klip terkumpul kurang dari target
+    # Fallback Pexels Online jika jumlah klip terkumpul kurang dari target (Prioritas 1)
     if len(downloaded_paths) < target_count:
         remaining_count = target_count - len(downloaded_paths)
         if downloaded_paths:
             print(f"⚠️ Hanya berhasil mengunduh {len(downloaded_paths)}/{target_count} klip dari kata kunci utama.")
-            print(f"📡 Mengisi sisa {remaining_count} klip menggunakan fallback...")
+            print(f"📡 Mengisi sisa {remaining_count} klip menggunakan fallback Pexels online...")
         else:
-            print("⚠️ Keyword spesifik tidak menghasilkan video. Mencari klip di folder fallback lokal...")
+            print("⚠️ Keyword spesifik tidak menghasilkan video. Mencari klip fallback di Pexels online...")
             
+        print(f"ℹ️ Kekurangan {remaining_count} klip. Menggunakan tema fallback Pexels (dark cinematic)...")
+        # Acak halaman pencarian fallback agar tidak selalu dapat klip yang sama
+        random_page = random.randint(1, 3)
+        fallback_videos = search_pexels_videos("dark cinematic", per_page=20, page=random_page)
+        
+        if fallback_videos:
+            random.shuffle(fallback_videos)
+            for vid_data in fallback_videos:
+                if len(downloaded_paths) >= target_count:
+                    break
+                    
+                vid_id = vid_data.get("id")
+                # Cek apakah sudah pernah dipakai
+                try:
+                    if vid_id and firebase_connector and getattr(firebase_connector, "is_clip_used", None):
+                        if firebase_connector.is_clip_used(vid_id):
+                            continue
+                except Exception:
+                    pass
+                    
+                download_url = choose_best_quality(vid_data.get("video_files", []))
+                if download_url:
+                    file_path = os.path.join(DIR_TEMP, f"bg_clip_fallback_pexels_{len(downloaded_paths)}.mp4")
+                    
+                    try:
+                        resp = requests.get(download_url, timeout=30)
+                        if resp.status_code == 200:
+                            with open(file_path, "wb") as f:
+                                f.write(resp.content)
+                            downloaded_paths.append(file_path)
+                            # tandai sebagai dipakai
+                            try:
+                                if vid_id and firebase_connector and getattr(firebase_connector, "mark_clip_used", None):
+                                    firebase_connector.mark_clip_used(vid_id)
+                            except Exception:
+                                pass
+                    except Exception as e:
+                        print(f"⚠️ Gagal mengunduh klip fallback Pexels: {e}")
+                        
+    # Fallback Folder Lokal (Prioritas Terakhir, hanya jika Pexels gagal total atau internet mati)
+    if len(downloaded_paths) < target_count:
+        remaining_count = target_count - len(downloaded_paths)
+        print(f"⚠️ Pexels Fallback gagal memenuhi {remaining_count} klip. Menggunakan folder fallback_clips lokal...")
+        
         fallback_dir = os.path.join("assets", "fallback_clips")
         local_fallbacks = []
         if os.path.exists(fallback_dir):
@@ -162,7 +215,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
             sample_size = min(len(local_fallbacks), remaining_count)
             chosen_local = random.sample(local_fallbacks, sample_size)
             for i, fname in enumerate(chosen_local):
-                file_path = os.path.join(DIR_TEMP, f"bg_clip_fallback_{i}.mp4")
+                file_path = os.path.join(DIR_TEMP, f"bg_clip_fallback_local_{i}.mp4")
                 src_path = os.path.join(fallback_dir, fname)
                 try:
                     shutil.copy2(src_path, file_path)
@@ -170,59 +223,5 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                     print(f"📦 Menggunakan klip fallback lokal: {src_path} -> {file_path}")
                 except Exception as copy_err:
                     print(f"⚠️ Gagal menyalin klip fallback lokal: {copy_err}")
-                    
-        # Jika kuota klip masih belum terpenuhi, beralih ke pencarian Pexels online dengan kata kunci umum
-        if len(downloaded_paths) < target_count:
-            remaining_count = target_count - len(downloaded_paths)
-            print(f"ℹ️ Kekurangan {remaining_count} klip. Menggunakan tema fallback Pexels (dark-aesthetic)...")
-
-            videos = search_pexels_videos("dark-aesthetic", per_page=15)
-            if videos:
-                sample_size = min(len(videos), remaining_count)
-                chosen_videos = random.sample(videos, sample_size)
-                for i, vid_data in enumerate(chosen_videos):
-                    vid_id = vid_data.get("id")
-                    pool_dir = os.path.join("assets", "video_pool")
-                    os.makedirs(pool_dir, exist_ok=True)
-                    cached_file = os.path.join(pool_dir, f"{vid_id}.mp4") if vid_id else None
-                    
-                    download_url = choose_best_quality(vid_data.get("video_files", []))
-                    if download_url:
-                        file_path = os.path.join(DIR_TEMP, f"bg_clip_fallback_pexels_{i}.mp4")
-                        
-                        if cached_file and os.path.exists(cached_file) and os.path.getsize(cached_file) > 0:
-                            print(f"📦 Menggunakan klip cache Pexels fallback: {cached_file} -> {file_path}")
-                            import shutil
-                            try:
-                                shutil.copy2(cached_file, file_path)
-                                downloaded_paths.append(file_path)
-                                continue
-                            except Exception as copy_err:
-                                print(f"⚠️ Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
-                                
-                        import time
-                        for attempt in range(3):
-                            try:
-                                resp = requests.get(download_url, timeout=30)
-                                if resp.status_code == 200:
-                                    with open(file_path, "wb") as f:
-                                        f.write(resp.content)
-                                        
-                                    if cached_file:
-                                        try:
-                                            with open(cached_file, "wb") as cf:
-                                                cf.write(resp.content)
-                                            print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
-                                        except Exception as cache_err:
-                                            print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
-                                            
-                                    downloaded_paths.append(file_path)
-                                    break
-                                else:
-                                    print(f"⚠️ Gagal mengunduh klip fallback (status {resp.status_code}) pada percobaan {attempt + 1}/3.")
-                            except Exception as e:
-                                print(f"⚠️ Gagal mengunduh klip fallback {i} pada percobaan {attempt + 1}/3: {e}")
-                            if attempt < 2:
-                                time.sleep(2)
             
     return downloaded_paths
