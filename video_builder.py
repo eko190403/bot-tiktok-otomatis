@@ -572,7 +572,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 "category_id": category_id,
                 "interactive_comment": interactive_comment,
                 "theme": chosen_visual_theme,
-                "niche": niche_key,
+                "niche": channel_id,
                 "hook": hook
             }, f, indent=4, ensure_ascii=False)
             
