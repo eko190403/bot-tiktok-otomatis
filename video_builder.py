@@ -452,12 +452,12 @@ async def generate_structured_script(niche: str = "psychology") -> dict:
 
     return parsed_json
 
-async def extract_keywords_from_script(script_text: str) -> list:
+async def extract_keywords_from_script(script_text: str, aesthetic_style: str = "dark cinematic") -> list:
     prompt = (
         "You are a professional video director and visual storyteller. Analyze the following vertical short video script and generate exactly 4 highly relevant, visually rich, and contextually precise English search terms for Pexels videos.\n\n"
         "CRITICAL GUIDELINES:\n"
-        "1. MATCH THE METAPHORS & CONTEXT PSYCHOLOGICALLY: Do NOT use literal representations if the script discusses abstract or psychological concepts (e.g., if discussing 'manipulation' or 'love bombing', DO NOT search for 'magician' or 'bombs'). Instead, search for visual metaphors or direct psychological representations (e.g., 'puppeteer hands', 'tense facial expression', 'anxious face', 'smartphone notifications', 'dominance gesture').\n"
-        "2. VISUALLY GRAPPLING: Focus on high-contrast, moody, or cinematic concepts (e.g., 'cinematic dark studio', 'cyberpunk rain', 'lonely silhouette', 'deep thought man').\n"
+        f"1. MATCH THE AESTHETIC & CONTEXT: Make sure the visuals perfectly match this specific channel's aesthetic: '{aesthetic_style}'. If the aesthetic is stoicism (e.g. roman statue, calm), DO NOT use dark psychology metaphors like 'tense face' or 'puppet strings'. If it is dark psychology, use psychological representations. ALWAYS adhere strictly to the '{aesthetic_style}' vibe.\n"
+        f"2. VISUALLY GRAPPLING: Focus on high-contrast, moody, or cinematic concepts that align with '{aesthetic_style}'.\n"
         "3. PEXELS FRIENDLY: Keep terms to 2-3 words, descriptive but concrete (avoid terms Pexels won't have like 'subconscious mind'). Use tangible objects/actions (e.g., 'brain model neon', 'hour glass sand', 'locked door key').\n"
         "4. MOOD CONSISTENCY: Ensure all 4 terms align with the overall tense/mysterious/educational mood of the script.\n\n"
         f"SCRIPT:\n\"{script_text}\"\n\n"
@@ -634,7 +634,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         cta = script_data.get("cta", "Follow untuk info lainnya").strip()
         caption = script_data.get("caption", "Fakta Menarik Hari Ini... #faktapsikologi #ruangpikir #fyp").strip()
         
-        keywords = await extract_keywords_from_script(story)
+        keywords = await extract_keywords_from_script(story, aesthetic_style)
         
         # Memilih tema visual secara acak untuk A/B testing
         from subtitle_engine.styles import SubtitleStyles
@@ -809,6 +809,10 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         
         moviepy_resources["audio_clip"] = AudioFileClip(vo_file_path)
         total_duration = moviepy_resources["audio_clip"].duration
+        
+        # PADDING 0.5 DETIK DI AKHIR VIDEO
+        # Agar kalimat / teks terakhir punya "ruang napas" dan tidak terpotong mentah-mentah
+        total_duration += 0.5
 
         # Hitung durasi Hook dari timestamps untuk menentukan pacing
         hook_end = 3.0
@@ -968,8 +972,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                         # Center the whoosh around the transition
                         sfx_item = whoosh_base.subclipped(0, clip_len).with_start(t_transition - 0.2)
                         from moviepy.audio.fx import MultiplyVolume
-                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.40)])
-                        sfx_clips.append(sfx_item)
+                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.10)])  # SFX jauh lebih pelan
+                        
+                        # Probabilitas 60% agar whoosh tidak selalu muncul di tiap pergantian (mengurangi repetisi)
+                        if random.random() < 0.6:
+                            sfx_clips.append(sfx_item)
                 logger.info(" SFX Transisi (Whoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
             except Exception as sfx_err:
                 logger.warning(" Gagal memuat SFX transisi: %s", sfx_err)
