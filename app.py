@@ -205,7 +205,7 @@ async def main():
         try:
             import firebase_connector
             from youtube_uploader import get_top_comments, reply_to_youtube_comments
-            viral_map = firebase_connector.get_viral_video_ids(min_views=500, limit=2)
+            viral_map = firebase_connector.get_viral_video_ids(min_views=500, limit=2, channel_id=channel_id)
             if viral_map:
                 print(f"💬 Ditemukan {len(viral_map)} video viral untuk dianalisis komentarnya...")
                 from video_builder import analyze_comments_with_gemini

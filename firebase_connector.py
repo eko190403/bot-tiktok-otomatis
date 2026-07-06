@@ -262,17 +262,16 @@ def get_previous_views(video_id: str) -> int:
         return 0
 
 
-def get_viral_video_ids(min_views: int = 500, limit: int = 3) -> dict:
-    """Mengambil video YouTube viral yang belum dianalisis komentarnya dari Firestore."""
+def get_viral_video_ids(min_views: int = 500, limit: int = 3, channel_id: str = None) -> dict:
+    """Mengambil video YouTube viral yang belum dianalisis komentarnya dari Firestore, difilter berdasarkan channel_id jika diberikan."""
     if not _require_firestore("get_viral_video_ids"):
         return {}
     try:
-        docs = (
-            db.collection("drafts")
-            .where("platform", "==", "youtube")
-            .limit(100)
-            .stream()
-        )
+        query = db.collection("drafts").where("platform", "==", "youtube")
+        if channel_id:
+            query = query.where("channel_id", "==", channel_id)
+            
+        docs = query.limit(100).stream()
         video_map = {}
         for doc in docs:
             data = doc.to_dict()
