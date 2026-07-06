@@ -953,46 +953,100 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             except Exception as me:
                 logger.warning(" Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
                 bg_music_clip = None
-        # ================= TRANSISI SOUND EFFECTS (SFX) =================
+        # ================= TRANSISI SOUND EFFECTS (SFX) & ADVANCED AUDIO DESIGN =================
         sfx_clips = []
-        whoosh_path = os.path.join(os.path.dirname(__file__), "assets", "music", "whoosh.wav")
-        pop_path = os.path.join(os.path.dirname(__file__), "assets", "music", "pop.wav")
+        music_dir = os.path.join(os.path.dirname(__file__), "assets", "music")
         
-        if os.path.exists(whoosh_path):
+        # 1. Soft Swish / Glitch untuk transisi visual
+        trans_path = os.path.join(music_dir, "glitch.wav" if niche_key == "psychology" else "soft_swish.wav")
+        if os.path.exists(trans_path):
             try:
-                whoosh_base = AudioFileClip(whoosh_path)
-                moviepy_resources["whoosh_base"] = whoosh_base
-                # Tambahkan SFX whoosh di setiap perpindahan visual (cumulative segment durations)
+                trans_base = AudioFileClip(trans_path)
+                moviepy_resources["trans_base"] = trans_base
                 t_transition = 0.0
-                # Lewati segmen terakhir karena tidak ada transisi ke klip berikutnya
                 for dur in segment_durations[:-1]:
                     t_transition += dur
                     if t_transition < total_duration - 1.0:
-                        clip_len = min(whoosh_base.duration, 0.8)
-                        # Center the whoosh around the transition
-                        sfx_item = whoosh_base.subclipped(0, clip_len).with_start(t_transition - 0.2)
+                        clip_len = min(trans_base.duration, 0.8)
+                        # Center the transition SFX
+                        sfx_item = trans_base.subclipped(0, clip_len).with_start(t_transition - (0.05 if niche_key == "psychology" else 0.2))
                         from moviepy.audio.fx import MultiplyVolume
-                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.10)])  # SFX jauh lebih pelan
+                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.12)])  # Volume 12%
                         
-                        # Probabilitas 60% agar whoosh tidak selalu muncul di tiap pergantian (mengurangi repetisi)
+                        # Probabilitas 60% agar tidak selalu muncul
                         if random.random() < 0.6:
                             sfx_clips.append(sfx_item)
-                logger.info(" SFX Transisi (Whoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
-            except Exception as sfx_err:
-                logger.warning(" Gagal memuat SFX transisi: %s", sfx_err)
+                logger.info(" SFX Transisi berhasil dimuat.")
+            except Exception as e:
+                logger.warning(" Gagal memuat SFX transisi: %s", e)
                 
-        # Pop SFX untuk kemunculan judul (hook)
-        if os.path.exists(pop_path) and hook_end > 0:
+        # 2. Sub Drop (Hanya 1x di detik 0.0 untuk efek kejut subliminal)
+        sub_path = os.path.join(music_dir, "sub_drop.wav")
+        if os.path.exists(sub_path):
             try:
-                pop_base = AudioFileClip(pop_path)
-                moviepy_resources["pop_base"] = pop_base
-                clip_len = min(pop_base.duration, 0.3)
-                pop_item = pop_base.subclipped(0, clip_len).with_start(0.1)
+                sub_base = AudioFileClip(sub_path)
+                moviepy_resources["sub_base"] = sub_base
+                sfx_item = sub_base.subclipped(0, min(sub_base.duration, 2.0)).with_start(0.0)
                 from moviepy.audio.fx import MultiplyVolume
-                pop_item = pop_item.with_effects([MultiplyVolume(0.50)])
-                sfx_clips.append(pop_item)
-            except Exception as pop_err:
-                logger.warning(" Gagal memuat SFX pop: %s", pop_err)
+                sfx_item = sfx_item.with_effects([MultiplyVolume(0.20)]) # 20%
+                sfx_clips.append(sfx_item)
+            except Exception as e:
+                logger.warning(" Gagal memuat Sub Drop: %s", e)
+
+        # 3. Heartbeat (Hanya untuk channel psikologi/stoik)
+        heartbeat_path = os.path.join(music_dir, "heartbeat.wav")
+        if os.path.exists(heartbeat_path) and niche_key == "psychology":
+            try:
+                hb_base = AudioFileClip(heartbeat_path)
+                moviepy_resources["hb_base"] = hb_base
+                hb_len = hb_base.duration
+                # Mainkan setiap 4 detik
+                import numpy as np
+                for t in np.arange(2.0, total_duration - 2.0, 4.0):
+                    sfx_item = hb_base.subclipped(0, hb_len).with_start(float(t))
+                    from moviepy.audio.fx import MultiplyVolume
+                    sfx_item = sfx_item.with_effects([MultiplyVolume(0.15)]) # 15%
+                    sfx_clips.append(sfx_item)
+            except Exception as e:
+                logger.warning(" Gagal memuat Heartbeat: %s", e)
+                
+        # 4. Soft Tick (Untuk setiap kata yang muncul, volume sangat pelan 8%)
+        tick_path = os.path.join(music_dir, "soft_tick.wav")
+        if os.path.exists(tick_path) and all_timestamps:
+            try:
+                tick_base = AudioFileClip(tick_path)
+                moviepy_resources["tick_base"] = tick_base
+                tick_len = tick_base.duration
+                for ts in all_timestamps:
+                    start_t = ts["start"]
+                    if start_t < total_duration:
+                        sfx_item = tick_base.subclipped(0, tick_len).with_start(start_t)
+                        from moviepy.audio.fx import MultiplyVolume
+                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.08)]) # sangat pelan
+                        sfx_clips.append(sfx_item)
+                logger.info(" SFX Ticks berhasil ditambahkan untuk %d kata.", len(all_timestamps))
+            except Exception as e:
+                logger.warning(" Gagal memuat Soft Tick: %s", e)
+
+        # 5. Rain Noise (Ambience pad)
+        rain_path = os.path.join(music_dir, "rain_noise.wav")
+        if os.path.exists(rain_path):
+            try:
+                rain_base = AudioFileClip(rain_path)
+                moviepy_resources["rain_base"] = rain_base
+                # loop rain
+                if rain_base.duration < total_duration:
+                    loops_needed = int(total_duration / rain_base.duration) + 1
+                    rain_clips = [rain_base] * loops_needed
+                    from moviepy import concatenate_audioclips
+                    rain_clip = concatenate_audioclips(rain_clips).subclipped(0, total_duration)
+                else:
+                    rain_clip = rain_base.subclipped(0, total_duration)
+                from moviepy.audio.fx import MultiplyVolume
+                rain_clip = rain_clip.with_effects([MultiplyVolume(0.10)]) # 10%
+                sfx_clips.append(rain_clip)
+            except Exception as e:
+                logger.warning(" Gagal memuat Rain Ambience: %s", e)
                 
         # Gabungkan audio TTS + musik latar + SFX
         audio_sources = [moviepy_resources["audio_clip"]]
