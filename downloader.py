@@ -1,19 +1,19 @@
 import os
 import random
 import requests
-from config import PEXELS_API_KEY, DIR_TEMP
+from config import PEXELS_API_KEY, PIXABAY_API_KEY, DIR_TEMP
 try:
     import firebase_connector
 except Exception:
     firebase_connector = None
 
-def search_pexels_videos(keyword: str, per_page: int = 5) -> list:
+def search_pexels_videos(keyword: str, per_page: int = 5, page: int = 1) -> list:
     """Mencari video portrait di Pexels berdasarkan keyword dari Gemini."""
     if not PEXELS_API_KEY:
         raise ValueError("❌ PEXELS_API_KEY belum dikonfigurasi di GitHub Secrets.")
         
     headers = {"Authorization": PEXELS_API_KEY}
-    url = f"https://api.pexels.com/videos/search?query={keyword}&per_page={per_page}&orientation=portrait"
+    url = f"https://api.pexels.com/videos/search?query={keyword}&per_page={per_page}&page={page}&orientation=portrait"
     
     import time
     for attempt in range(3):
@@ -27,6 +27,61 @@ def search_pexels_videos(keyword: str, per_page: int = 5) -> list:
             print(f"⚠️ Gagal menghubungi Pexels untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
         if attempt < 2:
             time.sleep(2)
+            time.sleep(2)
+    return []
+
+def search_pixabay_videos(keyword: str, per_page: int = 15, page: int = 1) -> list:
+    """Mencari video di Pixabay dan menormalisasi outputnya agar sesuai dengan format Pexels."""
+    if not PIXABAY_API_KEY:
+        print("⚠️ PIXABAY_API_KEY belum dikonfigurasi. Lewati pencarian Pixabay.")
+        return []
+        
+    import urllib.parse
+    q = urllib.parse.quote(keyword)
+    url = f"https://pixabay.com/api/videos/?key={PIXABAY_API_KEY}&q={q}&per_page={per_page}&page={page}&video_type=film"
+    
+    import time
+    for attempt in range(3):
+        try:
+            response = requests.get(url, timeout=15)
+            if response.status_code == 200:
+                hits = response.json().get("hits", [])
+                normalized = []
+                for hit in hits:
+                    videos_dict = hit.get("videos", {})
+                    best_vid = None
+                    for res in ["large", "medium", "small"]:
+                        v = videos_dict.get(res, {})
+                        if v and v.get("url"):
+                            best_vid = v
+                            break
+                    if best_vid and best_vid.get("url"):
+                        normalized.append({
+                            "id": f"pix_{hit.get('id')}",
+                            "source": "pixabay",
+                            "video_files": [{"link": best_vid.get("url"), "width": best_vid.get("width"), "height": best_vid.get("height")}]
+                        })
+                return normalized
+            else:
+                print(f"⚠️ Pixabay API mengembalikan status {response.status_code} pada percobaan {attempt + 1}/3.")
+        except Exception as e:
+            print(f"⚠️ Gagal menghubungi Pixabay untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
+        if attempt < 2:
+            time.sleep(2)
+    return []
+
+def search_multi_source(keyword: str, per_page: int = 15, page: int = 1) -> list:
+    """Load balancer: Acak penggunaan Pexels atau Pixabay, jika satu gagal, fallback ke yang lain."""
+    sources = ["pexels", "pixabay"] if PIXABAY_API_KEY else ["pexels"]
+    random.shuffle(sources)
+    
+    for source in sources:
+        if source == "pexels":
+            res = search_pexels_videos(keyword, per_page, page)
+            if res: return res
+        elif source == "pixabay":
+            res = search_pixabay_videos(keyword, per_page, page)
+            if res: return res
     return []
 
 def choose_best_quality(video_files: list) -> str:
@@ -45,7 +100,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
     downloaded_paths = []
     clip_idx = 0
     
-    print(f"📡 Memulai pencarian video Pexels berdasarkan keyword AI: {keywords} (Target: {target_count} klip)")
+    print(f"📡 Memulai pencarian video AI (Pexels & Pixabay) berdasarkan keyword: {keywords} (Target: {target_count} klip)")
     
     # Hitung jumlah klip yang perlu diambil dari masing-masing keyword secara rata
     num_kws = len(keywords) if keywords else 1
@@ -57,10 +112,10 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
             
         # Poin 1: Sinkronisasi Gaya Visual Estetik (Aesthetic Matching)
         aesthetic_query = f"{kw} {aesthetic_style}" if aesthetic_style else kw
-        videos = search_pexels_videos(aesthetic_query, per_page=15)
+        videos = search_multi_source(aesthetic_query, per_page=15)
         if not videos:
             # Fallback ke keyword murni jika pencarian estetik tidak mengembalikan video
-            videos = search_pexels_videos(kw, per_page=15)
+            videos = search_multi_source(kw, per_page=15)
             
         if not videos:
             continue
@@ -85,7 +140,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
             try:
                 if vid_id and firebase_connector and getattr(firebase_connector, "is_clip_used", None):
                     if firebase_connector.is_clip_used(vid_id):
-                        print(f"⛔ Klip Pexels {vid_id} sudah pernah dipakai. Lewati.")
+                        print(f"⛔ Klip {vid_id} sudah pernah dipakai. Lewati.")
                         continue
             except Exception as e:
                 print(f"⚠️ Gagal memeriksa used_clips: {e}")
@@ -161,10 +216,10 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
         else:
             print("⚠️ Keyword spesifik tidak menghasilkan video. Mencari klip fallback di Pexels online...")
             
-        print(f"ℹ️ Kekurangan {remaining_count} klip. Menggunakan tema fallback Pexels (dark cinematic)...")
+        print(f"ℹ️ Kekurangan {remaining_count} klip. Menggunakan tema fallback Multi-Source (dark cinematic)...")
         # Acak halaman pencarian fallback agar tidak selalu dapat klip yang sama
         random_page = random.randint(1, 3)
-        fallback_videos = search_pexels_videos("dark cinematic", per_page=20, page=random_page)
+        fallback_videos = search_multi_source("dark cinematic", per_page=20, page=random_page)
         
         if fallback_videos:
             random.shuffle(fallback_videos)

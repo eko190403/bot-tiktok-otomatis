@@ -30,6 +30,7 @@ for i in range(1, 9): # Mengubah range ke 9 agar mencakup kunci ke-6, 7, dan 8
         GEMINI_KEYS.append(key)
 
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 
 def get_channel_config(channel_id: str = "ruangpikir") -> dict:
     import json
