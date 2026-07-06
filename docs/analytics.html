@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       // apiKey redacted for repository. Set your API key at runtime or in a secure config.
@@ -35,7 +35,7 @@
     async function fetchDashboardData() {
       try {
         const draftsRef = collection(db, "drafts");
-        const q = query(draftsRef, limit(300));
+        const q = query(draftsRef, orderBy("timestamp", "desc"), limit(300));
         const snapshot = await getDocs(q);
 
         allDocs = [];
