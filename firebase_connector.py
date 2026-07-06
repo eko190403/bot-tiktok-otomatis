@@ -424,7 +424,7 @@ def mark_clip_used(clip_id: str) -> None:
         logger.error(f"❌ Gagal menandai klip terpakai di Firestore: {e}")
 
 
-def cleanup_used_clips(days: int = 90) -> None:
+def cleanup_used_clips(days: int = 30) -> None:
     """Hapus entri `used_clips` yang lebih tua dari `days` hari."""
     if not _require_firestore("cleanup_used_clips"):
         return
