@@ -1100,10 +1100,10 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             logger.warning(" Watermark/CTA dilewati: %s", wm_err)
         # Pastikan durasi final video persis sama dengan durasi audio (hindari padding/freep frames)
         try:
-            moviepy_resources["final_video"] = moviepy_resources["final_video"].set_duration(total_duration)
-        except Exception:
-            # Jika set_duration gagal, lanjutkan tanpa crash (MoviePy versi tertentu kadang bermasalah)
-            logger.debug("Tidak bisa memaksa set_duration pada final_video, melanjutkan.")
+            moviepy_resources["final_video"] = moviepy_resources["final_video"].with_duration(total_duration)
+        except Exception as e:
+            # Jika with_duration gagal, lanjutkan tanpa crash
+            logger.debug(f"Tidak bisa memaksa with_duration pada final_video: {e}, melanjutkan.")
         # ======================================================
 
         os.makedirs(DIR_OUTPUT, exist_ok=True)
