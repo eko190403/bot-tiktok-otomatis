@@ -335,18 +335,14 @@ async def generate_structured_script(niche: str = "psychology") -> dict:
     exclude_prompt = ""
     try:
         import firebase_connector
-        recent_entries = firebase_connector.get_recent_history(25)
+        recent_entries = firebase_connector.get_recent_history(60)
         if recent_entries:
             recent_hooks = [item["hook"] for item in recent_entries if "hook" in item]
-            recent_stories = [item["story"] for item in recent_entries if "story" in item]
             
             exclude_prompt = (
-                "\n\nHINDARI MEMBUAT HOOK DAN TOPIK YANG SAMA ATAU MIRIP DENGAN DAFTAR DI BAWAH INI "
-                "agar konten selalu unik, segar, dan bervariasi.\n"
-                "Daftar Hook terakhir:\n" +
-                "\n".join(f"- {h}" for h in recent_hooks) +
-                "\n\nDaftar Story/Penjelasan fakta terakhir:\n" +
-                "\n".join(f"- {s}" for s in recent_stories)
+                "\n\nHINDARI MEMBUAT TOPIK YANG SAMA ATAU MIRIP DENGAN DAFTAR DI BAWAH INI "
+                "agar konten selalu unik. Daftar 60 Hook/Topik terakhir yang sudah pernah dibuat:\n" +
+                "\n".join(f"- {h}" for h in recent_hooks)
             )
     except Exception as e:
         logger.warning(" Gagal membaca riwayat naskah: %s", e)
