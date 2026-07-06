@@ -63,8 +63,8 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
         scopes=["https://www.googleapis.com/auth/youtube.upload"]
     )
     
-    # Inisialisasi Google YouTube Service
-    youtube = build("youtube", "v3", credentials=credentials)
+    # Inisialisasi Google YouTube Service (cache_discovery=False untuk mencegah spam peringatan oauth2client)
+    youtube = build("youtube", "v3", credentials=credentials, cache_discovery=False)
     
     # Tentukan tags dan categoryId secara dinamis
     yt_tags = tags if tags else ["shorts", "faktapsikologi", "mindset", "ruangpikir"]

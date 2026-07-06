@@ -27,7 +27,6 @@ def search_pexels_videos(keyword: str, per_page: int = 5, page: int = 1) -> list
             print(f"⚠️ Gagal menghubungi Pexels untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
         if attempt < 2:
             time.sleep(2)
-            time.sleep(2)
     return []
 
 def search_pixabay_videos(keyword: str, per_page: int = 15, page: int = 1) -> list:
