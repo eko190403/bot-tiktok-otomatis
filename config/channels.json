@@ -89,32 +89,31 @@
       ]
     },
     "misterisemesta": {
-      "name": "Misteri Semesta",
-      "niche": "space universe mystery, quantum physics paradoxes, and deep science exploration",
-      "watermark": "@MisteriSemesta",
-      "aesthetic_query": "cosmic space nebula galaxy sci-fi deep blue violet cinematic",
+      "name": "Kisah Menarik",
+      "niche": "crazy facts, bizarre true stories, and mind-blowing life experiences",
+      "watermark": "@KisahMenarik",
+      "aesthetic_query": "aesthetic",
       "voice_id": "id-ID-ArdiNeural",
       "voice_rate": "-5%",
       "voice_pitch": "-2Hz",
       "theme_color": "classic_yellow",
       "background_type": "retention",
-      "retention_keyword": "minecraft parkour gameplay no copyright 1 hour",
+      "retention_keyword": "satisfying cooking street food no copyright 1 hour",
       "themes": [
-        "Misteri Lubang Hitam (Black Hole)",
-        "Fakta Menarik Kecepatan Cahaya",
-        "Sisi Gelap Laut Dalam (Deep Sea)",
-        "Teori Relativitas Einstein Secara Sederhana",
-        "Keajaiban Kuantum (Quantum Physics)",
-        "Misteri Alien & Ekstraterestrial",
-        "Evolusi Alam Semesta"
+        "Fakta Gila yang Sulit Dipercaya",
+        "Kisah Hidup Paling Aneh dalam Sejarah",
+        "Pengalaman Nyata di Luar Nalar",
+        "Fakta Tersembunyi di Balik Benda Sehari-hari",
+        "Orang-orang dengan Keberuntungan Ekstrem",
+        "Rahasia Kelam Tokoh Terkenal"
       ],
-      "system_prompt": "Kamu adalah seorang kreator konten TikTok viral Indonesia yang ahli di bidang sains populer, fakta unik ilmiah, dan misteri alam semesta.\nBuat SATU konten edukasi singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n",
-      "tags_example": "['science facts', 'universe', 'brain science', 'space facts']",
+      "system_prompt": "Kamu adalah pencerita (storyteller) hebat di TikTok yang suka membagikan kisah aneh, fakta gila, dan pengalaman nyata yang sulit dipercaya.\nBuat SATU konten cerita/fakta singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n",
+      "tags_example": "['crazy facts', 'true story', 'faktaunik', 'kisahnyata']",
       "tags_fallback": [
         "shorts",
-        "faktasains",
-        "ilmiah",
-        "antariksa"
+        "faktaunik",
+        "ceritanyata",
+        "kisahmenarik"
       ]
     },
     "poladisiplin": {
