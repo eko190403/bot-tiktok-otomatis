@@ -153,13 +153,50 @@ def update_draft_stats(video_id: str, views: int, likes: int) -> None:
     if not _require_firestore("update_draft_stats"):
         return
     try:
-        db.collection("drafts").document(video_id).update({
+        doc_ref = db.collection("drafts").document(video_id)
+        doc = doc_ref.get()
+        if not doc.exists:
+            return
+            
+        data = doc.to_dict()
+        prev_views = data.get("views", 0)
+        prev_likes = data.get("likes", 0)
+        
+        delta_views = views - prev_views
+        delta_likes = likes - prev_likes
+        
+        batch = db.batch()
+        batch.update(doc_ref, {
             "views": views,
             "likes": likes,
             "last_checked": int(time.time()),
         })
+        
+        # A/B Testing Aggregation: Increment theme stats
+        theme = data.get("theme")
+        if theme and (delta_views > 0 or delta_likes > 0):
+            theme_ref = db.collection("theme_stats").document(theme)
+            batch.set(theme_ref, {
+                "views": firestore.Increment(delta_views),
+                "likes": firestore.Increment(delta_likes)
+            }, merge=True)
+            
+        # A/B Testing Aggregation: Increment hook stats
+        hook = data.get("hook")
+        if hook and (delta_views > 0 or delta_likes > 0):
+            # Membatasi ID dokumen maksimal 100 karakter agar tidak terlalu panjang
+            hook_id = hook[:100].replace("/", "-").strip() if hook else ""
+            if hook_id:
+                hook_ref = db.collection("hook_stats").document(hook_id)
+                batch.set(hook_ref, {
+                    "views": firestore.Increment(delta_views),
+                    "likes": firestore.Increment(delta_likes),
+                    "full_text": hook
+                }, merge=True)
+                
+        batch.commit()
     except Exception as e:
-        logger.error(f"❌ Gagal memperbarui stats draf di Firestore: {e}")
+        logger.error(f"❌ Gagal memperbarui stats draf & analitik di Firestore: {e}")
 
 
 # ─────────────────────────────────────────────
@@ -354,50 +391,37 @@ def get_last_upload_timestamp(channel_id: str) -> int:
 # THEME PERFORMANCE (Visual A/B Analytics helpers)
 # ─────────────────────────────────────────────
 
-def record_theme_performance(theme: str, views: int = 0, likes: int = 0) -> None:
-    """Simpan satu data performa tema ke koleksi 'theme_stats'.
-
-    Digunakan oleh pipeline setelah video dipublish untuk agregasi sederhana.
-    """
-    if not _require_firestore("record_theme_performance"):
-        return
-    try:
-        db.collection("theme_stats").add({
-            "timestamp": int(time.time()),
-            "theme": theme,
-            "views": int(views) if views else 0,
-            "likes": int(likes) if likes else 0,
-        })
-        logger.info(f"📊 Theme performance recorded: {theme} (views={views}, likes={likes})")
-    except Exception as e:
-        logger.warning(f"⚠️ Gagal menyimpan theme performance ke Firestore: {e}")
-
-
 def get_top_themes(limit: int = 5) -> list:
-    """Ambil top theme berdasarkan total views dari koleksi 'theme_stats'.
-
-    Karena Firestore tidak mendukung agregasi server-side sederhana, fungsi ini
-    membaca dokumen recent dan melakukan agregasi di sisi klien.
-    """
+    """Ambil top theme berdasarkan total views dari koleksi 'theme_stats' (sudah diagregasi oleh Increment)."""
     if not _require_firestore("get_top_themes"):
         return []
     try:
-        docs = db.collection("theme_stats").stream()
-        agg = {}
-        for d in docs:
-            data = d.to_dict()
-            t = data.get("theme")
-            if not t:
-                continue
-            s = agg.setdefault(t, {"views": 0, "likes": 0, "count": 0})
-            s["views"] += int(data.get("views", 0))
-            s["likes"] += int(data.get("likes", 0))
-            s["count"] += 1
-
-        sorted_items = sorted(agg.items(), key=lambda x: x[1]["views"], reverse=True)[:limit]
-        return [{"theme": k, **v} for k, v in sorted_items]
+        docs = (
+            db.collection("theme_stats")
+            .order_by("views", direction=firestore.Query.DESCENDING)
+            .limit(limit)
+            .stream()
+        )
+        return [{"theme": d.id, **d.to_dict()} for d in docs]
     except Exception as e:
-        logger.warning(f"⚠️ Gagal mengagregasi theme performance dari Firestore: {e}")
+        logger.warning(f"⚠️ Gagal mengambil theme performance dari Firestore: {e}")
+        return []
+
+
+def get_top_hooks(limit: int = 3) -> list:
+    """Ambil top hook berdasarkan total views dari koleksi 'hook_stats'."""
+    if not _require_firestore("get_top_hooks"):
+        return []
+    try:
+        docs = (
+            db.collection("hook_stats")
+            .order_by("views", direction=firestore.Query.DESCENDING)
+            .limit(limit)
+            .stream()
+        )
+        return [{"hook": d.id, **d.to_dict()} for d in docs]
+    except Exception as e:
+        logger.warning(f"⚠️ Gagal mengambil hook performance dari Firestore: {e}")
         return []
 
 
