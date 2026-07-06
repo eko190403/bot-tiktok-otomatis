@@ -474,6 +474,17 @@ async def run_download_with_retry(loop, keywords: list, target_count: int = 4, a
             await asyncio.sleep(2.0 * (attempt + 1))
     return []
 
+async def run_retention_with_fallback(loop, retention_keyword: str, keywords: list, target_count: int, aesthetic_style: str) -> tuple:
+    """Mencoba download dari YouTube, jika gagal (misal: bot protection), fallback ke Pexels.
+    Return: (results_list, is_fallback_boolean)"""
+    results = await run_retention_download(loop, retention_keyword)
+    if not results:
+        logger.warning("⚠️ YouTube-DL gagal (kemungkinan IP diblokir). Mengaktifkan fallback otomatis ke Pexels/Pixabay...")
+        results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
+        return results, True
+    return results, False
+
+
 def safe_close_resources(resources: dict, files_to_delete: list):
     logger.info("🧹 Memulai pembersihan resource secara aman...")
     for name, obj in resources.items():
@@ -625,7 +636,9 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         if reused_audio_and_timestamps:
             logger.info(" Menjalankan download background secara mandiri (menggunakan audio cache)...")
             if bg_type == "retention":
-                results = await run_retention_download(loop, retention_keyword)
+                results, is_fallback = await run_retention_with_fallback(loop, retention_keyword, keywords, needed_clips, aesthetic_style)
+                if is_fallback:
+                    bg_type = "pexels"
             else:
                 results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
                 
@@ -637,7 +650,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         else:
             logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
             if bg_type == "retention":
-                download_task = run_retention_download(loop, retention_keyword)
+                download_task = run_retention_with_fallback(loop, retention_keyword, keywords, needed_clips, aesthetic_style)
             else:
                 download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
                 
@@ -649,7 +662,12 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
                 video_files = []
             else:
-                video_files = results[0]
+                if bg_type == "retention":
+                    video_files, is_fallback = results[0]
+                    if is_fallback:
+                        bg_type = "pexels"
+                else:
+                    video_files = results[0]
                 
             if isinstance(results[1], Exception):
                 raise RuntimeError(f"Gagal menghasilkan audio dari Edge-TTS: {results[1]}") from results[1]
@@ -977,7 +995,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
 
         # 3. Heartbeat (Hanya untuk channel psikologi/stoik)
         heartbeat_path = os.path.join(music_dir, "heartbeat.wav")
-        if os.path.exists(heartbeat_path) and niche_key == "psychology":
+        if os.path.exists(heartbeat_path) and channel_id == "ruangpikir":
             try:
                 hb_raw = AudioFileClip(heartbeat_path)
                 from moviepy.audio.AudioClip import AudioArrayClip
