@@ -969,10 +969,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     t_transition += dur
                     if t_transition < total_duration - 1.0:
                         clip_len = min(trans_base.duration, 0.8)
-                        # Center the transition SFX
-                        sfx_item = trans_base.subclipped(0, clip_len).with_start(t_transition - (0.05 if niche_key == "psychology" else 0.2))
+                        # Terapkan efek DULU, baru set start dan end agar tidak tertimpa wrapper
                         from moviepy.audio.fx import MultiplyVolume
-                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.12)]).with_end(t_transition - (0.05 if niche_key == "psychology" else 0.2) + clip_len)
+                        sfx_item = trans_base.subclipped(0, clip_len).with_effects([MultiplyVolume(0.12)])
+                        s_time = t_transition - (0.05 if niche_key == "psychology" else 0.2)
+                        sfx_item = sfx_item.with_start(s_time).with_end(s_time + clip_len)
                         
                         # Probabilitas 60% agar tidak selalu muncul
                         if random.random() < 0.6:
@@ -987,9 +988,10 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             try:
                 sub_base = AudioFileClip(sub_path)
                 moviepy_resources["sub_base"] = sub_base
-                sfx_item = sub_base.subclipped(0, min(sub_base.duration, 2.0)).with_start(0.0)
                 from moviepy.audio.fx import MultiplyVolume
-                sfx_item = sfx_item.with_effects([MultiplyVolume(0.20)]).with_end(min(sub_base.duration, 2.0))
+                clip_len = min(sub_base.duration, 2.0)
+                sfx_item = sub_base.subclipped(0, clip_len).with_effects([MultiplyVolume(0.20)])
+                sfx_item = sfx_item.with_start(0.0).with_end(clip_len)
                 sfx_clips.append(sfx_item)
             except Exception as e:
                 logger.warning(" Gagal memuat Sub Drop: %s", e)
@@ -1004,9 +1006,9 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 # Mainkan setiap 4 detik
                 import numpy as np
                 for t in np.arange(2.0, total_duration - 2.0, 4.0):
-                    sfx_item = hb_base.subclipped(0, hb_len).with_start(float(t))
                     from moviepy.audio.fx import MultiplyVolume
-                    sfx_item = sfx_item.with_effects([MultiplyVolume(0.15)]).with_end(float(t) + hb_len)
+                    sfx_item = hb_base.with_effects([MultiplyVolume(0.15)])
+                    sfx_item = sfx_item.with_start(float(t)).with_end(float(t) + hb_len)
                     sfx_clips.append(sfx_item)
             except Exception as e:
                 logger.warning(" Gagal memuat Heartbeat: %s", e)
@@ -1021,9 +1023,9 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 for ts in all_timestamps:
                     start_t = ts["start"]
                     if start_t < total_duration:
-                        sfx_item = tick_base.subclipped(0, tick_len).with_start(start_t)
                         from moviepy.audio.fx import MultiplyVolume
-                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.08)]).with_end(start_t + tick_len)
+                        sfx_item = tick_base.with_effects([MultiplyVolume(0.08)])
+                        sfx_item = sfx_item.with_start(start_t).with_end(start_t + tick_len)
                         sfx_clips.append(sfx_item)
                 logger.info(" SFX Ticks berhasil ditambahkan untuk %d kata.", len(all_timestamps))
             except Exception as e:
