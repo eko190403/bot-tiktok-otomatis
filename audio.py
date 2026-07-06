@@ -382,21 +382,14 @@ def build_clean_text(hook_tokens: List[Dict], story_tokens: List[Dict], cta_toke
     if hook_text and not hook_text[-1] in [".", "!", "?", ","]:
         hook_text += "..."
 
-    # 2. Bangun Story dengan mempertahankan tanda baca akhir kalimat agar TTS menjeda secara alami
+    # 2. Bangun Story tanpa tanda baca akhir kalimat agar TTS membaca terus tanpa jeda panjang (Cut Dead Air)
     story_parts = []
     current_sentence = []
     for t in story_tokens:
         word = t["spoken"]
         current_sentence.append(word)
-        # Jika token display asli memiliki tanda baca akhir kalimat, gunakan untuk jeda
-        if any(char in t["display"] for char in [".", "!", "?", ","]):
-            # Ambil tanda baca asli dari display untuk disisipkan
-            match = re.search(r"([.,!?]+)$", t["display"])
-            punc = match.group(1) if match else "."
-            story_parts.append(" ".join(current_sentence) + punc)
-            current_sentence = []
     if current_sentence:
-        story_parts.append(" ".join(current_sentence) + ".")
+        story_parts.append(" ".join(current_sentence))
     story_text = " ".join(story_parts)
 
     # 3. Bangun CTA

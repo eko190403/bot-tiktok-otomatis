@@ -460,7 +460,7 @@ async def extract_keywords_from_script(script_text: str) -> list:
     prompt = (
         "You are a professional video director and visual storyteller. Analyze the following vertical short video script and generate exactly 4 highly relevant, visually rich, and contextually precise English search terms for Pexels videos.\n\n"
         "CRITICAL GUIDELINES:\n"
-        "1. MATCH THE METAPHORS & CONTEXT: Do not use generic keywords. If the script discusses 'manipulation' or 'praise', do not search for abstract terms. Instead, search for visual metaphors or direct representations (e.g., 'puppeteer hands', 'fake smile', 'shadow face', 'applause crowd', 'whispering').\n"
+        "1. MATCH THE METAPHORS & CONTEXT PSYCHOLOGICALLY: Do NOT use literal representations if the script discusses abstract or psychological concepts (e.g., if discussing 'manipulation' or 'love bombing', DO NOT search for 'magician' or 'bombs'). Instead, search for visual metaphors or direct psychological representations (e.g., 'puppeteer hands', 'tense facial expression', 'anxious face', 'smartphone notifications', 'dominance gesture').\n"
         "2. VISUALLY GRAPPLING: Focus on high-contrast, moody, or cinematic concepts (e.g., 'cinematic dark studio', 'cyberpunk rain', 'lonely silhouette', 'deep thought man').\n"
         "3. PEXELS FRIENDLY: Keep terms to 2-3 words, descriptive but concrete (avoid terms Pexels won't have like 'subconscious mind'). Use tangible objects/actions (e.g., 'brain model neon', 'hour glass sand', 'locked door key').\n"
         "4. MOOD CONSISTENCY: Ensure all 4 terms align with the overall tense/mysterious/educational mood of the script.\n\n"
@@ -831,7 +831,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     current_time = hook_end
                     continue
             else:
-                dur = min(3.5, total_duration - current_time)
+                # FAST PACING: Maksimal 2.5 detik per visual klip agar penonton tidak bosan
+                dur = min(2.5, total_duration - current_time)
                 # Jika segmen terakhir terlalu pendek, gabungkan dengan sebelumnya
                 if segment_durations and (total_duration - current_time) < 1.0:
                     segment_durations[-1] += (total_duration - current_time)
@@ -954,25 +955,41 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 bg_music_clip = None
         # ================= TRANSISI SOUND EFFECTS (SFX) =================
         sfx_clips = []
-        sfx_path = os.path.join(os.path.dirname(__file__), "assets", "sfx", "swoosh.mp3")
-        if os.path.exists(sfx_path):
+        whoosh_path = os.path.join(os.path.dirname(__file__), "assets", "music", "whoosh.wav")
+        pop_path = os.path.join(os.path.dirname(__file__), "assets", "music", "pop.wav")
+        
+        if os.path.exists(whoosh_path):
             try:
-                sfx_base = AudioFileClip(sfx_path)
-                moviepy_resources["sfx_base"] = sfx_base
-                # Jeda pergantian klip terjadi setiap 4 detik (duration_per_clip = 4.0)
-                num_transitions = int(total_duration / 4.0)
-                for i in range(1, num_transitions + 1):
-                    t_start = i * 4.0
-                    if t_start < total_duration - 1.0:
-                        # Potong sfx maksimal sepanjang durasi aslinya atau 1.2 detik
-                        clip_len = min(sfx_base.duration, 1.2)
-                        sfx_item = sfx_base.subclipped(0, clip_len).with_start(t_start - 0.4)
+                whoosh_base = AudioFileClip(whoosh_path)
+                moviepy_resources["whoosh_base"] = whoosh_base
+                # Tambahkan SFX whoosh di setiap perpindahan visual (cumulative segment durations)
+                t_transition = 0.0
+                # Lewati segmen terakhir karena tidak ada transisi ke klip berikutnya
+                for dur in segment_durations[:-1]:
+                    t_transition += dur
+                    if t_transition < total_duration - 1.0:
+                        clip_len = min(whoosh_base.duration, 0.8)
+                        # Center the whoosh around the transition
+                        sfx_item = whoosh_base.subclipped(0, clip_len).with_start(t_transition - 0.2)
                         from moviepy.audio.fx import MultiplyVolume
-                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.20)])
+                        sfx_item = sfx_item.with_effects([MultiplyVolume(0.40)])
                         sfx_clips.append(sfx_item)
-                logger.info(" SFX Transisi (Swoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
+                logger.info(" SFX Transisi (Whoosh) berhasil dimuat untuk %d pergantian klip.", len(sfx_clips))
             except Exception as sfx_err:
                 logger.warning(" Gagal memuat SFX transisi: %s", sfx_err)
+                
+        # Pop SFX untuk kemunculan judul (hook)
+        if os.path.exists(pop_path) and hook_end > 0:
+            try:
+                pop_base = AudioFileClip(pop_path)
+                moviepy_resources["pop_base"] = pop_base
+                clip_len = min(pop_base.duration, 0.3)
+                pop_item = pop_base.subclipped(0, clip_len).with_start(0.1)
+                from moviepy.audio.fx import MultiplyVolume
+                pop_item = pop_item.with_effects([MultiplyVolume(0.50)])
+                sfx_clips.append(pop_item)
+            except Exception as pop_err:
+                logger.warning(" Gagal memuat SFX pop: %s", pop_err)
                 
         # Gabungkan audio TTS + musik latar + SFX
         audio_sources = [moviepy_resources["audio_clip"]]

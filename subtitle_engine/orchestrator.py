@@ -12,7 +12,7 @@ from subtitle_engine.animation import SubtitleAnimator
 from config import WIDTH, HEIGHT, FONT_PATH
 
 # Batas frase default (di-override oleh styles.py per style_type)
-DEFAULT_MAX_WORDS = 4
+DEFAULT_MAX_WORDS = 2
 DEFAULT_MAX_CHARS = 32
 NATURAL_GAP_LIMIT = 0.38   # Detik jeda bicara yang dianggap pemisah frase natural
 
@@ -90,8 +90,8 @@ class SubtitleEngineV2:
         grouped_phrases = self._group_words_into_rhythm_phrases(raw_words, max_words, max_chars)
         clips           = []
 
-        # Posisi Y subtitle: 75% tinggi layar (lebih aman dari area UI TikTok)
-        subtitle_y_ratio = 0.75
+        # Posisi Y subtitle: 50% tinggi layar (Tepat di tengah/eye-level)
+        subtitle_y_ratio = 0.50
 
         for p_idx, phrase in enumerate(grouped_phrases):
             phrase_len = len(phrase)

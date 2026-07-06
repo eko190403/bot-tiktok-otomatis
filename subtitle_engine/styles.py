@@ -52,21 +52,21 @@ class SubtitleStyles:
                 "active_color":  theme_data["hook"]["active_color"],
                 "glow_color":    theme_data["hook"]["glow_color"],
                 "font_scale":    1.2,
-                "max_words":     3,
+                "max_words":     2,
             },
             "body": {
                 "default_color": theme_data["body"]["default_color"],
                 "active_color":  theme_data["body"]["active_color"],
                 "glow_color":    theme_data["body"]["glow_color"],
                 "font_scale":    1.0,
-                "max_words":     5,
+                "max_words":     2,
             },
             "cta": {
                 "default_color": theme_data["cta"]["default_color"],
                 "active_color":  theme_data["cta"]["active_color"],
                 "glow_color":    theme_data["cta"]["glow_color"],
                 "font_scale":    1.1,
-                "max_words":     4,
+                "max_words":     2,
             },
         }
         return styles.get(style_type, styles["body"])
