@@ -898,9 +898,10 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         bg_music_clip = None
         music_dir = os.path.join(os.path.dirname(__file__), "assets", "music")
         music_extensions = (".mp3", ".wav", ".ogg", ".m4a")
+        sfx_names = {"whoosh.wav", "pop.wav", "glitch.wav", "sub_drop.wav", "heartbeat.wav", "rain_noise.wav", "soft_swish.wav", "soft_tick.wav"}
         
         os.makedirs(music_dir, exist_ok=True)
-        music_files = [f for f in os.listdir(music_dir) if f.lower().endswith(music_extensions)]
+        music_files = [f for f in os.listdir(music_dir) if f.lower().endswith(music_extensions) and f not in sfx_names]
         
         if not music_files:
             logger.info(" Folder assets/music/ kosong. Mengunduh backsound gratis bebas hak cipta secara otomatis...")
