@@ -97,7 +97,9 @@ def choose_best_quality(video_files: list) -> str:
 def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style: str = "dark cinematic cold moody tone") -> list:
     """Mendownload klip video berdasarkan daftar keyword relevan, mendukung multi-download per keyword."""
     os.makedirs(DIR_TEMP, exist_ok=True)
+    os.makedirs(DIR_TEMP, exist_ok=True)
     downloaded_paths = []
+    reusable_clips = []  # Tempat menyimpan klip yang pernah dipakai untuk fallback darurat
     clip_idx = 0
     
     print(f"📡 Memulai pencarian video AI (Pexels & Pixabay) berdasarkan keyword: {keywords} (Target: {target_count} klip)")
@@ -136,11 +138,12 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                 break
                 
             vid_id = vid_data.get("id")
-            # Jika Firestore tersedia, lewati klip yang sudah pernah dipakai
+            # Jika Firestore tersedia, lewati klip yang sudah pernah dipakai (simpan untuk darurat)
             try:
                 if vid_id and firebase_connector and getattr(firebase_connector, "is_clip_used", None):
                     if firebase_connector.is_clip_used(vid_id):
-                        print(f"⛔ Klip {vid_id} sudah pernah dipakai. Lewati.")
+                        print(f"⛔ Klip {vid_id} pernah dipakai. Disimpan untuk cadangan darurat (reuse).")
+                        reusable_clips.append(vid_data)
                         continue
             except Exception as e:
                 print(f"⚠️ Gagal memeriksa used_clips: {e}")
@@ -232,6 +235,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                 try:
                     if vid_id and firebase_connector and getattr(firebase_connector, "is_clip_used", None):
                         if firebase_connector.is_clip_used(vid_id):
+                            reusable_clips.append(vid_data)
                             continue
                 except Exception:
                     pass
@@ -254,6 +258,28 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                                 pass
                     except Exception as e:
                         print(f"⚠️ Gagal mengunduh klip fallback Pexels: {e}")
+                        
+    # 3. Fallback Darurat: REUSE (Menggunakan ulang klip yang pernah dipakai, tapi diacak)
+    if len(downloaded_paths) < target_count and reusable_clips:
+        remaining_count = target_count - len(downloaded_paths)
+        print(f"♻️ Darurat: Kekurangan {remaining_count} klip. Menggunakan ulang (REUSE) klip yang pernah dipakai agar proses tidak gagal...")
+        random.shuffle(reusable_clips)
+        for vid_data in reusable_clips:
+            if len(downloaded_paths) >= target_count:
+                break
+                
+            download_url = choose_best_quality(vid_data.get("video_files", []))
+            if download_url:
+                file_path = os.path.join(DIR_TEMP, f"bg_clip_reuse_{len(downloaded_paths)}.mp4")
+                try:
+                    resp = requests.get(download_url, timeout=30)
+                    if resp.status_code == 200:
+                        with open(file_path, "wb") as f:
+                            f.write(resp.content)
+                        downloaded_paths.append(file_path)
+                        print(f"✅ Berhasil me-reuse klip {vid_data.get('id')}.")
+                except Exception as e:
+                    print(f"⚠️ Gagal me-reuse klip: {e}")
                         
     # Fallback Folder Lokal (Prioritas Terakhir, hanya jika Pexels gagal total atau internet mati)
     if len(downloaded_paths) < target_count:
