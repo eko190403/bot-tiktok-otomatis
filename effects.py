@@ -3,18 +3,22 @@ from config import WIDTH, HEIGHT
 from PIL import Image
 import numpy as np
 
-def apply_slow_zoom(clip, speed=0.05, zoom_in=True):
+def apply_slow_zoom(clip, speed=0.05, zoom_in=True, base_zoom=None):
     """Efek Ken Burns (Slow Zoom In / Out) khas TikTok untuk menjaga layar terus bergerak."""
+    import random
+    if base_zoom is None:
+        base_zoom = random.uniform(1.05, 1.10)
+        
     def zoom_effect(get_frame, t):
         frame = get_frame(t) # Numpy array (H, W, C)
         h, w, c = frame.shape
         
         if zoom_in:
-            factor = 1.0 + (speed * t)
+            factor = base_zoom + (speed * t)
         else:
             # Zoom out: mulai dari besar ke kecil
             duration = clip.duration if clip.duration else 4.0
-            factor = 1.0 + (speed * max(0.0, duration - t))
+            factor = base_zoom + (speed * max(0.0, duration - t))
         
         # Hitung ukuran baru hasil zoom
         w_new = int(round(w * factor))
@@ -129,9 +133,23 @@ def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     # 4. Lakukan resize dimensi dasar video ke tepat (WIDTH, HEIGHT)
     resized_clip = clip.resized((WIDTH, HEIGHT))
     
-    # 5. Terapkan efek slow zoom dengan arah acak
     import random
+    from moviepy.video.fx import MirrorX, MultiplyColor
+    
+    # 5. Flip Horizontal (Peluang 50% untuk merusak hash)
+    if random.random() < 0.5:
+        resized_clip = resized_clip.with_effects([MirrorX()])
+        
+    # 6. Color Shifter (Ubah warna secara asimetris untuk manipulasi piksel total)
+    r_factor = random.uniform(0.95, 1.05)
+    g_factor = random.uniform(0.95, 1.05)
+    b_factor = random.uniform(0.95, 1.05)
+    # MultiplyColor bisa menerima array/list untuk tiap channel warna
+    resized_clip = resized_clip.with_effects([MultiplyColor([r_factor, g_factor, b_factor])])
+    
+    # 7. Terapkan efek slow zoom dengan arah acak (sudah memuat base_zoom 1.05 - 1.10)
     zoom_dir = random.choice([True, False])
-    final_clip = apply_slow_zoom(resized_clip, speed=0.04, zoom_in=zoom_dir)
+    base_zoom = random.uniform(1.05, 1.10)
+    final_clip = apply_slow_zoom(resized_clip, speed=0.04, zoom_in=zoom_dir, base_zoom=base_zoom)
     
     return final_clip
