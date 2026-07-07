@@ -116,6 +116,11 @@ def download_youtube_retention_video(keyword: str) -> str:
         'max_downloads': 1
     }
     
+    # Deteksi Cookie untuk by-pass Bot Protection YouTube
+    if os.path.exists("cookies.txt"):
+        ydl_opts['cookiefile'] = "cookies.txt"
+        print("🍪 Menggunakan cookies.txt untuk otentikasi YouTube-DL")
+    
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # ytsearch1: mencari dan mengambil 1 hasil pertama
