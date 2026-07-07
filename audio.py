@@ -76,6 +76,22 @@ PHONETIC_DICTIONARY = {
     "FAKE": "feik", "VALUE": "velyu", "WORTH": "werth",
     "OVERPOWER": "overpauer", "OVERWHELM": "overwelm",
     "JUDGE": "jadj", "JUDGING": "jadjing",
+    
+    # Kosakata Misteri & Gaming (Misteri Semesta)
+    "MATRIX": "matriks", "GAMEPLAY": "gemplei", "PARKOUR": "parkur",
+    "FYP": "ef ye pe", "POV": "pi o vi", "HACK": "hek", "HACKER": "heker",
+    "STORYTIME": "stori taim", "REDDIT": "redit", "SHOWER": "syawer",
+    "FACT": "fek", "FACTS": "feks", "RANDOM": "rendom",
+    "CREEPY": "kripi", "GLITCH": "glich", "URBAN": "erban", "LEGEND": "lejen",
+    
+    # Kosakata Finance & Disiplin (Rahasia Finansial, Pola Disiplin)
+    "CASH": "kes", "CASHFLOW": "kesflo", "PASSIVE": "pasif", "ACTIVE": "aktif",
+    "INCOME": "inkam", "BUDGET": "bajet", "BUDGETING": "bajeting",
+    "INVEST": "inves", "RETURN": "ritern", "RISK": "risiko", "HIGH": "hai", "LOW": "lo",
+    "PROCRASTINATION": "prokrastinasi", "LAZY": "lezi", "MOTIVATION": "motivasi",
+    "CONSISTENCY": "konsistensi", "GRIND": "graind", "ROUTINE": "rutin",
+    "RAT RACE": "ret reis", "RACE": "reis", "WEALTH": "welth",
+    "MINDSET": "maindset", "RICH": "rich", "POOR": "pur", "BROKE": "brok",
 }
 
 # Bobot scoring untuk DP alignment (Needleman-Wunsch style)
