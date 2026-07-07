@@ -154,6 +154,19 @@ def expand_token_to_spoken(word: str) -> List[str]:
     if clean_word.isdigit():
         return number_to_words_id(int(clean_word)).split()
         
+    # 2b. Tangani pecahan atau rasio (e.g. 7/10 atau 7-10)
+    import re
+    match_fraction = re.match(r"^(\d+)/(\d+)$", clean_word)
+    if match_fraction:
+        num1 = number_to_words_id(int(match_fraction.group(1)))
+        num2 = number_to_words_id(int(match_fraction.group(2)))
+        return f"{num1} per {num2}".split()
+        
+    match_range = re.match(r"^(\d+)-(\d+)$", clean_word)
+    if match_range:
+        num1 = number_to_words_id(int(match_range.group(1)))
+        num2 = number_to_words_id(int(match_range.group(2)))
+        return f"{num1} sampai {num2}".split()
     # 3. Tangani simbol/slang lain via phonetic dict
     normalized = normalize_for_match(clean_word)
     if normalized in PHONETIC_DICTIONARY:
