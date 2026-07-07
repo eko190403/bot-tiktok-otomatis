@@ -338,6 +338,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     prompt = (
         f"{config['system_prompt']}"
         f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n\n"
+        "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. SANGAT PENTING (DRAMATIC PAUSE): Tepat sebelum kamu mengungkapkan fakta paling mengejutkan atau plot twist di cerita ini, sisipkan tanda elipsis panjang '... [JEDA] ...' untuk memaksa suara AI berhenti sejenak dan membangun ketegangan. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
@@ -907,15 +908,15 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         icons_dir = os.path.join(os.path.dirname(__file__), "assets", "icons")
         os.makedirs(icons_dir, exist_ok=True)
         
-        # Kamus Keyword ke Unicode (Google Noto Emoji 512px)
-        NER_EMOJIS = {
-            "otak": "1f9e0", "pikiran": "1f9e0", "uang": "1f4b8", "miskin": "1f4b8",
-            "waktu": "23f3", "waktumu": "23f3", "fokus": "1f3af", "bahaya": "26a0",
-            "awas": "26a0", "racun": "2620", "mati": "2620", "hati": "2764", "cinta": "2764",
-            "marah": "1f621", "sedih": "1f622", "stres": "1f92f", "depresi": "1f614",
-            "gila": "1f92f", "berhasil": "1f680", "sukses": "1f680", "rahasia": "1f512",
-            "kunci": "1f511", "dunia": "1f30d", "bohong": "1f925", "pembohong": "1f925",
-            "gagal": "274c", "salah": "274c", "stop": "1f6d1", "berhenti": "1f6d1", "jangan": "26d4"
+        # Kamus Keyword ke URL Path (Icons8 Monochrome - White)
+        NER_ICONS = {
+            "otak": "brain", "pikiran": "brain", "uang": "money", "miskin": "money",
+            "waktu": "hourglass", "waktumu": "hourglass", "fokus": "bullseye", "bahaya": "warning-shield",
+            "awas": "warning-shield", "racun": "poison", "mati": "poison", "hati": "hearts", "cinta": "hearts",
+            "marah": "angry", "sedih": "sad", "stres": "headache", "depresi": "sad",
+            "gila": "headache", "berhasil": "rocket", "sukses": "rocket", "rahasia": "lock",
+            "kunci": "key", "dunia": "earth-planet", "bohong": "pinocchio", "pembohong": "pinocchio",
+            "gagal": "cancel", "salah": "cancel", "stop": "stop-sign", "berhenti": "stop-sign", "jangan": "do-not-enter"
         }
         
         import urllib.request
@@ -928,12 +929,12 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             if emojis_added >= 4:
                 break
             clean_w = w["spoken"].lower().strip(".,!?:;\"'")
-            if clean_w in NER_EMOJIS:
-                hexcode = NER_EMOJIS[clean_w]
-                img_path = os.path.join(icons_dir, f"{hexcode}.png")
-                # Unduh emoji jika belum ada di cache lokal
+            if clean_w in NER_ICONS:
+                icon_name = NER_ICONS[clean_w]
+                img_path = os.path.join(icons_dir, f"{icon_name}_white.png")
+                # Unduh ikon dari Icons8 (ios-filled, 512px, warna putih #FFFFFF)
                 if not os.path.exists(img_path):
-                    url = f"https://fonts.gstatic.com/s/e/notoemoji/latest/{hexcode}/512.png"
+                    url = f"https://img.icons8.com/ios-filled/512/FFFFFF/{icon_name}.png"
                     try:
                         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
                         with urllib.request.urlopen(req, timeout=10) as response:
