@@ -313,6 +313,8 @@ async def main():
 
             # Poin 9: Integrasi Upload Otomatis ke TikTok
             enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
+            any_upload_success = False
+            
             if enable_upload and channel_id == "ruangpikir":
                 if latest_video:
                     print("📤 Memicu pengunggahan otomatis ke TikTok...")
@@ -321,6 +323,7 @@ async def main():
                     try:
                         tiktok_username = await upload_to_tiktok(latest_video, caption=caption, comment_text=interactive_comment)
                         print("🚀 Sukses mengunggah video ke TikTok!")
+                        any_upload_success = True
                         
                         # Kirim notifikasi SUKSES ke Telegram
                         msg = (
@@ -391,6 +394,7 @@ async def main():
                             channel_id=channel_id
                         )
                         print("🚀 Sukses mengunggah video ke YouTube Shorts!")
+                        any_upload_success = True
                         
                         # Ekstrak ID dari URL https://youtu.be/ID
                         yt_video_id = youtube_url.split("/")[-1]
@@ -490,9 +494,14 @@ async def main():
                     except Exception as draft_err:
                         print(f"⚠️ Gagal mencatat draf ke database: {draft_err}")
             
-            # 6. Commit status "Terpakai" untuk klip Pexels (KARENA VIDEO SUKSES)
+            # 6. Commit status "Terpakai" HANYA jika upload sukses (mencegah pemborosan clip saat testing)
             if firebase_connector:
-                firebase_connector.commit_used_clips()
+                if any_upload_success:
+                    firebase_connector.commit_used_clips()
+                else:
+                    logger = __import__("logging").getLogger("bot")
+                    logger.info("ℹ️ Tidak ada video yang berhasil diunggah ke sosmed. Antrean klip Pexels dibuang (tidak ditandai terpakai).")
+                    firebase_connector.clear_used_clips_queue()
                 
         else:
             print("❌ Gagal membuat video (Kembalian Bernilai False).")
