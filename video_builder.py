@@ -349,7 +349,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         "8. 'yt_title': Judul video YouTube yang dioptimasi untuk SEO. Harus kuat, provokatif, mengandung kata kunci utama, dan TIDAK mengandung hashtag. Panjang maksimal 90 karakter. Contoh: 'Fakta Psikologi Gelap yang Tersembunyi di Balik Pujian Bertubi-Tubi'\n"
         "9. 'yt_description': Deskripsi video YouTube yang lengkap dan dioptimasi untuk mesin pencari (SEO). Struktur: (a) 2 kalimat ringkasan konten yang engaging, (b) poin-poin utama yang dibahas (bullet list), (c) kalimat CTA mengajak subscribe dan follow, (d) semua hashtag yang relevan. Total panjang 300-500 karakter. Tulis dalam Bahasa Indonesia.\n"
         f"{ab_test_instruction}\n"
-        "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang.\n"
+        "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu orang. SANGAT PENTING: Hindari terjemahan kaku dari bahasa Inggris. Pastikan kalimat pembuka (hook) dan sambungan looping-nya 100% masuk akal secara gramatikal (contoh SALAH: 'Apa yang kamu takutkan mereka tak perhatikan', contoh BENAR: 'Apa yang kamu takutkan, sebenarnya tak mereka perhatikan').\n"
         f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', 'interactive_comment', 'yt_title', dan 'yt_description'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
     )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
@@ -374,12 +374,12 @@ async def extract_keywords_from_script(script_text: str, aesthetic_style: str = 
         "You are a professional video director and visual storyteller. Analyze the following vertical short video script and generate exactly 4 highly relevant, visually rich, and contextually precise English search terms for Pexels videos.\n\n"
         "CRITICAL GUIDELINES:\n"
         f"1. MATCH THE AESTHETIC & CONTEXT: Make sure the visuals perfectly match this specific channel's aesthetic: '{aesthetic_style}'. If the aesthetic is stoicism (e.g. roman statue, calm), DO NOT use dark psychology metaphors like 'tense face' or 'puppet strings'. If it is dark psychology, use psychological representations. ALWAYS adhere strictly to the '{aesthetic_style}' vibe.\n"
-        f"2. VISUALLY GRAPPLING: Focus on high-contrast, moody, or cinematic concepts that align with '{aesthetic_style}'.\n"
-        "3. PEXELS FRIENDLY: Keep terms to 2-3 words, descriptive but concrete (avoid terms Pexels won't have like 'subconscious mind'). Use tangible objects/actions (e.g., 'brain model neon', 'hour glass sand', 'locked door key').\n"
-        "4. MOOD CONSISTENCY: Ensure all 4 terms align with the overall tense/mysterious/educational mood of the script.\n\n"
+        "2. LITERAL VISUAL SYNC: If the script mentions specific real-world actions or objects (e.g., 'messy hair', 'looking in mirror', 'choosing clothes'), YOU MUST include those exact literal concepts as search terms. Do NOT just rely on abstract aesthetic terms if tangible examples are spoken.\n"
+        "3. VISUALLY GRAPPLING: Focus on high-contrast, moody, or cinematic concepts that align with the script's mood.\n"
+        "4. PEXELS FRIENDLY: Keep terms to 2-3 words, descriptive but concrete (avoid terms Pexels won't have like 'subconscious mind'). Use tangible objects/actions (e.g., 'brain model neon', 'mirror reflection').\n\n"
         f"SCRIPT:\n\"{script_text}\"\n\n"
         "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 4 search terms.\n"
-        "Example: [\"whispering shadow\", \"puppeteer strings\", \"anxious expression\", \"neon abstract brain\"].\n"
+        "Example: [\"whispering shadow\", \"looking in mirror\", \"messy hair close\", \"neon abstract brain\"].\n"
         "No additional text outside the JSON."
     )
     try:
