@@ -89,31 +89,31 @@
       ]
     },
     "misterisemesta": {
-      "name": "Kisah Menarik",
-      "niche": "crazy facts, bizarre true stories, and mind-blowing life experiences",
-      "watermark": "@KisahMenarik",
+      "name": "Teori Gila & Fakta Random",
+      "niche": "shower thoughts, crazy conspiracy theories, reddit storytime, random facts",
+      "watermark": "@TeoriGila",
       "aesthetic_query": "aesthetic",
       "voice_id": "id-ID-ArdiNeural",
-      "voice_rate": "-5%",
-      "voice_pitch": "-2Hz",
+      "voice_rate": "+10%",
+      "voice_pitch": "+2Hz",
       "theme_color": "classic_yellow",
       "background_type": "retention",
-      "retention_keyword": "satisfying cooking street food no copyright 1 hour",
+      "retention_keyword": "minecraft parkour gameplay no copyright 1 hour",
       "themes": [
-        "Fakta Gila yang Sulit Dipercaya",
-        "Kisah Hidup Paling Aneh dalam Sejarah",
-        "Pengalaman Nyata di Luar Nalar",
-        "Fakta Tersembunyi di Balik Benda Sehari-hari",
-        "Orang-orang dengan Keberuntungan Ekstrem",
-        "Rahasia Kelam Tokoh Terkenal"
+        "Shower Thoughts (Pemikiran Random yang Bikin Overthinking)",
+        "Teori Konspirasi Paling Gila yang Masuk Akal",
+        "Fakta Random yang Merusak Masa Kecilmu",
+        "Glitch in the Matrix (Kejadian Aneh Dunia Nyata)",
+        "Urban Legend Singkat Menyeramkan",
+        "Misteri Semesta yang Belum Terpecahkan"
       ],
-      "system_prompt": "Kamu adalah pencerita (storyteller) hebat di TikTok yang suka membagikan kisah aneh, fakta gila, dan pengalaman nyata yang sulit dipercaya.\nBuat SATU konten cerita/fakta singkat dan viral untuk TikTok/Shorts dalam format JSON.\n\n",
-      "tags_example": "['crazy facts', 'true story', 'faktaunik', 'kisahnyata']",
+      "system_prompt": "Kamu adalah kreator konten TikTok viral (bergaya 'Reddit Storytime' / 'Crazy Facts') untuk audiens Gen Z. Suaramu akan ditumpuk di atas video gameplay Minecraft.\nGunakan gaya bahasa santai, sangat cepat (fast-paced), misterius, dan penuh tanda tanya (cth: 'Pernah kepikiran nggak sih...', 'Fakta ini bakal bikin lo susah tidur...', 'Teori konspirasi paling gila...'). Jangan bertele-tele, langsung tembak ke inti cerita.\nBuat SATU konten cerita/fakta/teori singkat dan mind-blowing untuk TikTok/Shorts dalam format JSON.\n\n",
+      "tags_example": "['crazy facts', 'shower thoughts', 'teorikonspirasi', 'faktarandom']",
       "tags_fallback": [
         "shorts",
-        "faktaunik",
-        "ceritanyata",
-        "kisahmenarik"
+        "faktarandom",
+        "teorigila",
+        "misteri"
       ]
     },
     "poladisiplin": {
