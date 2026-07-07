@@ -756,9 +756,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         moviepy_resources["audio_clip"] = AudioFileClip(vo_file_path)
         total_duration = moviepy_resources["audio_clip"].duration
         
-        # PADDING 0.5 DETIK DI AKHIR VIDEO
-        # Agar kalimat / teks terakhir punya "ruang napas" dan tidak terpotong mentah-mentah
-        total_duration += 0.5
+        # Menghapus padding akhir agar seamless loop dengan awal video
+        # total_duration += 0.5
 
         # Hitung durasi Hook dari timestamps untuk menentukan pacing
         hook_end = 3.0
