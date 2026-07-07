@@ -955,9 +955,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         trans_path = os.path.join(music_dir, "glitch.wav" if channel_id == "ruangpikir" else "soft_swish.wav")
         if os.path.exists(trans_path):
             try:
-                trans_raw = AudioFileClip(trans_path)
-                from moviepy.audio.AudioClip import AudioArrayClip
-                trans_base = AudioArrayClip(trans_raw.to_soundarray(fps=44100), fps=44100)
+                trans_base = AudioFileClip(trans_path)
                 moviepy_resources["trans_base"] = trans_base
                 t_transition = 0.0
                 for dur in segment_durations[:-1]:
@@ -981,9 +979,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         sub_path = os.path.join(music_dir, "sub_drop.wav")
         if os.path.exists(sub_path):
             try:
-                sub_raw = AudioFileClip(sub_path)
-                from moviepy.audio.AudioClip import AudioArrayClip
-                sub_base = AudioArrayClip(sub_raw.to_soundarray(fps=44100), fps=44100)
+                sub_base = AudioFileClip(sub_path)
                 moviepy_resources["sub_base"] = sub_base
                 from moviepy.audio.fx import MultiplyVolume
                 clip_len = min(sub_base.duration, 2.0)
@@ -997,9 +993,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         heartbeat_path = os.path.join(music_dir, "heartbeat.wav")
         if os.path.exists(heartbeat_path) and channel_id == "ruangpikir":
             try:
-                hb_raw = AudioFileClip(heartbeat_path)
-                from moviepy.audio.AudioClip import AudioArrayClip
-                hb_base = AudioArrayClip(hb_raw.to_soundarray(fps=44100), fps=44100)
+                hb_base = AudioFileClip(heartbeat_path)
                 moviepy_resources["hb_base"] = hb_base
                 hb_len = hb_base.duration
                 # Mainkan setiap 4 detik
@@ -1016,9 +1010,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         tick_path = os.path.join(music_dir, "soft_tick.wav")
         if os.path.exists(tick_path) and all_timestamps:
             try:
-                tick_raw = AudioFileClip(tick_path)
-                from moviepy.audio.AudioClip import AudioArrayClip
-                tick_base = AudioArrayClip(tick_raw.to_soundarray(fps=44100), fps=44100)
+                tick_base = AudioFileClip(tick_path)
                 moviepy_resources["tick_base"] = tick_base
                 tick_len = tick_base.duration
                 for ts in all_timestamps:
