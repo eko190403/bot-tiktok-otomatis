@@ -317,7 +317,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         )
         logger.info("🎯 A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. SANGAT PENTING: JANGAN gunakan pola kalimat yang repetitif (hindari memulai dengan 'TAHUKAH KAMU', 'FAKTA', atau 'ALASAN'). Gunakan variasi struktur kalimat ekstrem setiap kalinya (contoh: kutipan menohok, pertanyaan psikologis, pernyataan kontra-intuitif, atau ancaman halus). Contoh: 'OTAK KAMU SEDANG DIMANIPULASI TANPA KAMU SADAR'\n"
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. STRATEGI WAJIB: Fokuskan Hook pada rasa sakit psikologis sehari-hari (Overthinking, Insecurity, Kecemasan Sosial, Validasi Orang Lain, Lelah Mental). HINDARI Hook yang terlalu filosofis atau abstrak. SANGAT PENTING: JANGAN gunakan pola kalimat yang repetitif (hindari memulai dengan 'TAHUKAH KAMU', 'FAKTA', atau 'ALASAN'). Gunakan variasi struktur kalimat ekstrem setiap kalinya. Contoh: 'TERLALU SERING KHAWATIR OMONGAN ORANG LAIN?'\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
