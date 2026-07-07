@@ -227,8 +227,31 @@ async def main():
                     
                     # 2. Ambil komentar untuk analisis insight naskah
                     comments = await get_top_comments(yt_id, max_results=20)
+                    
+                    # --- NLP Filter Sederhana ---
+                    def sanitize_comments_nlp(raw_comments):
+                        sanitized = []
+                        for c in raw_comments:
+                            text = c.get("text", "")
+                            words = text.split()
+                            # Syarat 1: Minimal 3 kata agar ada konteks
+                            if len(words) < 3:
+                                continue
+                            # Syarat 2: Tidak boleh ada link promosi
+                            if "http" in text or "www" in text:
+                                continue
+                            # Syarat 3: Rasio karakter alfabetis minimal 50% untuk mencegah spam emoji penuh
+                            alpha_count = sum(1 for char in text if char.isalpha())
+                            if alpha_count / max(len(text), 1) < 0.5:
+                                continue
+                            sanitized.append(c)
+                        return sanitized
+                        
                     if comments:
-                        insight = await analyze_comments_with_gemini(comments)
+                        clean_comments = sanitize_comments_nlp(comments)
+                        insight = None
+                        if clean_comments:
+                            insight = await analyze_comments_with_gemini(clean_comments)
                         if insight:
                             firebase_connector.mark_comments_analyzed(draft_id, insight)
                             print(f"💬 Insight komentar disimpan untuk {draft_id}: {insight[:80]}...")

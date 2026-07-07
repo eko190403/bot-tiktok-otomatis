@@ -902,7 +902,71 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         all_text_clips.extend(engine_v3.generate_subtitle_clips(story_words, font_size=FONT_SIZE_BODY, style_type="body", max_total_duration=total_duration))
         all_text_clips.extend(engine_v3.generate_subtitle_clips(cta_words, font_size=FONT_SIZE_BODY, style_type="cta", max_total_duration=total_duration))
 
-        moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips, use_bgclip=True)
+        # ================= LITERAL VISUAL SYNC (NER EMOJI POPUPS) =================
+        ner_clips = []
+        icons_dir = os.path.join(os.path.dirname(__file__), "assets", "icons")
+        os.makedirs(icons_dir, exist_ok=True)
+        
+        # Kamus Keyword ke Unicode (Google Noto Emoji 512px)
+        NER_EMOJIS = {
+            "otak": "1f9e0", "pikiran": "1f9e0", "uang": "1f4b8", "miskin": "1f4b8",
+            "waktu": "23f3", "waktumu": "23f3", "fokus": "1f3af", "bahaya": "26a0",
+            "awas": "26a0", "racun": "2620", "mati": "2620", "hati": "2764", "cinta": "2764",
+            "marah": "1f621", "sedih": "1f622", "stres": "1f92f", "depresi": "1f614",
+            "gila": "1f92f", "berhasil": "1f680", "sukses": "1f680", "rahasia": "1f512",
+            "kunci": "1f511", "dunia": "1f30d", "bohong": "1f925", "pembohong": "1f925",
+            "gagal": "274c", "salah": "274c", "stop": "1f6d1", "berhenti": "1f6d1", "jangan": "26d4"
+        }
+        
+        import urllib.request
+        from PIL import Image
+        from moviepy import ImageClip
+        
+        # Batasi maksimal 4 emoji per video agar tidak norak
+        emojis_added = 0
+        for w in valid_words:
+            if emojis_added >= 4:
+                break
+            clean_w = w["spoken"].lower().strip(".,!?:;\"'")
+            if clean_w in NER_EMOJIS:
+                hexcode = NER_EMOJIS[clean_w]
+                img_path = os.path.join(icons_dir, f"{hexcode}.png")
+                # Unduh emoji jika belum ada di cache lokal
+                if not os.path.exists(img_path):
+                    url = f"https://fonts.gstatic.com/s/e/notoemoji/latest/{hexcode}/512.png"
+                    try:
+                        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                        with urllib.request.urlopen(req, timeout=10) as response:
+                            with open(img_path, "wb") as f:
+                                f.write(response.read())
+                    except Exception as err:
+                        logger.warning("⚠️ Gagal mengunduh emoji NER %s: %s", clean_w, err)
+                        continue
+                
+                # Render emoji clip
+                if os.path.exists(img_path):
+                    try:
+                        # Durasi emoji muncul di layar = durasi kata + 0.8s
+                        e_dur = min(1.5, w["duration"] + 0.8)
+                        if w["start"] + e_dur > total_duration:
+                            e_dur = total_duration - w["start"]
+                            
+                        # Posisi: Tepat di atas teks kanvas (tengah layar agak ke bawah sedikit)
+                        pos_y = int(HEIGHT * 0.4)
+                        e_clip = (
+                            ImageClip(img_path)
+                            .with_start(w["start"])
+                            .with_duration(e_dur)
+                            .resized(height=250)
+                            .with_position(("center", pos_y))
+                        )
+                        ner_clips.append(e_clip)
+                        emojis_added += 1
+                        logger.info("🎨 NER Sync: Menambahkan ikon '%s' pada %.2fs", clean_w, w["start"])
+                    except Exception as c_err:
+                        logger.warning("⚠️ Gagal memproses klip emoji NER: %s", c_err)
+
+        moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips + ner_clips, use_bgclip=True)
 
         # ================= MUSIK LATAR OTOMATIS =================
         bg_music_clip = None
@@ -1116,11 +1180,6 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             from overlay import apply_text_watermark, apply_visual_cta, apply_cinematic_overlay
             import config as _config
 
-            # 1. Terapkan Cinematic Overlay untuk menyatukan semua footage Pexels
-            if bg_type == "pexels":
-                moviepy_resources["final_video"] = apply_cinematic_overlay(moviepy_resources["final_video"])
-                logger.info("🎬 Cinematic Overlay (Vignette + Film Grain) diterapkan.")
-
             # 2. Watermark
             moviepy_resources["final_video"] = apply_text_watermark(
                 moviepy_resources["final_video"], channel_name=watermark_name
@@ -1148,10 +1207,15 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
 
         
         def execute_ffmpeg_render(target_path: str):
+            params = ["-crf", "30", "-pix_fmt", "yuv420p"]
+            if bg_type == "pexels":
+                # Mendelegasikan Film Grain (noise) & Vignette ke engine native C++ FFmpeg
+                params.extend(["-vf", "noise=alls=8:allf=t+u,vignette=PI/3"])
+                
             moviepy_resources["final_video"].write_videofile(
                 target_path, fps=30, codec="libx264", preset="veryfast", # OPTIMASI: Kecepatan & kompresi seimbang
                 audio_codec="aac", threads=cpu_threads, logger=None,
-                ffmpeg_params=["-crf", "30", "-pix_fmt", "yuv420p"]      # OPTIMASI: Kompresi optimal untuk batas 50MB Telegram
+                ffmpeg_params=params      # OPTIMASI: Kompresi optimal untuk batas 50MB Telegram
             )
 
         render_timeout = total_duration * RENDER_TIMEOUT_FACTOR
