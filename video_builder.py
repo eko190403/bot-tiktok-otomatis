@@ -928,7 +928,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         for w in valid_words:
             if emojis_added >= 4:
                 break
-            clean_w = w["spoken"].lower().strip(".,!?:;\"'")
+            clean_w = w["display"].lower().strip(".,!?:;\"'")
             if clean_w in NER_ICONS:
                 icon_name = NER_ICONS[clean_w]
                 img_path = os.path.join(icons_dir, f"{icon_name}_white.png")
