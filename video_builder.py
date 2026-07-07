@@ -9,9 +9,7 @@ from dataclasses import asdict
 import librosa
 from google import genai
 from google.genai import types
-
-from config import GEMINI_KEYS, DIR_OUTPUT, FONT_SIZE_HOOK, FONT_SIZE_BODY, DIR_TEMP
-
+from config import GEMINI_KEYS, DIR_OUTPUT, FONT_SIZE_HOOK, FONT_SIZE_BODY, DIR_TEMP, WIDTH, HEIGHT
 try:
     from config import (
         THREADS_MAX, 
