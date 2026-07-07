@@ -31,7 +31,7 @@ jobs:
     - name: Eksekusi Bot Utama
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES1 }}
       run: |
         if [ -n "$YOUTUBE_COOKIES" ]; then
           echo "$YOUTUBE_COOKIES" > cookies.txt
