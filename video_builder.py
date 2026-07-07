@@ -767,25 +767,30 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
 
         segment_durations = []
         current_time = 0.0
+        import random
         while current_time < total_duration:
             if current_time < hook_end:
-                dur = min(1.2, hook_end - current_time)
-                # Jika segmen terakhir di hook terlalu pendek, gabungkan saja
+                # FAST PACING di Hook (Kepanikan Visual: 0.8s - 1.5s)
+                dur = random.uniform(0.8, 1.5)
+                dur = min(dur, hook_end - current_time)
+                # Jika segmen terakhir di hook terlalu pendek (< 0.5s), gabungkan
                 if segment_durations and current_time < hook_end and (hook_end - current_time) < 0.5:
                     segment_durations[-1] += (hook_end - current_time)
                     current_time = hook_end
                     continue
             else:
-                # FAST PACING: Maksimal 2.5 detik per visual klip agar penonton tidak bosan
-                dur = min(2.5, total_duration - current_time)
-                # Jika segmen terakhir terlalu pendek, gabungkan dengan sebelumnya
+                # RELAXED PACING di Story (Penjelasan Edukatif: 2.0s - 4.5s)
+                dur = random.uniform(2.0, 4.5)
+                dur = min(dur, total_duration - current_time)
+                # Jika segmen terakhir terlalu pendek (< 1.0s), gabungkan dengan sebelumnya
                 if segment_durations and (total_duration - current_time) < 1.0:
                     segment_durations[-1] += (total_duration - current_time)
                     break
+                
             segment_durations.append(dur)
             current_time += dur
-
-        logger.info("📊 Segmentasi durasi latar belakang: %s", segment_durations)
+            
+        logger.info("🎬 Mode Dynamic Cut-Rate: Dihasilkan %d potongan video yang tidak rata.", len(segment_durations))
 
         if bg_type == "retention" and video_files:
             # Mode Layar Penuh (ASMR/Gameplay)
@@ -952,10 +957,27 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     bg_music_clip = concatenate_audioclips(music_clips).subclipped(0, total_duration)
                 else:
                     bg_music_clip = bg_music_raw.subclipped(0, total_duration)
-                # Volume musik latar -20dB (sekitar 10% dari suara utama)
+                # ================= INTELLIGENT AUDIO DUCKING & SWELL =================
+                import numpy as np
+                swells = []
+                for i in range(len(all_timestamps) - 1):
+                    end_prev = all_timestamps[i]['end']
+                    start_next = all_timestamps[i+1]['start']
+                    if (start_next - end_prev) >= 0.7:
+                        swells.append((end_prev + 0.1, start_next - 0.1))
+                
+                def volume_envelope(t):
+                    is_array = isinstance(t, np.ndarray)
+                    t_val = t if is_array else np.array([t])
+                    vol = np.full_like(t_val, 0.08)
+                    for (s_start, s_end) in swells:
+                        mask = (t_val >= s_start) & (t_val <= s_end)
+                        vol[mask] = 0.35
+                    return vol if is_array else vol[0]
+                
                 from moviepy.audio.fx import MultiplyVolume
-                bg_music_clip = bg_music_clip.with_effects([MultiplyVolume(0.10)])
-                logger.info("🎵 Musik latar berhasil dimuat: %s", chosen_music)
+                bg_music_clip = bg_music_clip.with_effects([MultiplyVolume(volume_envelope)])
+                logger.info("🎵 Musik latar berhasil dimuat dengan Dinamika Audio (Ducking & Swells): %s", chosen_music)
             except Exception as me:
                 logger.warning(" Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
                 bg_music_clip = None
