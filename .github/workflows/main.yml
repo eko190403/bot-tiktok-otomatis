@@ -130,7 +130,13 @@ jobs:
           ENABLE_YOUTUBE_UPLOAD: "false"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES1 }}
         run: |
+          if [ -n "$YOUTUBE_COOKIES" ]; then
+            echo "$YOUTUBE_COOKIES" > cookies.txt
+            echo "🍪 Berkas cookies.txt berhasil dibuat dari GitHub Secrets (YOUTUBE_COOKIES1)"
+          fi
+          
           echo "🚀 Menjalankan pipeline untuk Ruang Pikir..."
           python app.py --channel ruangpikir || echo "⚠️ Gagal di ruangpikir, lanjut ke channel berikutnya..."
           
