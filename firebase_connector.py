@@ -435,16 +435,30 @@ def is_clip_used(clip_id: str) -> bool:
         logger.warning(f"⚠️ Gagal memeriksa used_clips di Firestore: {e}")
         return False
 
+_used_clips_queue = []
 
 def mark_clip_used(clip_id: str) -> None:
-    """Tandai klip Pexels sebagai sudah dipakai (simpan timestamp)."""
-    if not _require_firestore("mark_clip_used"):
+    """Tandai klip Pexels sebagai sudah dipakai (simpan di antrean memori dulu)."""
+    _used_clips_queue.append(str(clip_id))
+    logger.info(f"🔖 Klip Pexels '{clip_id}' dimasukkan ke antrean memori (belum dicatat ke database).")
+
+def commit_used_clips() -> None:
+    """Catat secara permanen semua klip yang ada di antrean ke Firestore (dieksekusi jika video sukses dibuat)."""
+    if not _require_firestore("commit_used_clips"):
         return
-    try:
-        db.collection("used_clips").document(str(clip_id)).set({"used_at": int(time.time())})
-        logger.info(f"🔖 Klip Pexels '{clip_id}' ditandai sebagai sudah dipakai.")
-    except Exception as e:
-        logger.error(f"❌ Gagal menandai klip terpakai di Firestore: {e}")
+    for clip_id in _used_clips_queue:
+        try:
+            db.collection("used_clips").document(clip_id).set({"used_at": int(time.time())})
+            logger.info(f"✅ Klip '{clip_id}' resmi dicatat sebagai dipakai di database.")
+        except Exception as e:
+            logger.error(f"❌ Gagal mencatat klip {clip_id}: {e}")
+    _used_clips_queue.clear()
+
+def clear_used_clips_queue() -> None:
+    """Hapus antrean klip jika terjadi error (video gagal dibuat)."""
+    if _used_clips_queue:
+        logger.info(f"🧹 Membersihkan {len(_used_clips_queue)} klip dari antrean memori (video batal/gagal dibuat).")
+    _used_clips_queue.clear()
 
 
 def cleanup_used_clips(days: int = 30) -> None:

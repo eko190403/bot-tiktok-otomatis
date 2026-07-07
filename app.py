@@ -241,6 +241,9 @@ async def main():
         print("📦 Meng-import modul video_builder...")
         from video_builder import create_video
         
+        if firebase_connector:
+            firebase_connector.clear_used_clips_queue()
+        
         print(f"🎬 Menjalankan fungsi create_video() untuk channel: {channel_id}...")
         success = await create_video(channel_id=channel_id)
         
@@ -486,8 +489,15 @@ async def main():
                         firebase_connector.save_video_draft(video_id, draft_data)
                     except Exception as draft_err:
                         print(f"⚠️ Gagal mencatat draf ke database: {draft_err}")
+            
+            # 6. Commit status "Terpakai" untuk klip Pexels (KARENA VIDEO SUKSES)
+            if firebase_connector:
+                firebase_connector.commit_used_clips()
+                
         else:
             print("❌ Gagal membuat video (Kembalian Bernilai False).")
+            if firebase_connector:
+                firebase_connector.clear_used_clips_queue()
             sys.exit(1)
             
     except Exception as e:
