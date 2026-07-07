@@ -951,8 +951,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                         if w["start"] + e_dur > total_duration:
                             e_dur = total_duration - w["start"]
                             
-                        # Posisi: Tepat di atas teks kanvas (tengah layar agak ke bawah sedikit)
-                        pos_y = int(HEIGHT * 0.4)
+                        # Posisi: Di bagian atas (25% dari layar) agar tidak menutupi subtitle yang ada di tengah
+                        pos_y = int(HEIGHT * 0.25)
                         e_clip = (
                             ImageClip(img_path)
                             .with_start(w["start"])
