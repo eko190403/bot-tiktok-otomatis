@@ -15,10 +15,12 @@ logger = logging.getLogger("video_pipeline")
 TICKS_PER_SECOND = 10_000_000
 
 PHONETIC_DICTIONARY = {
-    # Slang Indonesia
-    "NGGAK": "TIDAK", "NGAK": "TIDAK", "GAK": "TIDAK", "ENGGAK": "TIDAK",
-    "TAU": "TAHU", "GITU": "BEGITU", "UDAH": "SUDAH", "TDK": "TIDAK",
-    "DGN": "DENGAN", "YG": "YANG", "KRNA": "KARENA", "KARNA": "KARENA",
+    # Slang Indonesia (Diubah agar tetap santai, JANGAN dipaksa baku)
+    "NGGAK": "enggak", "NGAK": "enggak", "GAK": "enggak", "ENGGAK": "enggak",
+    "TAU": "tau", "GITU": "gitu", "UDAH": "udah", "TDK": "tidak",
+    "DGN": "dengan", "YG": "yang", "KRNA": "karena", "KARNA": "karena",
+    "LHO": "loh", "LOH": "loh", "SIH": "sih", "DONG": "dong", "KOK": "kok",
+    "LU": "lu", "LO": "lo", "GUE": "gue", "GW": "gue", "BANGET": "banget", "BNGT": "banget",
     # Kata Inggris umum → cara baca Indonesia
     "MINDSET": "maindset", "MINDSETS": "maindset",
     "SELF": "self", "SELF-CONTROL": "self kontrol", "SELF-ESTEEM": "self estim",
