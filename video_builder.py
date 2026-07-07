@@ -1212,7 +1212,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         
         def execute_ffmpeg_render(target_path: str):
             # -g 15 memastikan ada keyframe setiap 0.5 detik (pada 30fps) untuk mencegah artefak saat fast-cut
-            params = ["-crf", "23", "-pix_fmt", "yuv420p", "-g", "15"]
+            params = ["-crf", "20", "-pix_fmt", "yuv420p", "-g", "15"]
             if bg_type == "pexels":
                 # Mendelegasikan Film Grain (noise) & Vignette ke engine native C++ FFmpeg
                 params.extend(["-vf", "noise=alls=8:allf=t+u,vignette=PI/3"])
