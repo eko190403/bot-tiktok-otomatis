@@ -340,7 +340,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n\n"
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
-        "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
+        "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. SANGAT PENTING (DRAMATIC PAUSE): Tepat sebelum kamu mengungkapkan fakta paling mengejutkan atau plot twist di cerita ini, sisipkan tanda elipsis panjang '... [JEDA] ...' untuk memaksa suara AI berhenti sejenak dan membangun ketegangan. Pastikan total kata naskah (hook + story + cta) tidak melebihi 110 kata agar total durasi suara selalu di bawah 60 detik (idealnya 35-50 detik). Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
         "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. PENTING: Kalimat terakhir dari cta ini HARUS dirancang menggantung di akhir kata dan secara tata bahasa menyambung kembali dengan mulus (seamless loop) ke kata pertama pada kalimat HOOK utama agar video bisa ditonton berulang kali secara melingkar tanpa terputus. Contoh jika HOOK = 'KENAPA KAMU MISKIN', maka akhir CTA bisa berbunyi '...dan itulah alasan utama...' sehingga saat diputar ulang ia tersambung menjadi '...dan itulah alasan utama KENAPA KAMU MISKIN'.\n"
         "4. 'caption': Judul deskripsi postingan TikTok/Shorts yang membuat penasaran, ditambah beberapa hashtag yang sangat viral dan relevan (contoh: #ruangpikir #motivation #mindset #fyp #viral). Panjang maksimal 150 karakter.\n"
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
@@ -833,10 +833,24 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 moviepy_resources["combined_bg"] = ColorClip(size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration)
         else:
             # Mode Klasik (Pexels / Pixabay)
+            from effects import apply_camera_shake, apply_flashbang
+            import random
             for i, dur in enumerate(segment_durations):
                 file = video_files[i % len(video_files)]
                 try:
                     processed_clip = process_background_clip(file, dur)
+                    
+                    # Pattern Interrupts (Hanya berlaku di tengah-tengah video agar hook awal tetap bersih)
+                    if i > 0:
+                        if random.random() < 0.25:
+                            # 25% peluang klip ini akan bergetar (Camera Shake) selama 1-2 detik
+                            processed_clip = apply_camera_shake(processed_clip, intensity=random.randint(4, 7), limit_duration=random.uniform(1.0, 2.0))
+                            logger.info("🎬 Efek Camera Shake diterapkan pada klip %d", i)
+                        if random.random() < 0.15:
+                            # 15% peluang flashbang di awal klip
+                            processed_clip = apply_flashbang(processed_clip, duration=0.1)
+                            logger.info("🎬 Efek Flashbang diterapkan pada klip %d", i)
+                            
                     moviepy_resources["processed_clips"].append(processed_clip)
                 except Exception as ce:
                     logger.error(" Kebocoran sub-resource dicegah: %s", ce)
@@ -1077,9 +1091,15 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
 
         # ================= WATERMARK & VISUAL CTA =================
         try:
-            from overlay import apply_text_watermark, apply_visual_cta
+            from overlay import apply_text_watermark, apply_visual_cta, apply_cinematic_overlay
             import config as _config
 
+            # 1. Terapkan Cinematic Overlay untuk menyatukan semua footage Pexels
+            if bg_type == "pexels":
+                moviepy_resources["final_video"] = apply_cinematic_overlay(moviepy_resources["final_video"])
+                logger.info("🎬 Cinematic Overlay (Vignette + Film Grain) diterapkan.")
+
+            # 2. Watermark
             moviepy_resources["final_video"] = apply_text_watermark(
                 moviepy_resources["final_video"], channel_name=watermark_name
             )

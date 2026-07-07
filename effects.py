@@ -43,6 +43,45 @@ def apply_slow_zoom(clip, speed=0.05, zoom_in=True, base_zoom=None):
         
     return clip.transform(zoom_effect, keep_duration=True)
 
+def apply_camera_shake(clip, intensity: int = 5, limit_duration: float = None):
+    """Efek getar kamera (Camera Shake) untuk momen menegangkan (Pattern Interrupt)."""
+    import random
+    from moviepy import CompositeVideoClip
+    
+    def shake_effect(get_frame, t):
+        frame = get_frame(t)
+        if limit_duration and t > limit_duration:
+            return frame # Stop shake after limit
+            
+        h, w, c = frame.shape
+        dx = random.randint(-intensity, intensity)
+        dy = random.randint(-intensity, intensity)
+        
+        # Crop dan resize kembali ke ukuran asli untuk menyembunyikan border hitam akibat geseran
+        img = Image.fromarray(frame)
+        left = max(0, -dx)
+        top = max(0, -dy)
+        right = min(w, w - dx)
+        bottom = min(h, h - dy)
+        
+        cropped = img.crop((left, top, right, bottom))
+        return np.array(cropped.resize((w, h), Image.Resampling.BILINEAR))
+        
+    return clip.transform(shake_effect, keep_duration=True)
+
+def apply_flashbang(clip, duration: float = 0.15):
+    """Efek kilat putih sekilas (Flashbang) di awal klip sebagai Pattern Interrupt."""
+    from moviepy import ColorClip, CompositeVideoClip
+    
+    w, h = clip.size
+    white_flash = (
+        ColorClip(size=(w, h), color=(255, 255, 255))
+        .with_duration(duration)
+        .with_opacity(0.85)
+    )
+    
+    return CompositeVideoClip([clip, white_flash])
+
 def find_smart_crop_offset(clip, target_w: int) -> int:
     """Menemukan x_offset terbaik secara otomatis dengan memindai daerah detail kontras tertinggi."""
     try:

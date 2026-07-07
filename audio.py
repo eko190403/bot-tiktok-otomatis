@@ -153,6 +153,13 @@ def tokenize_section(text: str, section: str) -> List[Dict]:
     raw_tokens = text.split()
     tokens = []
     for w in raw_tokens:
+        # Hapus marker [JEDA] dari teks agar tidak diucapkan TTS, 
+        # namun biarkan tanda baca (...) yang mengikutinya untuk memicu jeda
+        if "[JEDA]" in w.upper():
+            w = re.sub(r'\[JEDA\]', '', w, flags=re.IGNORECASE)
+            if not w.strip():
+                continue
+            
         # Cari tanda baca di akhir kata (misal: "73%,")
         match = re.search(r"([.,!?]+)$", w)
         punc = match.group(1) if match else ""

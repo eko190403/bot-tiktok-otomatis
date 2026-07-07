@@ -173,3 +173,56 @@ def apply_visual_cta(video_clip):
         logging.getLogger("video_pipeline").warning("⚠️ Visual CTA gagal: %s", e)
         return video_clip
 
+def apply_cinematic_overlay(video_clip):
+    """
+    Mengatasi Stock Footage Syndrome dengan menyatukan seluruh klip (Pexels)
+    ke dalam satu "Cinematic Universe" menggunakan Vignette & Film Grain noise tipis.
+    """
+    try:
+        from moviepy import ImageClip, CompositeVideoClip
+        w, h = int(video_clip.w), int(video_clip.h)
+        duration = video_clip.duration
+        
+        # 1. Buat frame transparan untuk overlay
+        overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        
+        # 2. Gambar Vignette (gelap di ujung-ujung)
+        import math
+        pixels = overlay.load()
+        cx, cy = w / 2, h / 2
+        max_dist = math.hypot(cx, cy)
+        
+        # 3. Tambahkan efek Film Grain Statis yang sangat halus
+        # Kita menggunakan satu frame grain statis dengan alpha sangat rendah
+        # untuk menghindari frame-by-frame processing python yang sangat lambat di MoviePy
+        import random
+        for y in range(0, h, 2): # Lewati tiap 2 pixel agar lebih cepat dan terlihat seperti butiran besar
+            for x in range(0, w, 2):
+                dist = math.hypot(x - cx, y - cy)
+                vignette_intensity = int(255 * (dist / max_dist)**2)
+                vignette_intensity = min(220, max(0, vignette_intensity - 50))
+                
+                # Film grain noise
+                noise = random.randint(-15, 15)
+                
+                alpha = vignette_intensity
+                if alpha > 0:
+                    r, g, b = max(0, 15+noise), max(0, 10+noise), max(0, 20+noise) # Sedikit kebiruan/gelap
+                    pixels[x, y] = (r, g, b, alpha)
+                    if x+1 < w: pixels[x+1, y] = (r, g, b, alpha)
+                    if y+1 < h: pixels[x, y+1] = (r, g, b, alpha)
+                    if x+1 < w and y+1 < h: pixels[x+1, y+1] = (r, g, b, alpha)
+
+        # Blur sedikit agar menyatu (Gaussian Blur lambat, resize hack lebih cepat)
+        overlay = overlay.resize((w//2, h//2), Image.Resampling.NEAREST).resize((w, h), Image.Resampling.BILINEAR)
+
+        overlay_clip = (
+            ImageClip(np.array(overlay))
+            .with_duration(duration)
+        )
+        
+        return CompositeVideoClip([video_clip, overlay_clip])
+    except Exception as e:
+        import logging
+        logging.getLogger("video_pipeline").warning("⚠️ Cinematic Overlay gagal: %s", e)
+        return video_clip
