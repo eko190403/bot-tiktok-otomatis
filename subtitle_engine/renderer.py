@@ -81,9 +81,8 @@ class SubtitleRenderer:
     # Text cleaning
     # ─────────────────────────────────────────────────────────────────────────
     def _clean_text(self, raw: str) -> str:
-        return str(raw).strip().upper().translate(
-            str.maketrans("", "", string.punctuation)
-        )
+        # Hapus tanda baca di ujung kata saja, pertahankan simbol internal seperti %, /, -, $
+        return str(raw).strip('.,!?;:"\'()[]{}').strip().upper()
 
     # ─────────────────────────────────────────────────────────────────────────
     # Multi-line word-wrap layout builder

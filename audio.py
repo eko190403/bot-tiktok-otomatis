@@ -142,9 +142,15 @@ def expand_token_to_spoken(word: str) -> List[str]:
     # Bersihkan tanda baca di sekeliling kata
     clean_word = word.strip(".,!?;:()\"'")
     
-    # 1. Tangani persentase (e.g. 70%)
+    # 1. Tangani persentase (e.g. 70%, 93.5%)
     if "%" in clean_word:
         base = clean_word.replace("%", "")
+        import re
+        match_dec = re.match(r"^(\d+)[.,](\d+)$", base)
+        if match_dec:
+            num1 = number_to_words_id(int(match_dec.group(1)))
+            num2 = number_to_words_id(int(match_dec.group(2)))
+            return f"{num1} koma {num2} persen".split()
         if base.isdigit():
             words = number_to_words_id(int(base)).split()
             words.append("persen")
@@ -154,8 +160,14 @@ def expand_token_to_spoken(word: str) -> List[str]:
     if clean_word.isdigit():
         return number_to_words_id(int(clean_word)).split()
         
-    # 2b. Tangani pecahan atau rasio (e.g. 7/10 atau 7-10)
+    # 2b. Tangani pecahan, rasio, atau desimal
     import re
+    match_decimal = re.match(r"^(\d+)[.,](\d+)$", clean_word)
+    if match_decimal:
+        num1 = number_to_words_id(int(match_decimal.group(1)))
+        num2 = number_to_words_id(int(match_decimal.group(2)))
+        return f"{num1} koma {num2}".split()
+
     match_fraction = re.match(r"^(\d+)/(\d+)$", clean_word)
     if match_fraction:
         num1 = number_to_words_id(int(match_fraction.group(1)))
@@ -167,6 +179,19 @@ def expand_token_to_spoken(word: str) -> List[str]:
         num1 = number_to_words_id(int(match_range.group(1)))
         num2 = number_to_words_id(int(match_range.group(2)))
         return f"{num1} sampai {num2}".split()
+
+    # 2c. Tangani mata uang (e.g. Rp10.000 atau $100)
+    match_currency = re.match(r"^(rp|\$)\.?([\d.,]+)$", clean_word, re.IGNORECASE)
+    if match_currency:
+        curr_sym = match_currency.group(1).lower()
+        amount_str = match_currency.group(2).replace(".", "").replace(",", "")
+        if amount_str.isdigit():
+            amount_words = number_to_words_id(int(amount_str))
+            if curr_sym == "rp":
+                return f"{amount_words} rupiah".split()
+            elif curr_sym == "$":
+                return f"{amount_words} dolar".split()
+
     # 3. Tangani simbol/slang lain via phonetic dict
     normalized = normalize_for_match(clean_word)
     if normalized in PHONETIC_DICTIONARY:
