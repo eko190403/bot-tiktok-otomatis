@@ -915,7 +915,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             "marah": "angry", "sedih": "sad", "stres": "headache", "depresi": "sad",
             "gila": "headache", "berhasil": "rocket", "sukses": "rocket", "rahasia": "lock",
             "kunci": "key", "dunia": "earth-planet", "bohong": "pinocchio", "pembohong": "pinocchio",
-            "gagal": "cancel", "salah": "cancel", "stop": "stop-sign", "berhenti": "stop-sign", "jangan": "do-not-enter"
+            "gagal": "cancel", "salah": "cancel", "stop": "stop-sign", "berhenti": "stop-sign", "jangan": "cancel"
         }
         
         import urllib.request
