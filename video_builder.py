@@ -317,7 +317,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         )
         logger.info("🎯 A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. STRATEGI WAJIB: Fokuskan Hook pada rasa sakit psikologis sehari-hari (Overthinking, Insecurity, Kecemasan Sosial, Validasi Orang Lain, Lelah Mental). HINDARI Hook yang terlalu filosofis atau abstrak. SANGAT PENTING: JANGAN gunakan pola kalimat yang repetitif (hindari memulai dengan 'TAHUKAH KAMU', 'FAKTA', atau 'ALASAN'). Gunakan variasi struktur kalimat ekstrem setiap kalinya. Contoh: 'TERLALU SERING KHAWATIR OMONGAN ORANG LAIN?'\n"
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. STRATEGI WAJIB: Gunakan taktik 'Negative Hook' (kalimat peringatan/menyindir) yang menargetkan rasa sakit psikologis (Overthinking, Insecurity, Kecemasan Sosial). HINDARI Hook filosofis. SANGAT PENTING: JANGAN gunakan pola kalimat repetitif ('TAHUKAH KAMU', 'FAKTA'). Gunakan variasi struktur ekstrem setiap kalinya. Contoh: 'TERLALU SERING KHAWATIR OMONGAN ORANG LAIN?'\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
@@ -770,8 +770,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         import random
         while current_time < total_duration:
             if current_time < hook_end:
-                # FAST PACING di Hook (Kepanikan Visual: 0.8s - 1.5s)
-                dur = random.uniform(0.8, 1.5)
+                # FAST PACING di Hook (Kepanikan Visual Sangat Agresif: 0.4s - 0.9s)
+                dur = random.uniform(0.4, 0.9)
                 dur = min(dur, hook_end - current_time)
                 # Jika segmen terakhir di hook terlalu pendek (< 0.5s), gabungkan
                 if segment_durations and current_time < hook_end and (hook_end - current_time) < 0.5:
