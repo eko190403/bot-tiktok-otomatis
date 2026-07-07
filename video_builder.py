@@ -910,11 +910,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         # Kamus Keyword ke URL Path (Icons8 Monochrome - White)
         NER_ICONS = {
             "otak": "brain", "pikiran": "brain", "uang": "money", "miskin": "money",
-            "waktu": "hourglass", "waktumu": "hourglass", "fokus": "bullseye", "bahaya": "warning-shield",
+            "waktu": "hourglass", "waktumu": "hourglass", "fokus": "target", "bahaya": "warning-shield",
             "awas": "warning-shield", "racun": "poison", "mati": "poison", "hati": "hearts", "cinta": "hearts",
             "marah": "angry", "sedih": "sad", "stres": "headache", "depresi": "sad",
             "gila": "headache", "berhasil": "rocket", "sukses": "rocket", "rahasia": "lock",
-            "kunci": "key", "dunia": "earth-planet", "bohong": "pinocchio", "pembohong": "pinocchio",
+            "kunci": "key", "dunia": "earth-planet", "bohong": "comedy", "pembohong": "comedy",
             "gagal": "cancel", "salah": "cancel", "stop": "stop-sign", "berhenti": "stop-sign", "jangan": "cancel"
         }
         
