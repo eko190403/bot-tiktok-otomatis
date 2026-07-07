@@ -1212,7 +1212,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
 
         
         def execute_ffmpeg_render(target_path: str):
-            params = ["-crf", "30", "-pix_fmt", "yuv420p"]
+            params = ["-crf", "24", "-pix_fmt", "yuv420p"]
             if bg_type == "pexels":
                 # Mendelegasikan Film Grain (noise) & Vignette ke engine native C++ FFmpeg
                 params.extend(["-vf", "noise=alls=8:allf=t+u,vignette=PI/3"])
