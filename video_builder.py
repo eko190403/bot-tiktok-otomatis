@@ -949,11 +949,23 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         sfx_clips = []
         music_dir = os.path.join(os.path.dirname(__file__), "assets", "music")
         
+        # Helper untuk memuat SFX pendek ke memori tanpa bug FFMPEG_AudioReader MoviePy
+        def load_sfx(filepath):
+            import scipy.io.wavfile as wav
+            import numpy as np
+            from moviepy.audio.AudioClip import AudioArrayClip
+            fps, data = wav.read(filepath)
+            if data.dtype == np.int16:
+                data = data.astype(np.float32) / 32768.0
+            if len(data.shape) == 1:
+                data = np.vstack((data, data)).T
+            return AudioArrayClip(data, fps=fps)
+
         # 1. Soft Swish / Glitch untuk transisi visual
         trans_path = os.path.join(music_dir, "glitch.wav" if channel_id == "ruangpikir" else "soft_swish.wav")
         if os.path.exists(trans_path):
             try:
-                trans_base = AudioFileClip(trans_path)
+                trans_base = load_sfx(trans_path)
                 moviepy_resources["trans_base"] = trans_base
                 t_transition = 0.0
                 for dur in segment_durations[:-1]:
@@ -977,7 +989,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         sub_path = os.path.join(music_dir, "sub_drop.wav")
         if os.path.exists(sub_path):
             try:
-                sub_base = AudioFileClip(sub_path)
+                sub_base = load_sfx(sub_path)
                 moviepy_resources["sub_base"] = sub_base
                 from moviepy.audio.fx import MultiplyVolume
                 clip_len = min(sub_base.duration, 2.0)
@@ -991,7 +1003,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         heartbeat_path = os.path.join(music_dir, "heartbeat.wav")
         if os.path.exists(heartbeat_path) and channel_id == "ruangpikir":
             try:
-                hb_base = AudioFileClip(heartbeat_path)
+                hb_base = load_sfx(heartbeat_path)
                 moviepy_resources["hb_base"] = hb_base
                 hb_len = hb_base.duration
                 # Mainkan setiap 4 detik
@@ -1008,7 +1020,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         tick_path = os.path.join(music_dir, "soft_tick.wav")
         if os.path.exists(tick_path) and all_timestamps:
             try:
-                tick_base = AudioFileClip(tick_path)
+                tick_base = load_sfx(tick_path)
                 moviepy_resources["tick_base"] = tick_base
                 tick_len = tick_base.duration
                 for ts in all_timestamps:
