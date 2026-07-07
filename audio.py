@@ -63,6 +63,19 @@ PHONETIC_DICTIONARY = {
     "QUANTUM": "kwantum", "VIBRATION": "vibrasi",
     "MANIFESTATION": "manifestasi", "MANIFEST": "manifest",
     "CONSPIRACY": "konspirasi", "THEORY": "teori",
+    # Kosakata Psikologi Modern & Gen-Z tambahan
+    "INSECURE": "insekyur", "INSECURITY": "insekyuriti",
+    "BURNOUT": "bern aut", "PASSION": "pesyen", 
+    "PRIVILEGE": "priviles", "CIRCLE": "sirkel",
+    "SUPPORT": "seport", "HUSTLE": "hasel", 
+    "SCREENTIME": "skrintaim", "SILENT": "sailen",
+    "TREATMENT": "tritmen", "ATTACHMENT": "ataecmen", 
+    "GASLIGHT": "gaslait", "VIBES": "vaibs", 
+    "FEELING": "filing", "HEALING": "hiling",
+    "MIND": "maind", "BULLY": "buli", "BULLYING": "buliing",
+    "FAKE": "feik", "VALUE": "velyu", "WORTH": "werth",
+    "OVERPOWER": "overpauer", "OVERWHELM": "overwelm",
+    "JUDGE": "jadj", "JUDGING": "jadjing",
 }
 
 # Bobot scoring untuk DP alignment (Needleman-Wunsch style)
