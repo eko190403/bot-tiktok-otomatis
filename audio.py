@@ -15,12 +15,15 @@ logger = logging.getLogger("video_pipeline")
 TICKS_PER_SECOND = 10_000_000
 
 PHONETIC_DICTIONARY = {
-    # Slang Indonesia (Diubah agar tetap santai, JANGAN dipaksa baku)
+    # Slang Indonesia & Singkatan Internet (Agar tidak dibaca kaku)
     "NGGAK": "enggak", "NGAK": "enggak", "GAK": "enggak", "ENGGAK": "enggak",
     "TAU": "tau", "GITU": "gitu", "UDAH": "udah", "TDK": "tidak",
     "DGN": "dengan", "YG": "yang", "KRNA": "karena", "KARNA": "karena",
-    "LHO": "loh", "LOH": "loh", "SIH": "sih", "DONG": "dong", "KOK": "kok",
-    "LU": "lu", "LO": "lo", "GUE": "gue", "GW": "gue", "BANGET": "banget", "BNGT": "banget",
+    "LHO": "loh", "LOH": "loh", "SIH": "sih", "DONG": "dong", "KOK": "kok", "NIH": "nih", "TUH": "tuh",
+    "LU": "lu", "LO": "lo", "GUE": "gue", "GW": "gue", "BANGET": "banget", "BNGT": "banget", "BGT": "banget",
+    "WKWK": "weka weka", "WKWKWK": "weka weka", "HAHAHA": "haha",
+    "BTW": "ngomong ngomong", "FYI": "ef wai ai", "OTW": "o te we", "YGY": "ya gaes ya",
+    "CMIIW": "koreksi kalo salah", "TBH": "sejujurnya", "IRL": "di dunia nyata",
     # Kata Inggris umum → cara baca Indonesia
     "MINDSET": "maindset", "MINDSETS": "maindset",
     "SELF": "self", "SELF-CONTROL": "self kontrol", "SELF-ESTEEM": "self estim",
