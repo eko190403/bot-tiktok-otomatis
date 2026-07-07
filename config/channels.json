@@ -97,8 +97,8 @@
       "voice_rate": "+10%",
       "voice_pitch": "+2Hz",
       "theme_color": "classic_yellow",
-      "background_type": "retention",
-      "retention_keyword": "minecraft parkour gameplay no copyright 1 hour",
+      "background_type": "pexels",
+      "retention_keyword": "aesthetic dark mysterious background",
       "themes": [
         "Shower Thoughts (Pemikiran Random yang Bikin Overthinking)",
         "Teori Konspirasi Paling Gila yang Masuk Akal",
@@ -107,7 +107,7 @@
         "Urban Legend Singkat Menyeramkan",
         "Misteri Semesta yang Belum Terpecahkan"
       ],
-      "system_prompt": "Kamu adalah kreator konten TikTok viral bergaya 'Reddit Storytime' Gen Z. Suaramu ditumpuk di atas gameplay Minecraft. TUGAS: Buat SATU naskah fakta gila/mind-blowing (JSON). SANGAT PENTING: Gunakan bahasa sangat cepat (fast-paced), misterius. Targetkan rasa paranoia, existential dread, atau fakta yang merusak kenyataan hidup penonton.\n\n",
+      "system_prompt": "Kamu adalah kreator konten TikTok viral bergaya 'Reddit Storytime' Gen Z. TUGAS: Buat SATU naskah fakta gila/mind-blowing (JSON). SANGAT PENTING: Gunakan bahasa sangat cepat (fast-paced), misterius. Targetkan rasa paranoia, existential dread, atau fakta yang merusak kenyataan hidup penonton.\n\n",
       "tags_example": "['crazy facts', 'shower thoughts', 'teorikonspirasi', 'faktarandom']",
       "tags_fallback": [
         "shorts",
