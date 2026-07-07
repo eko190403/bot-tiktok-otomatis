@@ -1031,17 +1031,21 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     if (start_next - end_prev) >= 0.7:
                         swells.append((end_prev + 0.1, start_next - 0.1))
                 
-                def volume_envelope(t):
+                def make_frame(get_frame, t):
+                    frame = get_frame(t)
                     is_array = isinstance(t, np.ndarray)
                     t_val = t if is_array else np.array([t])
-                    vol = np.full_like(t_val, 0.08)
+                    vol = np.full_like(t_val, 0.08, dtype=float)
                     for (s_start, s_end) in swells:
                         mask = (t_val >= s_start) & (t_val <= s_end)
                         vol[mask] = 0.35
-                    return vol if is_array else vol[0]
-                
-                from moviepy.audio.fx import MultiplyVolume
-                bg_music_clip = bg_music_clip.with_effects([MultiplyVolume(volume_envelope)])
+                    
+                    if is_array:
+                        return frame * vol[:, np.newaxis]
+                    else:
+                        return frame * vol[0]
+
+                bg_music_clip = bg_music_clip.transform(make_frame)
                 logger.info("🎵 Musik latar berhasil dimuat dengan Dinamika Audio (Ducking & Swells): %s", chosen_music)
             except Exception as me:
                 logger.warning(" Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
