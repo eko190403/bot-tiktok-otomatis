@@ -118,6 +118,29 @@ def download_youtube_retention_video(keyword: str) -> str:
     
     # Deteksi Cookie untuk by-pass Bot Protection YouTube
     if os.path.exists("cookies.txt"):
+        # Auto-convert JSON to Netscape Format jika diperlukan
+        try:
+            with open("cookies.txt", "r", encoding="utf-8") as f:
+                content = f.read().strip()
+            if content.startswith("[") and content.endswith("]"):
+                import json
+                cookies = json.loads(content)
+                netscape_str = "# Netscape HTTP Cookie File\n# http://curl.haxx.se/rfc/cookie_spec.html\n# This is a generated file!  Do not edit.\n\n"
+                for c in cookies:
+                    domain = c.get("domain", "")
+                    include_subdomain = "TRUE" if domain.startswith(".") else "FALSE"
+                    path = c.get("path", "/")
+                    secure = "TRUE" if c.get("secure", False) else "FALSE"
+                    expiry = str(int(c.get("expirationDate", 0)))
+                    name = c.get("name", "")
+                    value = c.get("value", "")
+                    netscape_str += f"{domain}\t{include_subdomain}\t{path}\t{secure}\t{expiry}\t{name}\t{value}\n"
+                with open("cookies.txt", "w", encoding="utf-8") as f:
+                    f.write(netscape_str)
+                print("🔄 Berhasil mengonversi format cookie JSON menjadi format Netscape (TXT).")
+        except Exception as e:
+            print(f"⚠️ Gagal mengonversi cookies.txt (Abaikan jika sudah berformat txt): {e}")
+            
         ydl_opts['cookiefile'] = "cookies.txt"
         print("🍪 Menggunakan cookies.txt untuk otentikasi YouTube-DL")
     
