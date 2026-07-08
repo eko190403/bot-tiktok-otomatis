@@ -100,7 +100,7 @@ class SubtitleEngineV2:
 
             avg_duration  = sum(w.get("duration", 0.2) for w in phrase) / phrase_len
             visual_offset = min(0.040, avg_duration * 0.15)
-            hold_padding  = 0.220
+            hold_padding  = 0.400
 
             phrase_display_start = max(0.0, phrase[0]["start"] - visual_offset)
             phrase_display_end   = phrase[-1]["end"] + hold_padding
