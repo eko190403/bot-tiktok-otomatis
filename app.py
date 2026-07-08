@@ -77,7 +77,7 @@ def send_telegram_photo(photo_path: str, caption: str = ""):
             time.sleep(2)
 
 
-def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: str) -> str:
+async def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: str) -> str:
     """
     Mengirim file video ke Telegram lengkap dengan tombol inline publikasi.
     Mengmengembalikan file_id jika sukses.
@@ -116,7 +116,8 @@ def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: st
                     "parse_mode": "HTML",
                     "reply_markup": json.dumps(reply_markup)
                 }
-                response = requests.post(url, files=files, data=data, timeout=60)
+                import asyncio
+                response = await asyncio.to_thread(requests.post, url, files=files, data=data, timeout=60)
                 if response.status_code == 200:
                     res_data = response.json()
                     video_obj = res_data.get("result", {}).get("video", {})
@@ -140,6 +141,7 @@ async def main():
     args, unknown = parser.parse_known_args()
     channel_id = args.channel
 
+    firebase_connector = None
     try:
         print(f"🚀 Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
         
@@ -315,7 +317,9 @@ async def main():
                 print("🖼️ Memulai proses pembuatan auto-thumbnail...")
                 try:
                     import subprocess
-                    result = subprocess.run(
+                    import asyncio
+                    result = await asyncio.to_thread(
+                        subprocess.run,
                         [
                             "ffmpeg", "-y",
                             "-ss", "2",
@@ -496,7 +500,7 @@ async def main():
                     f"✍️ <b>Caption:</b>\n<i>{caption}</i>\n\n"
                     f"💬 <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
                 )
-                file_id = send_telegram_video_with_buttons(latest_video, caption=tg_caption, video_id=video_id)
+                file_id = await send_telegram_video_with_buttons(latest_video, caption=tg_caption, video_id=video_id)
                 
                 if file_id:
                     # Simpan ke Firestore/Lokal
