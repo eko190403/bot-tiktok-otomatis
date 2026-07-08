@@ -677,15 +677,15 @@ async def generate_voiceover_with_timestamps(
         failed_tokens=failed_tokens,
     )
 
-    # 9. PROTEKSI DURASI MAKSIMAL (FFMPEG DELEGATION)
+    # 9. PROTEKSI DURASI MAKSIMAL 88 DETIK (TIKTOK/SHORTS EXTENDED)
     # Logika time-stretch menggunakan librosa/soundfile dihapus karena:
     # 1. Edge-TTS menghasilkan MP3, dan soundfile tidak mendukung MP3.
     # 2. Librosa phase vocoder merusak frekuensi suara manusia (metalik).
     # Manipulasi durasi sekarang sepenuhnya didelegasikan ke FFmpeg atempo filter.
     duration = librosa.get_duration(path=audio_path)
-    if duration > 58.0:
+    if duration > 88.0:
         logger.warning(
-            "⏳ Durasi audio (%.2fs) melebihi batas 58s. "
+            "⏳ Durasi audio (%.2fs) melebihi batas 88s. "
             "Peregangan waktu (time-stretch) akan dieksekusi secara aman oleh FFmpeg "
             "pada tahap render video menggunakan filter atempo.", duration
         )

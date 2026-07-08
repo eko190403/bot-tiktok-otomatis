@@ -1262,15 +1262,39 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             if os.path.exists(temp_output_path): os.remove(temp_output_path)
             return False
             
-        # 🔥 POST-PROCESSING FFMPEG NATIVE (ATEMPO DELEGATION) - DIMATIKAN
-        # Jika durasi lebih dari 58 detik, kita biarkan saja agar suara tetap natural
-        # dan informasi tidak terpotong. Konsekuensi: Video > 60s akan masuk ke kategori
-        # YouTube reguler, bukan Shorts.
-        if total_duration > 58.0:
+        # 🔥 POST-PROCESSING FFMPEG NATIVE (ATEMPO DELEGATION)
+        # Sesuai aturan YouTube Shorts Extended 2025, batas maks adalah 3 menit.
+        # Kita set batas pelindung di 88.0 detik agar video tetap aman.
+        if total_duration > 88.0:
+            stretch_factor = total_duration / 88.0
             logger.warning(
-                "⏳ Durasi video (%.2fs) melampaui batas 58s. "
-                "Kompresi Atempo dinonaktifkan agar kecepatan baca tetap nyaman.", total_duration
+                "⏳ Durasi video (%.2fs) melampaui batas 88s. "
+                "Menjalankan FFmpeg atempo compression (factor: %.3f)...", total_duration, stretch_factor
             )
+            compressed_temp = temp_output_path.replace(".mp4", "_compressed.mp4")
+            try:
+                # setpts mempercepat video frame, atempo mempercepat audio tanpa merubah pitch
+                import subprocess
+                pts_factor = 1.0 / stretch_factor
+                ffmpeg_cmd = [
+                    "ffmpeg", "-y", "-i", temp_output_path,
+                    "-filter_complex", f"[0:v]setpts={pts_factor}*PTS[v];[0:a]atempo={stretch_factor}[a]",
+                    "-map", "[v]", "-map", "[a]",
+                    "-c:v", "libx264", "-crf", "20", "-preset", "fast",
+                    "-c:a", "aac",
+                    compressed_temp
+                ]
+                # Jalankan sinkron namun dilindungi thread pool agar aman
+                await asyncio.to_thread(subprocess.run, ffmpeg_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                
+                # Timpa file temp dengan hasil kompresi
+                os.replace(compressed_temp, temp_output_path)
+                logger.info(" FFmpeg atempo compression berhasil!")
+            except Exception as ffmpeg_err:
+                logger.error("❌ FFmpeg atempo compression gagal: %s", ffmpeg_err)
+                if os.path.exists(compressed_temp):
+                    try: os.remove(compressed_temp)
+                    except OSError: pass
 
         os.replace(temp_output_path, output_file_path)
         
