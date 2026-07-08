@@ -81,6 +81,7 @@ PHONETIC_DICTIONARY = {
     "FAKE": "feik", "VALUE": "velyu", "WORTH": "werth",
     "OVERPOWER": "overpauer", "OVERWHELM": "overwelm",
     "JUDGE": "jadj", "JUDGING": "jadjing",
+    "OVERESTIMASI": "over estimasi", "ESTIMASI": "estimasi",
     
     # Kosakata Misteri & Gaming (Misteri Semesta)
     "MATRIX": "matriks", "GAMEPLAY": "gemplei", "PARKOUR": "parkur",
