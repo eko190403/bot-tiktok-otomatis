@@ -164,14 +164,16 @@ class SubtitleEngineV2:
                 static_np = np.array(frame_img.convert("RGBA"))
                 
                 # Fungsi Matematika On-The-Fly untuk efek pop
-                def make_pop_filter(get_frame, t):
-                    if t >= pop_duration:
-                        return static_np
+                # PENTING: Gunakan default arguments (snp=static_np, dll) untuk menghindari
+                # Python late-binding closure bug di dalam loop.
+                def make_pop_filter(get_frame, t, snp=static_np, pdur=pop_duration, f_img=frame_img, bw=bbox_w, bh=bbox_h):
+                    if t >= pdur:
+                        return snp
                     
-                    progress = t / pop_duration
+                    progress = t / pdur
                     animated_pil = SubtitleAnimator.apply_pop_animation(
-                        frame_img.copy(), progress,
-                        center_coords=(bbox_w // 2, bbox_h // 2),
+                        f_img.copy(), progress,
+                        center_coords=(bw // 2, bh // 2),
                     )
                     return np.array(animated_pil.convert("RGBA"))
 
