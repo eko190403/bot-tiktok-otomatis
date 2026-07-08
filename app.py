@@ -184,7 +184,7 @@ async def main():
         try:
             import firebase_connector
             from youtube_uploader import get_youtube_stats
-            yt_video_map = firebase_connector.get_active_youtube_video_ids(limit=10)
+            yt_video_map = firebase_connector.get_active_youtube_video_ids(limit=50)
             if yt_video_map:
                 print(f"📊 Menemukan {len(yt_video_map)} video YouTube untuk diperiksa statistiknya...")
                 stats = await get_youtube_stats(list(yt_video_map.values()))

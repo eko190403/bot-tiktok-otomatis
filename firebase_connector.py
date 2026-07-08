@@ -228,22 +228,25 @@ def get_top_performing_scripts(limit: int = 3) -> list:
         return []
 
 
-def get_active_youtube_video_ids(limit: int = 10) -> dict:
-    """Mengambil peta video_id -> platform_video_id YouTube dari Firestore."""
+def get_active_youtube_video_ids(limit: int = 50) -> dict:
+    """Mengambil peta video_id -> platform_video_id YouTube dari draf terbaru di Firestore."""
     if not _require_firestore("get_active_youtube_video_ids"):
         return {}
     try:
+        # Ambil draf terbaru, filter platform di Python untuk menghindari butuhnya Composite Index
         docs = (
             db.collection("drafts")
-            .where("platform", "==", "youtube")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .limit(limit)
             .stream()
         )
         video_map = {}
         for doc in docs:
-            yt_id = doc.to_dict().get("platform_video_id")
-            if yt_id:
-                video_map[doc.id] = yt_id
+            data = doc.to_dict()
+            if data.get("platform") == "youtube":
+                yt_id = data.get("platform_video_id")
+                if yt_id:
+                    video_map[doc.id] = yt_id
         return video_map
     except Exception as e:
         logger.warning(f"⚠️ Gagal mengambil active YouTube video dari Firestore: {e}")
