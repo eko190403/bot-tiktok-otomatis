@@ -182,11 +182,16 @@ class SubtitleEngineV2:
                         .with_start(highlight_start)
                         .with_position((pos_x, pos_y)))
                         
-                # ── Injeksi Peluruhan Silang (CrossFadeIn) untuk awal frasa ───
+                # ── Injeksi Peluruhan Silang (Fade In) untuk awal frasa ───
                 if i == 0:
-                    from moviepy.video.fx import CrossFadeIn
-                    # Muluskan kemunculan frasa baru dengan fade 0.1s
-                    clip = clip.with_effects([CrossFadeIn(0.1)])
+                    try:
+                        # MoviePy v2
+                        from moviepy.video.fx import FadeIn
+                        clip = clip.with_effects([FadeIn(0.1)])
+                    except ImportError:
+                        # MoviePy v1
+                        from moviepy.video.fx.all import fadein
+                        clip = clip.fx(fadein, 0.1)
                     
                 clips.append(clip)
 
