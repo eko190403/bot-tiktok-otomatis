@@ -166,21 +166,32 @@ class SubtitleEngineV2:
                 # Fungsi Matematika On-The-Fly untuk efek pop
                 # PENTING: Gunakan default arguments (snp=static_np, dll) untuk menghindari
                 # Python late-binding closure bug di dalam loop.
-                def make_pop_filter(get_frame, t, snp=static_np, pdur=pop_duration, f_img=frame_img, bw=bbox_w, bh=bbox_h):
+                def make_rgb_filter(t, snp=static_np, pdur=pop_duration, f_img=frame_img, bw=bbox_w, bh=bbox_h):
                     if t >= pdur:
-                        return snp
-                    
+                        return snp[:, :, :3]
                     progress = t / pdur
                     animated_pil = SubtitleAnimator.apply_pop_animation(
                         f_img.copy(), progress,
                         center_coords=(bw // 2, bh // 2),
                     )
-                    return np.array(animated_pil.convert("RGBA"))
+                    return np.array(animated_pil.convert("RGB"))
 
-                # Terapkan transform dan filter (tanpa instansiasi array duplikat)
-                clip = (ImageClip(static_np)
-                        .with_duration(word_duration)
-                        .transform(make_pop_filter)
+                def make_mask_filter(t, snp=static_np, pdur=pop_duration, f_img=frame_img, bw=bbox_w, bh=bbox_h):
+                    if t >= pdur:
+                        return snp[:, :, 3] / 255.0
+                    progress = t / pdur
+                    animated_pil = SubtitleAnimator.apply_pop_animation(
+                        f_img.copy(), progress,
+                        center_coords=(bw // 2, bh // 2),
+                    )
+                    return np.array(animated_pil.split()[3]) / 255.0
+
+                from moviepy import VideoClip
+                rgb_clip = VideoClip(make_rgb_filter, duration=word_duration)
+                mask_clip = VideoClip(make_mask_filter, duration=word_duration, ismask=True)
+                
+                clip = (rgb_clip
+                        .with_mask(mask_clip)
                         .with_start(highlight_start)
                         .with_position((pos_x, pos_y)))
                         
