@@ -1227,15 +1227,15 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         
         def execute_ffmpeg_render(target_path: str):
             # -g 15 memastikan ada keyframe setiap 0.5 detik (pada 30fps)
-            # CRF 23 (Kualitas Tinggi) + maxrate 4000k (Safety Limit 50MB absolut)
-            params = ["-crf", "23", "-maxrate", "4000k", "-bufsize", "8000k", "-pix_fmt", "yuv420p", "-g", "15"]
+            # CRF 20 (Kualitas Visual Sangat Tajam) + maxrate 7000k (Maksimal ukuran file ~42MB untuk 48 detik, aman dari limit 50MB Telegram)
+            params = ["-crf", "20", "-maxrate", "7000k", "-bufsize", "14000k", "-pix_fmt", "yuv420p", "-g", "15"]
             if bg_type == "pexels":
                 # Mendelegasikan Film Grain (noise) & Vignette ke engine native C++ FFmpeg
                 params.extend(["-vf", "noise=alls=8:allf=t+u,vignette=PI/3"])
                 
             moviepy_resources["final_video"].write_videofile(
                 target_path, fps=30, codec="libx264", preset="veryfast", # OPTIMASI: Kecepatan & kompresi seimbang
-                audio_codec="aac", bitrate="4500k", threads=cpu_threads, logger=None,
+                audio_codec="aac", bitrate="7000k", threads=cpu_threads, logger=None,
                 ffmpeg_params=params      # OPTIMASI: Kompresi ketat untuk batas 50MB Telegram
             )
 
