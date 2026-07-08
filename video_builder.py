@@ -166,7 +166,15 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
     for attempt in range(max_attempts):
         client, idx = await client_pool.get_client_and_rotate()
         try:
-            response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+            # BUGFIX: Pemanggilan generate_content ini aslinya synchronous.
+            # Menggunakan asyncio.to_thread agar tidak membekukan Event Loop Python
+            # saat menunggu respon server Google (terutama ketika memproses banyak channel paralel).
+            response = await asyncio.to_thread(
+                client.models.generate_content,
+                model='gemini-2.5-flash',
+                contents=prompt,
+                config=config
+            )
             return response.text.strip()
         except Exception as e:
             last_err = e
@@ -1320,5 +1328,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         for idx, cp in enumerate(moviepy_resources["processed_clips"]):
             clips_to_close[f"processed_clip_{idx}"] = cp
 
-        clean_video_files = video_files if isinstance(video_files, list) else []
+        # BUGFIX: Jangan pernah hapus berkas cadangan fallback (misal: default_portrait.mp4) yang ada di folder assets.
+        raw_video_files = video_files if isinstance(video_files, list) else []
+        clean_video_files = [f for f in raw_video_files if f and "assets" not in str(f).replace("\\", "/").lower()]
+        
         safe_close_resources(clips_to_close, clean_video_files + [vo_file_path])
