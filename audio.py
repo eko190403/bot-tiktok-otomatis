@@ -225,11 +225,16 @@ def tokenize_section(text: str, section: str) -> List[Dict]:
     raw_tokens = text.split()
     tokens = []
     for w in raw_tokens:
-        # Hapus marker [JEDA] dari teks agar tidak diucapkan TTS, 
-        # namun biarkan tanda baca (...) yang mengikutinya untuk memicu jeda
+        phantom_pause = ""
+        # Deteksi marker [JEDA] untuk Phantom Pause
         if "[JEDA]" in w.upper():
             w = re.sub(r'\[JEDA\]', '', w, flags=re.IGNORECASE)
+            # 4 koma beruntun akan memaksa TTS jeda sekitar ~0.8 detik
+            phantom_pause = ", , , ,"
             if not w.strip():
+                # Jika tokennya HANYA "[JEDA]", tempelkan jeda ke token sebelumnya (jika ada)
+                if tokens:
+                    tokens[-1]["spoken"] += f" {phantom_pause}"
                 continue
             
         # Cari tanda baca di akhir kata (misal: "73%,")
@@ -241,9 +246,11 @@ def tokenize_section(text: str, section: str) -> List[Dict]:
             for idx, spoken in enumerate(spoken_list):
                 # Tambahkan tanda baca asli ke kata terakhir hasil ekspansi
                 display_word = spoken + punc if idx == len(spoken_list) - 1 else spoken
-                tokens.append({"display": display_word, "spoken": spoken, "section": section})
+                final_spoken = spoken + (f" {phantom_pause}" if idx == len(spoken_list) - 1 and phantom_pause else "")
+                tokens.append({"display": display_word, "spoken": final_spoken, "section": section})
         else:
-            tokens.append({"display": w, "spoken": spoken_list[0], "section": section})
+            final_spoken = spoken_list[0] + (f" {phantom_pause}" if phantom_pause else "")
+            tokens.append({"display": w, "spoken": final_spoken, "section": section})
     return tokens
 
 def build_target_sequence(hook: str, story: str, cta: str) -> List[Dict]:
