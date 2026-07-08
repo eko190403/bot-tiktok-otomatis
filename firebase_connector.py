@@ -270,9 +270,10 @@ def get_viral_video_ids(min_views: int = 500, limit: int = 3, channel_id: str = 
     if not _require_firestore("get_viral_video_ids"):
         return {}
     try:
-        query = db.collection("drafts").where("platform", "==", "youtube")
+        from google.cloud.firestore_v1.base_query import FieldFilter
+        query = db.collection("drafts").where(filter=FieldFilter("platform", "==", "youtube"))
         if channel_id:
-            query = query.where("channel_id", "==", channel_id)
+            query = query.where(filter=FieldFilter("channel_id", "==", channel_id))
             
         docs = query.limit(100).stream()
         video_map = {}

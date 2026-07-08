@@ -180,11 +180,18 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
             last_err = e
             err_msg = str(e)
             if any(x.lower() in err_msg.lower() for x in RETRY_ERRORS):
-                backoff_delay = 2 ** attempt
+                backoff_delay = min(2 ** attempt, 15)  # Batas maksimal tidur 15 detik per putaran
                 logger.warning("[%s] Eror terdeteksi. Karantina Slot-%d. Backoff %d detik.", EV_GEMINI_ROTATION, idx + 1, backoff_delay)
                 await client_pool.set_cooldown(idx, duration=60 + backoff_delay)
                 await asyncio.sleep(backoff_delay)
                 continue
+            
+            # Jika 403 / API Key terblokir, karantina kunci ini 24 jam agar tidak dipakai lagi
+            if "403" in err_msg or "PERMISSION_DENIED" in err_msg:
+                logger.error("❌ Kunci API Slot-%d diblokir Google (403). Mengkarantina selama 24 jam...", idx + 1)
+                await client_pool.set_cooldown(idx, duration=86400)
+                continue
+                
             logger.warning("[%s] Gangguan API Gemini: %s. Mencoba model lain/kunci lain.", EV_GEMINI_CRASH, e)
             
     # Jika Gemini gagal total, coba Groq API Fallback
