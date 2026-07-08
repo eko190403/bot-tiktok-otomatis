@@ -360,7 +360,7 @@ class SubtitleRenderer:
                 rx, ry = wp["abs_x"], wp["abs_y"]
 
             if is_active:
-                keyword_color = highlighter.get_word_color(wp["text"], None)
+                keyword_color = self.highlighter.get_word_color(wp["text"], None)
                 color = keyword_color if keyword_color else default_active
             else:
                 # Dim inactive words to a cool grey to create a premium karaoke style highlight
