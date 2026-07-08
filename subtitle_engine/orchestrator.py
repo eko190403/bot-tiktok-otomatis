@@ -90,8 +90,8 @@ class SubtitleEngineV2:
         grouped_phrases = self._group_words_into_rhythm_phrases(raw_words, max_words, max_chars)
         clips           = []
 
-        # Posisi Y subtitle: 50% tinggi layar (Tepat di tengah/eye-level)
-        subtitle_y_ratio = 0.50
+        # Posisi Y subtitle: 75% tinggi layar (Area aman di bawah tengah)
+        subtitle_y_ratio = 0.75
 
         for p_idx, phrase in enumerate(grouped_phrases):
             phrase_len = len(phrase)
@@ -152,38 +152,42 @@ class SubtitleEngineV2:
                 pos_x = (WIDTH  - bbox_w) // 2
                 pos_y = int(HEIGHT * subtitle_y_ratio) - (bbox_h // 2)
 
-                # ── Pop animation: pre-render 5 frames of scale animation ───────
+                # ── Pop animation: Time-based Transform ───────
                 fps = 30
-                frame_duration = 1.0 / fps
-                num_anim_frames = 5
-                pop_duration = num_anim_frames * frame_duration  # 0.167s
+                pop_duration = 5 * (1.0 / fps)  # ~0.167s
 
-                # Jika durasi kata sangat singkat, sesuaikan jumlah frame pop
+                # Jika durasi kata sangat singkat, sesuaikan durasi pop
                 if word_duration < pop_duration:
-                    num_anim_frames = max(1, int(word_duration * fps))
-                    pop_duration = num_anim_frames * frame_duration
+                    pop_duration = max(0.033, word_duration)
 
-                anim_clips = []
-                for f_idx in range(num_anim_frames):
-                    # Progress [0.2 - 1.0] untuk curve scaling
-                    progress = (f_idx + 1) / num_anim_frames
+                # Pre-convert frame dasar ke RGBA Numpy Array
+                static_np = np.array(frame_img.convert("RGBA"))
+                
+                # Fungsi Matematika On-The-Fly untuk efek pop
+                def make_pop_filter(get_frame, t):
+                    if t >= pop_duration:
+                        return static_np
+                    
+                    progress = t / pop_duration
                     animated_pil = SubtitleAnimator.apply_pop_animation(
                         frame_img.copy(), progress,
                         center_coords=(bbox_w // 2, bbox_h // 2),
                     )
-                    animated_np = np.array(animated_pil.convert("RGBA"))
-                    # imageio / moviepy akan membaca canvas mini RGBA ini dengan transparansi
-                    anim_clips.append(ImageClip(animated_np).with_duration(frame_duration))
+                    return np.array(animated_pil.convert("RGBA"))
 
-                remain_duration = word_duration - pop_duration
-                if remain_duration > 0.001:
-                    static_np = np.array(frame_img.convert("RGBA"))
-                    anim_clips.append(ImageClip(static_np).with_duration(remain_duration))
-
-                from moviepy import concatenate_videoclips
-                clip = (concatenate_videoclips(anim_clips, method="compose")
+                # Terapkan transform dan filter (tanpa instansiasi array duplikat)
+                clip = (ImageClip(static_np)
+                        .with_duration(word_duration)
+                        .transform(make_pop_filter)
                         .with_start(highlight_start)
                         .with_position((pos_x, pos_y)))
+                        
+                # ── Injeksi Peluruhan Silang (CrossFadeIn) untuk awal frasa ───
+                if i == 0:
+                    from moviepy.video.fx import CrossFadeIn
+                    # Muluskan kemunculan frasa baru dengan fade 0.1s
+                    clip = clip.with_effects([CrossFadeIn(0.1)])
+                    
                 clips.append(clip)
 
         self.renderer.clear_cache()
