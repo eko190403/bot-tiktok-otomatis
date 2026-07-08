@@ -188,7 +188,7 @@ class SubtitleEngineV2:
 
                 from moviepy import VideoClip
                 rgb_clip = VideoClip(make_rgb_filter, duration=word_duration)
-                mask_clip = VideoClip(make_mask_filter, duration=word_duration, ismask=True)
+                mask_clip = VideoClip(make_mask_filter, duration=word_duration)
                 
                 clip = (rgb_clip
                         .with_mask(mask_clip)
