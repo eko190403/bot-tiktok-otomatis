@@ -182,17 +182,6 @@ class SubtitleEngineV2:
                         .with_start(highlight_start)
                         .with_position((pos_x, pos_y)))
                         
-                # ── Injeksi Peluruhan Silang (Fade In) untuk awal frasa ───
-                if i == 0:
-                    try:
-                        # MoviePy v2
-                        from moviepy.video.fx import FadeIn
-                        clip = clip.with_effects([FadeIn(0.1)])
-                    except ImportError:
-                        # MoviePy v1
-                        from moviepy.video.fx.all import fadein
-                        clip = clip.fx(fadein, 0.1)
-                    
                 clips.append(clip)
 
         self.renderer.clear_cache()
