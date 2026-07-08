@@ -349,7 +349,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
-        "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. SANGAT PENTING (DRAMATIC PAUSE): Tepat sebelum kamu mengungkapkan fakta paling mengejutkan atau plot twist di cerita ini, sisipkan tanda elipsis panjang '... [JEDA] ...' untuk memaksa suara AI berhenti sejenak dan membangun ketegangan. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 85 kata agar total durasi suara selalu di bawah 55 detik (idealnya 35-45 detik). Ini sangat penting agar penonton tidak merasa bicara terlalu cepat! Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
+        "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. SANGAT PENTING (DRAMATIC PAUSE): Tepat sebelum kamu mengungkapkan fakta paling mengejutkan atau plot twist di cerita ini, sisipkan tanda elipsis panjang '... [JEDA] ...' untuk memaksa suara AI berhenti sejenak dan membangun ketegangan. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 120 kata agar informasinya utuh dan mendalam. Gunakan koma dan titik dengan baik agar intonasi suara natural saat dibacakan.\n"
         "3. 'cta': Ajakan bertindak yang personal dan mendesak, maks 2 kalimat. PENTING: Kalimat terakhir dari cta ini HARUS dirancang menggantung di akhir kata dan secara tata bahasa menyambung kembali dengan mulus (seamless loop) ke kata pertama pada kalimat HOOK utama agar video bisa ditonton berulang kali secara melingkar tanpa terputus. Contoh jika HOOK = 'KENAPA KAMU MISKIN', maka akhir CTA bisa berbunyi '...dan itulah alasan utama...' sehingga saat diputar ulang ia tersambung menjadi '...dan itulah alasan utama KENAPA KAMU MISKIN'.\n"
         "4. 'caption': Judul/caption TikTok yang santai, relate, atau sedikit dark jokes (jangan terlalu formal/kaku), ditambah hashtag viral (contoh: #ruangpikir #psikologi #overthinking #fyp). Maks 150 karakter.\n"
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
@@ -1262,39 +1262,15 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             if os.path.exists(temp_output_path): os.remove(temp_output_path)
             return False
             
-        # 🔥 POST-PROCESSING FFMPEG NATIVE (ATEMPO DELEGATION)
-        # Jika durasi lebih dari 58 detik, panggil FFmpeg untuk compress waktu
+        # 🔥 POST-PROCESSING FFMPEG NATIVE (ATEMPO DELEGATION) - DIMATIKAN
+        # Jika durasi lebih dari 58 detik, kita biarkan saja agar suara tetap natural
+        # dan informasi tidak terpotong. Konsekuensi: Video > 60s akan masuk ke kategori
+        # YouTube reguler, bukan Shorts.
         if total_duration > 58.0:
-            stretch_factor = total_duration / 58.0
             logger.warning(
                 "⏳ Durasi video (%.2fs) melampaui batas 58s. "
-                "Menjalankan FFmpeg atempo compression (factor: %.3f)...", total_duration, stretch_factor
+                "Kompresi Atempo dinonaktifkan agar kecepatan baca tetap nyaman.", total_duration
             )
-            compressed_temp = temp_output_path.replace(".mp4", "_compressed.mp4")
-            try:
-                # setpts mempercepat video frame, atempo mempercepat audio tanpa merubah pitch
-                import subprocess
-                pts_factor = 1.0 / stretch_factor
-                ffmpeg_cmd = [
-                    "ffmpeg", "-y", "-i", temp_output_path,
-                    "-filter_complex", f"[0:v]setpts={pts_factor}*PTS[v];[0:a]atempo={stretch_factor}[a]",
-                    "-map", "[v]", "-map", "[a]",
-                    "-c:v", "libx264", "-crf", "20", "-preset", "fast",
-                    "-c:a", "aac",
-                    compressed_temp
-                ]
-                # Jalankan sinkron namun dilindungi thread pool agar aman
-                await asyncio.to_thread(subprocess.run, ffmpeg_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                
-                # Timpa file temp dengan hasil kompresi
-                os.replace(compressed_temp, temp_output_path)
-                logger.info(" FFmpeg atempo compression berhasil!")
-            except Exception as ffmpeg_err:
-                logger.error("❌ FFmpeg atempo compression gagal: %s", ffmpeg_err)
-                if os.path.exists(compressed_temp):
-                    try: os.remove(compressed_temp)
-                    except OSError: pass
-                # Lanjutkan menyimpan file asli (akan gagal upload di YouTube Shorts, tapi setidaknya file terselamatkan)
 
         os.replace(temp_output_path, output_file_path)
         
