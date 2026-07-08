@@ -11,11 +11,11 @@ on:
       - telegram_publish
 
   schedule:
-    # Menggunakan Jam Emas (Prime Time) Indonesia:
-    # Pagi: 07:00 WIB (00:00 UTC)
-    # Siang: 12:00 WIB (05:00 UTC)
-    # Malam: 19:00 WIB (12:00 UTC)
-    - cron: '0 0,5,12 * * *'
+    # Mengkompensasi delay GitHub Actions (1-2 jam molor dari antrean server):
+    # Target Pagi (07:00 WIB)   -> Cron diset 05:00 WIB (22:00 UTC)
+    # Target Siang (12:00 WIB)  -> Cron diset 10:00 WIB (03:00 UTC)
+    # Target Malam (19:00 WIB)  -> Cron diset 17:00 WIB (10:00 UTC)
+    - cron: '0 3,10,22 * * *'
     # Cron mingguan untuk pembersihan draf lama (Senin 03:00 WIB -> 20:00 UTC)
     - cron: '0 20 * * 1'
 
