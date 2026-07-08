@@ -107,6 +107,18 @@ GAP_PENALTY = -2
 FUZZY_MATCH_MIN_RATIO = 0.55  # di bawah ini dianggap gagal match sama sekali
 
 
+# Fallback Model: Whisper Tiny (Lazy Load)
+_WHISPER_MODEL = None
+def _get_whisper_model():
+    global _WHISPER_MODEL
+    if _WHISPER_MODEL is None:
+        try:
+            import whisper
+            _WHISPER_MODEL = whisper.load_model("tiny")
+        except Exception as e:
+            logger.error("Gagal load Whisper: %s", e)
+    return _WHISPER_MODEL
+
 @dataclass(slots=True)
 class WordTimestamp:
     word: str
@@ -558,23 +570,24 @@ async def generate_voiceover_with_timestamps(
             "Menggunakan local OpenAI Whisper (tiny) sebagai fallback untuk timing presisi..."
         )
         try:
-            import whisper
-            # Load model tiny lokal (sangat cepat untuk audio 30-50 detik)
-            model = whisper.load_model("tiny")
-            result = model.transcribe(audio_path, word_timestamps=True)
-            
-            for segment in result.get("segments", []):
-                for w in segment.get("words", []):
-                    word_text = w["word"].strip()
-                    # Bersihkan tanda baca
-                    clean_text = re.sub(r"[^\w']", "", word_text).upper()
-                    if clean_text:
-                        raw_boundaries.append({
-                            "word": word_text,
-                            "start": w["start"],
-                            "duration": max(0.05, w["end"] - w["start"]),
-                        })
-            logger.info("🗣️ Local Whisper berhasil menyelaraskan %d kata dari berkas audio.", len(raw_boundaries))
+            model = _get_whisper_model()
+            if model:
+                # PENTING: Gunakan to_thread agar librosa/whisper tidak block event loop utama!
+                import asyncio
+                result = await asyncio.to_thread(model.transcribe, audio_path, word_timestamps=True)
+                
+                for segment in result.get("segments", []):
+                    for w in segment.get("words", []):
+                        word_text = w["word"].strip()
+                        # Bersihkan tanda baca
+                        clean_text = re.sub(r"[^\w']", "", word_text).upper()
+                        if clean_text:
+                            raw_boundaries.append({
+                                "word": word_text,
+                                "start": w["start"],
+                                "duration": max(0.05, w["end"] - w["start"]),
+                            })
+                logger.info("🗣️ Local Whisper berhasil menyelaraskan %d kata dari berkas audio.", len(raw_boundaries))
         except Exception as whisper_err:
             logger.error("❌ Fallback Whisper lokal gagal: %s. Melanjutkan dengan interpolasi linear...", whisper_err)
 
@@ -664,28 +677,18 @@ async def generate_voiceover_with_timestamps(
         failed_tokens=failed_tokens,
     )
 
-    # 9. PROTEKSI DURASI MAKSIMAL 58 DETIK (TIKTOK SHORTS)
-    try:
-        duration = librosa.get_duration(path=audio_path)
-        if duration > 58.0:
-            stretch_factor = duration / 58.0
-            logger.info("⏳ Durasi audio (%.2fs) melebihi batas 58s. Melakukan time-stretch dengan faktor %.2f...", duration, stretch_factor)
-            
-            import soundfile as sf
-            y, sr = librosa.load(audio_path, sr=None)
-            y_stretched = librosa.effects.time_stretch(y, rate=stretch_factor)
-            sf.write(audio_path, y_stretched, sr)
-            
-            # Koreksi timestamps agar tetap sinkron
-            for t in final_timestamps:
-                t.start = round(t.start / stretch_factor, 3)
-                t.end = round(t.end / stretch_factor, 3)
-                t.duration = round(t.end - t.start, 3)
-                
-            # Lockdown ulang dengan durasi baru
-            final_timestamps = lockdown_timeline(final_timestamps, 58.0)
-    except Exception as stretch_err:
-        logger.warning("⚠️ Gagal menerapkan proteksi durasi / time-stretch: %s", stretch_err)
+    # 9. PROTEKSI DURASI MAKSIMAL (FFMPEG DELEGATION)
+    # Logika time-stretch menggunakan librosa/soundfile dihapus karena:
+    # 1. Edge-TTS menghasilkan MP3, dan soundfile tidak mendukung MP3.
+    # 2. Librosa phase vocoder merusak frekuensi suara manusia (metalik).
+    # Manipulasi durasi sekarang sepenuhnya didelegasikan ke FFmpeg atempo filter.
+    duration = librosa.get_duration(path=audio_path)
+    if duration > 58.0:
+        logger.warning(
+            "⏳ Durasi audio (%.2fs) melebihi batas 58s. "
+            "Peregangan waktu (time-stretch) akan dieksekusi secara aman oleh FFmpeg "
+            "pada tahap render video menggunakan filter atempo.", duration
+        )
 
     logger.info(
         f"📊 Sinkronisasi selesai: {matched_count}/{total} kata match "
