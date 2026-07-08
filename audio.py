@@ -551,6 +551,26 @@ async def generate_voiceover_with_timestamps(
     with open(audio_path, "wb") as f:
         f.write(audio_data)
 
+    # --- STUDIO POST-PROCESSING (FFMPEG) ---
+    import subprocess
+    import os
+    try:
+        temp_audio_path = audio_path + ".temp.mp3"
+        # Filter: Bass Boost (+6dB @ 110Hz), Treble (+2dB), Dynamic Compression untuk meratakan suara
+        # Ini akan menghilangkan nuansa "robotik kering" dan menggantinya dengan suara "studio podcast" yang dalam
+        ffmpeg_cmd = [
+            "ffmpeg", "-y", "-i", audio_path, 
+            "-af", "bass=g=6:f=110,treble=g=2,acompressor=threshold=-21dB:ratio=4:attack=5:release=50:makeup=3", 
+            temp_audio_path
+        ]
+        # Jalankan FFmpeg tanpa memenuhi log terminal
+        subprocess.run(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        if os.path.exists(temp_audio_path):
+            os.replace(temp_audio_path, audio_path)
+            logger.info("🎙️ Studio Post-Processing (Bass Boost + EQ + Compression) berhasil diterapkan pada audio!")
+    except Exception as e:
+        logger.warning("⚠️ Gagal menerapkan Studio Post-Processing FFmpeg, menggunakan audio mentah: %s", e)
+
     # 3. DETEKSI LEADING SILENCE — HANYA UNTUK LOG/DIAGNOSTIK, TIDAK DIPAKAI UNTUK SHIFT
     #    (raw_boundaries sudah relatif terhadap audio_path yang sama persis,
     #     jadi timestamp-nya sudah otomatis benar, termasuk leading silence-nya)
