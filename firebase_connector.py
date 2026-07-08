@@ -375,15 +375,19 @@ def get_last_upload_timestamp(channel_id: str) -> int:
     if not _require_firestore("get_last_upload_timestamp"):
         return 0
     try:
+        # BUGFIX: Menghindari Composite Index Trap.
+        # Hapus .where("channel_id") agar tidak bertabrakan dengan .order_by("timestamp").
+        # Kita ambil 50 draft terakhir, lalu filter channel_id di memori Python.
         docs = (
             db.collection("drafts")
-            .where("channel_id", "==", channel_id)
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .limit(1)
+            .limit(50)
             .stream()
         )
         for doc in docs:
-            return doc.to_dict().get("timestamp", 0)
+            data = doc.to_dict()
+            if data.get("channel_id") == channel_id:
+                return data.get("timestamp", 0)
     except Exception as e:
         logger.error(f"⚠️ Gagal membaca timestamp terakhir dari Firestore: {e}")
     return 0
