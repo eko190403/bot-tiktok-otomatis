@@ -770,11 +770,12 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         
         moviepy_resources["audio_clip"] = AudioFileClip(vo_file_path)
         
-        # OPTIMASI SEAMLESS LOOP: Potong sisa keheningan (trailing silence) bawaan Edge-TTS 
-        # dengan mematok durasi akhir persis pada timestamp kata terakhir + 0.1 detik ekstra.
+        # OPTIMASI SEAMLESS LOOP (VERSI REVISI NANA): Berikan "Silence Pad" (ruang napas)
+        # sebesar 0.5 detik di akhir kalimat agar loop tidak terasa "terjatuh" atau glitchy.
         if all_timestamps_dataclass:
             last_word_end = all_timestamps_dataclass[-1].end
-            total_duration = min(moviepy_resources["audio_clip"].duration, last_word_end + 0.1)
+            # Memberikan jeda 1 ketukan (0.6 detik dari batas akhir kata)
+            total_duration = last_word_end + 0.6
         else:
             total_duration = moviepy_resources["audio_clip"].duration
 
