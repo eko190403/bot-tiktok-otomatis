@@ -368,7 +368,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan sehari-hari yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu teman (gunakan 'kamu', 'aku', atau sesuaikan dengan *vibe* santai Gen-Z). SANGAT PENTING: JAUHI bahasa sastra kuno, puitis, hiperbolis kaku (seperti 'UBAN PENUH KEPALA', 'KAU TUNGGU APA', 'GELAPNYA MALAM'), atau terjemahan kaku dari bahasa Inggris. Pastikan kalimat pembuka (hook) dan sambungan looping-nya 100% luwes dan masuk akal secara gramatikal (contoh SALAH: 'Apa yang kamu takutkan mereka tak perhatikan', contoh BENAR: 'Apa yang kamu takutkan, sebenarnya tak mereka perhatikan').\n"
         f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', 'interactive_comment', 'yt_title', dan 'yt_description'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
     )
-    res = await call_gemini_with_retry(prompt, is_json=True, temperature=1.25)
+    res = await call_gemini_with_retry(prompt, is_json=True, temperature=0.85)
     parsed_json = clean_and_parse_json(res)
 
     # Jika Gemini menghasilkan Hook alternatif B, simpan untuk run berikutnya
@@ -1058,6 +1058,12 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     for (s_start, s_end) in swells:
                         mask = (t_val >= s_start) & (t_val <= s_end)
                         vol[mask] = 0.35
+                    
+                    # PROACTIVE AUDIT: Anti-click fadeout di ujung video (0.2s)
+                    fade_duration = 0.2
+                    time_from_end = total_duration - t_val
+                    fade_mask = (time_from_end < fade_duration) & (time_from_end > 0)
+                    vol[fade_mask] *= (time_from_end[fade_mask] / fade_duration)
                     
                     if is_array:
                         return frame * vol[:, np.newaxis]
