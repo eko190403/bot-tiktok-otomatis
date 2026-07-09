@@ -261,7 +261,8 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     
     config = channel_cfg
     chosen_theme = random.choice(config["themes"])
-    logger.info(" Tema terpilih: %s", chosen_theme)
+    chosen_angle = random.choice(config.get("angles", ["Umum / Bebas"]))
+    logger.info(" Tema terpilih: %s (Angle: %s)", chosen_theme, chosen_angle)
     
     # Baca riwayat naskah untuk mencegah repetisi ide (lewat Firebase / cadangan Lokal)
     exclude_prompt = ""
@@ -352,7 +353,8 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
 
     prompt = (
         f"{config['system_prompt']}"
-        f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n\n"
+        f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n"
+        f"SUDUT PANDANG (ANGLE): Bahas tema di atas secara spesifik melalui lensa/sudut pandang: '{chosen_angle}'. Gabungkan tema dan angle ini secara kreatif agar konten terasa segar dan tidak klise.\n\n"
         "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
         "ATURAN WAJIB:\n"
         f"{hook_rule}"

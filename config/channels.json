@@ -20,6 +20,14 @@
         "Fakta Unik Hubungan & Interaksi Sosial",
         "Bahasa Tubuh & Rahasia Perilaku Manusia"
       ],
+      "angles": [
+        "Sains Otak & Dopamin (Medis/Neuroscience)",
+        "Sejarah Kuno yang Kelam (Kisah Masa Lalu)",
+        "Kehidupan Asmara Gen-Z (Toxic Relationship)",
+        "Tekanan Dunia Kerja/Karir (Corporate Slave)",
+        "Analogi Hewan Liar (Predator vs Mangsa)",
+        "Kehidupan Pertemanan (Fake Friends/Circle)"
+      ],
       "system_prompt": "Kamu adalah kreator konten TikTok viral Indonesia ahli psikologi gelap. TUGAS: Buat SATU naskah edukasi singkat (JSON) yang berbobot. SANGAT PENTING: Targetkan 'pain point' audiens (overthinking, manipulasi, luka batin) agar mereka merasa tersindir sejak detik pertama.\n\n",
       "tags_example": "['psychology facts', 'dark psychology', 'manipulasi', 'mindset']",
       "tags_fallback": [
@@ -48,6 +56,13 @@
         "Kebijaksanaan Kuno untuk Hidup Modern",
         "Cara Menerima Keadaan (Amor Fati)",
         "Melepaskan Ego"
+      ],
+      "angles": [
+        "Filosofi Ksatria/Prajurit Kuno (Spartan/Gladiator)",
+        "Seni Bertahan dari Hinaan (Bullying/Netizen)",
+        "Ketenangan di Tengah Badai (Chaos Dunia Modern)",
+        "Ekspektasi vs Realita (Kekecewaan Hidup)",
+        "Paradoks Mengejar Kebahagiaan"
       ],
       "system_prompt": "Kamu adalah kreator konten TikTok viral Indonesia ahli Stoikisme dan mental toughness. TUGAS: Buat SATU naskah (JSON) berbobot. SANGAT PENTING: Targetkan 'pain point' audiens (kecemasan, takut omongan orang, baperan, overthinking) dan berikan 'tamparan keras' (reality check) ala filosofi Teras.\n\n",
       "tags_example": "['stoicism', 'filosofiteras', 'mindset', 'mentaltoughness']",
@@ -79,6 +94,13 @@
         "Pentingnya Dana Darurat",
         "Rahasia Bebas Finansial (Financial Freedom)"
       ],
+      "angles": [
+        "Kesalahan Finansial Umur 20-an",
+        "Mental Miskin vs Mental Kaya (Mindset Perbandingan)",
+        "Jebakan Gaya Hidup (Flexing/Pinjol)",
+        "Realita Sandwich Generation (Beban Keluarga)",
+        "Seni Menggandakan Uang (Investasi Leher Ke Atas)"
+      ],
       "system_prompt": "Kamu adalah kreator konten TikTok viral Indonesia ahli mindset keuangan. TUGAS: Buat SATU naskah (JSON) berbobot. SANGAT PENTING: Targetkan 'pain point' audiens (insecure finansial, terjebak rat race, gaya hidup boros, sandwich generation) agar mereka tertampar kenyataan pahit soal uang.\n\n",
       "tags_example": "['personal finance', 'investing', 'money habits', 'financial freedom']",
       "tags_fallback": [
@@ -106,6 +128,13 @@
         "Glitch in the Matrix (Kejadian Aneh Dunia Nyata)",
         "Urban Legend Singkat Menyeramkan",
         "Misteri Semesta yang Belum Terpecahkan"
+      ],
+      "angles": [
+        "Konspirasi yang Ternyata Benar",
+        "Phobia & Ketakutan Bawah Sadar (Thalassophobia dll)",
+        "Kejadian Glitch in the Matrix yang Pernah Terjadi",
+        "Paradoks Waktu & Eksistensi",
+        "Sisi Gelap Teknologi/AI Masa Depan"
       ],
       "system_prompt": "Kamu adalah kreator konten TikTok viral bergaya 'Reddit Storytime' Gen Z. TUGAS: Buat SATU naskah fakta gila/mind-blowing (JSON). SANGAT PENTING: Gunakan bahasa sangat cepat (fast-paced), misterius. Targetkan rasa paranoia, existential dread, atau fakta yang merusak kenyataan hidup penonton.\n\n",
       "tags_example": "['crazy facts', 'shower thoughts', 'teorikonspirasi', 'faktarandom']",
@@ -136,6 +165,13 @@
         "Pentingnya Memiliki Rutinitas Pagi",
         "Menghadapi Kegagalan & Mental Tangguh",
         "Aturan 5 Detik untuk Bertindak"
+      ],
+      "angles": [
+        "Tamparan Keras untuk Pemalas (Harsh Reality Check)",
+        "Rutinitas Toksik yang Menghancurkan Masa Depan",
+        "Seni Membangun Karakter Baja (Grit & Toughness)",
+        "Manajemen Waktu ala Miliarder",
+        "Sakitnya Penyesalan vs Sakitnya Disiplin"
       ],
       "system_prompt": "Kamu adalah kreator konten TikTok viral Indonesia ahli disiplin dan habit. TUGAS: Buat SATU naskah (JSON) berbobot. SANGAT PENTING: Targetkan 'pain point' audiens (rasa malas, prokrastinasi akut, penyesalan umur, mental lemah) dan berikan motivasi yang sangat brutal/keras (bukan motivasi lembek).\n\n",
       "tags_example": "['motivation', 'discipline', 'growth mindset', 'productivity']",
