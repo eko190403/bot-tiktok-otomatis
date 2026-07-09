@@ -332,7 +332,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         )
         logger.info("🎯 A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. STRATEGI WAJIB: Gunakan taktik 'Negative Hook' (kalimat peringatan/menyindir) yang menargetkan rasa sakit psikologis (Overthinking, Insecurity, Kecemasan Sosial). HINDARI Hook filosofis, puitis, teatrikal, atau kaku seperti novel terjemahan. Gunakan bahasa percakapan sehari-hari yang SANGAT NATURAL (Contoh kaku/salah: 'KAU TUNGGU APA SAMPAI UBAN PENUH KEPALA'). SANGAT PENTING: JANGAN gunakan pola kalimat repetitif ('TAHUKAH KAMU', 'FAKTA'). Contoh kalimat luwes/benar: 'JUJUR AJA, KAMU CAPEK KAN MIKIRIN OMONGAN ORANG LAIN?'\n"
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. STRATEGI WAJIB: Gunakan taktik 'Negative Hook' (menargetkan rasa sakit psikologis). WAJIB: Pecah Hook menjadi dua bagian menggunakan tanda baca (koma atau tanda tanya) agar ada jeda napas yang natural (Contoh: 'SUSAH BILANG TIDAK? MEREKA AKAN MENGINJAKMU'). JANGAN buat satu kalimat panjang tanpa tanda baca! HINDARI Hook filosofis, teatrikal, atau kaku. Gunakan bahasa percakapan santai. SANGAT PENTING: JANGAN gunakan pola repetitif ('TAHUKAH KAMU').\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
