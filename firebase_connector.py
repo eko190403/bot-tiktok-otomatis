@@ -93,6 +93,7 @@ def save_video_draft(video_id: str, data: dict) -> None:
     try:
         db.collection("drafts").document(video_id).set({
             "timestamp": int(time.time()),
+            "drop_off_second": 0, # Blueprint untuk menganalisis kurva retensi
             **data,
         })
         logger.info(f" Draf video '{video_id}' tersimpan ke Firestore.")

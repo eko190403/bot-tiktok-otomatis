@@ -359,7 +359,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
         "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural sesuai tata bahasa baku agar AI dapat membaca dengan ritme dan tempo kecepatan yang normal.\n"
-        "3. 'cta': Ajakan bertindak (Maksimal 15 kata). SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika langsung bersambung ke kata pertama HOOK. JANGAN MENGULANG atau mengkopi-paste kata-kata dari Hook ke dalam CTA! Itu akan membuat kalimatnya terdengar aneh saat video mengulang. Contoh BENAR: Jika HOOK = 'KAMU SELALU MERASA GAGAL?', maka akhir CTA harus berbunyi seperti 'mulai sekarang sadari bahwa' (sehingga saat video *looping*, kalimatnya otomatis menjadi 'mulai sekarang sadari bahwa KAMU SELALU MERASA GAGAL?'). JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
+        "3. 'cta': Ajakan bertindak (Maksimal 15 kata). SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika langsung bersambung ke kata pertama HOOK. JANGAN MENGULANG kata-kata dari Hook ke CTA! VARIASIKAN GAYA BAHASA CTA (jangan melulu pakai kata 'mulai sekarang', 'itulah kenapa', atau 'maka dari itu'). Gunakan pendekatan berbeda-beda (misal: mempertanyakan balik, menantang, atau sarkas) asalkan ujungnya tetap nyambung secara gramatikal ke Hook saat dilooping. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
         "4. 'caption': Judul/caption TikTok yang santai, relate, atau sedikit dark jokes (jangan terlalu formal/kaku), ditambah hashtag viral (contoh: #ruangpikir #psikologi #overthinking #fyp). Maks 150 karakter.\n"
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
@@ -384,6 +384,14 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     if isinstance(parsed_json, dict):
         parsed_json["niche"] = config.get("niche", "Unknown")
         parsed_json["theme"] = chosen_theme
+        
+        # Inject Lead Magnet Corong Monetisasi
+        lead_magnet = config.get("lead_magnet_copy")
+        if lead_magnet:
+            if "interactive_comment" in parsed_json:
+                parsed_json["interactive_comment"] += f"\n\n{lead_magnet}"
+            if "yt_description" in parsed_json:
+                parsed_json["yt_description"] += f"\n\n{lead_magnet}"
 
     return parsed_json
 
@@ -1250,8 +1258,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 elif channel_id == "poladisiplin":
                     # Efek bersih, fokus intens, tanpa noise kotor, vignette tipis di ujung
                     params.extend(["-vf", "vignette=PI/10"])
+                elif channel_id in ["logikastoik", "rahasiafinansial"]:
+                    # Efek sangat bersih, tanpa noise, vignette sangat tipis untuk ruang kontemplasi (Lower Cognitive Load)
+                    params.extend(["-vf", "vignette=PI/15"])
                 else:
-                    # Default untuk channel lain (logikastoik, rahasiafinansial)
+                    # Default untuk channel lain
                     params.extend(["-vf", "vignette=PI/5"])
             moviepy_resources["final_video"].write_videofile(
                 target_path, fps=30, codec="libx264", preset="veryfast", # OPTIMASI: Kecepatan & kompresi seimbang
