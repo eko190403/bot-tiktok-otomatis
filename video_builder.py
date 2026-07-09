@@ -1235,9 +1235,16 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             # CRF 20 (Kualitas Visual Sangat Tajam) + maxrate 7000k (Maksimal ukuran file ~42MB untuk 48 detik, aman dari limit 50MB Telegram)
             params = ["-crf", "20", "-maxrate", "7000k", "-bufsize", "14000k", "-pix_fmt", "yuv420p", "-g", "15"]
             if bg_type == "pexels":
-                # Mendelegasikan Film Grain (noise) & Vignette ke engine native C++ FFmpeg
-                params.extend(["-vf", "noise=alls=8:allf=t+u,vignette=PI/3"])
-                
+                # Kustomisasi Filter Visual (Vignette & Noise) berdasarkan identitas channel
+                if channel_id in ["ruangpikir", "misterisemesta"]:
+                    # Efek sangat gelap, kotor, dan misterius
+                    params.extend(["-vf", "noise=alls=8:allf=t+u,vignette=PI/3"])
+                elif channel_id == "poladisiplin":
+                    # Efek bersih, fokus intens, tanpa noise kotor, vignette tipis di ujung
+                    params.extend(["-vf", "vignette=PI/10"])
+                else:
+                    # Default untuk channel lain (logikastoik, rahasiafinansial)
+                    params.extend(["-vf", "vignette=PI/5"])
             moviepy_resources["final_video"].write_videofile(
                 target_path, fps=30, codec="libx264", preset="veryfast", # OPTIMASI: Kecepatan & kompresi seimbang
                 audio_codec="aac", bitrate="7000k", threads=cpu_threads, logger=None,
