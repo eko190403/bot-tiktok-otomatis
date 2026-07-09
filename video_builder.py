@@ -771,11 +771,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         moviepy_resources["audio_clip"] = AudioFileClip(vo_file_path)
         
         # OPTIMASI SEAMLESS LOOP (VERSI REVISI NANA): Berikan "Silence Pad" (ruang napas)
-        # sebesar 0.5 detik di akhir kalimat agar loop tidak terasa "terjatuh" atau glitchy.
+        # sebesar 0.35 detik di akhir kalimat agar loop tidak terasa "terjatuh" namun juga tidak kelamaan.
         if all_timestamps_dataclass:
             last_word_end = all_timestamps_dataclass[-1].end
-            # Memberikan jeda 1 ketukan (0.6 detik dari batas akhir kata)
-            total_duration = last_word_end + 0.6
+            # Memberikan jeda setengah ketukan (0.35 detik dari batas akhir kata)
+            total_duration = last_word_end + 0.35
         else:
             total_duration = moviepy_resources["audio_clip"].duration
 
