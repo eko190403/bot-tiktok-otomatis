@@ -500,6 +500,10 @@ def build_clean_text(hook_tokens: List[Dict], story_tokens: List[Dict], cta_toke
 
     # 3. Bangun CTA
     cta_text = " ".join(t["spoken"] for t in cta_tokens).strip()
+    
+    # Memaksa Edge-TTS menggunakan intonasi menggantung lambat (trailing) di akhir kalimat
+    if cta_text and not cta_text[-1] in [".", "!", "?", ","]:
+        cta_text += "..."
 
     # Gabungkan menjadi satu naskah suara yang utuh tanpa tag XML/SSML
     full_text = f"{hook_text} {story_text} {cta_text}"
