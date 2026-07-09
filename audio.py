@@ -283,7 +283,7 @@ def get_audio_offset(audio_path: str, top_db: int = 25) -> float:
         non_silent = librosa.effects.split(y, top_db=top_db)
         if len(non_silent) > 0:
             offset = float(non_silent[0][0] / sr)
-            logger.info(f"🎯 Leading silence terdeteksi: {offset:.4f}s")
+            logger.info(f" Leading silence terdeteksi: {offset:.4f}s")
             return offset
     except Exception as e:
         logger.error(f"Gagal deteksi offset: {e}")
@@ -347,7 +347,7 @@ def validate_timeline_invariants(
         return timestamps
 
     summary = "; ".join(violations[:5]) + (f" ... (+{len(violations) - 5} lagi)" if len(violations) > 5 else "")
-    msg = f"⚠️ {len(violations)} pelanggaran invariant timeline terdeteksi: {summary}"
+    msg = f" {len(violations)} pelanggaran invariant timeline terdeteksi: {summary}"
 
     if strict:
         raise ValueError(msg)
@@ -362,7 +362,7 @@ def validate_timeline_invariants(
         or (i > 0 and ts.start < fixed[i - 1].end - 1e-6)
     ]
     if still_broken:
-        logger.error(f"❌ Invariant MASIH dilanggar setelah auto-fix pada index: {still_broken}")
+        logger.error(f" Invariant MASIH dilanggar setelah auto-fix pada index: {still_broken}")
 
     return fixed
 
@@ -572,9 +572,9 @@ async def generate_voiceover_with_timestamps(
         subprocess.run(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
         if os.path.exists(temp_audio_path):
             os.replace(temp_audio_path, audio_path)
-            logger.info("🎙️ Studio Post-Processing (Bass Boost + EQ + Compression) berhasil diterapkan pada audio!")
+            logger.info(" Studio Post-Processing (Bass Boost + EQ + Compression) berhasil diterapkan pada audio!")
     except Exception as e:
-        logger.warning("⚠️ Gagal menerapkan Studio Post-Processing FFmpeg, menggunakan audio mentah: %s", e)
+        logger.warning(" Gagal menerapkan Studio Post-Processing FFmpeg, menggunakan audio mentah: %s", e)
 
     # 3. DETEKSI LEADING SILENCE — HANYA UNTUK LOG/DIAGNOSTIK, TIDAK DIPAKAI UNTUK SHIFT
     #    (raw_boundaries sudah relatif terhadap audio_path yang sama persis,
@@ -582,7 +582,7 @@ async def generate_voiceover_with_timestamps(
     leading_silence = get_audio_offset(audio_path)
     if leading_silence > 0.05:
         logger.info(
-            f"ℹ️ Leading silence {leading_silence:.3f}s sudah otomatis tercakup "
+            f" Leading silence {leading_silence:.3f}s sudah otomatis tercakup "
             f"di WordBoundary edge-tts — tidak perlu koreksi manual."
         )
 
@@ -591,7 +591,7 @@ async def generate_voiceover_with_timestamps(
     # 4. Cek apakah Edge-TTS mengembalikan WordBoundary — jika kosong, coba Whisper lokal
     if not raw_boundaries:
         logger.warning(
-            "⚠️ Edge-TTS tidak mengembalikan WordBoundary (raw_boundaries kosong). "
+            " Edge-TTS tidak mengembalikan WordBoundary (raw_boundaries kosong). "
             "Menggunakan local OpenAI Whisper (tiny) sebagai fallback untuk timing presisi..."
         )
         try:
@@ -612,13 +612,13 @@ async def generate_voiceover_with_timestamps(
                                 "start": w["start"],
                                 "duration": max(0.05, w["end"] - w["start"]),
                             })
-                logger.info("🗣️ Local Whisper berhasil menyelaraskan %d kata dari berkas audio.", len(raw_boundaries))
+                logger.info(" Local Whisper berhasil menyelaraskan %d kata dari berkas audio.", len(raw_boundaries))
         except Exception as whisper_err:
-            logger.error("❌ Fallback Whisper lokal gagal: %s. Melanjutkan dengan interpolasi linear...", whisper_err)
+            logger.error(" Fallback Whisper lokal gagal: %s. Melanjutkan dengan interpolasi linear...", whisper_err)
 
     if not raw_boundaries:
         logger.warning(
-            "⚠️ raw_boundaries tetap kosong. Melakukan interpolasi linear merata untuk semua %d kata...", len(target_tokens)
+            " raw_boundaries tetap kosong. Melakukan interpolasi linear merata untuk semua %d kata...", len(target_tokens)
         )
         slot = audio_duration / max(len(target_tokens), 1)
         final_timestamps: List[WordTimestamp] = []
@@ -644,7 +644,7 @@ async def generate_voiceover_with_timestamps(
             missed=len(target_tokens),
             failed_tokens=[t["display"] for t in target_tokens],
         )
-        logger.warning("📊 Fallback interpolasi selesai. Total timestamps: %d", len(final_timestamps))
+        logger.warning(" Fallback interpolasi selesai. Total timestamps: %d", len(final_timestamps))
         return final_timestamps, metadata
 
     # 4b. DP ALIGNMENT: cocokkan target_tokens (spoken) <-> raw_boundaries
@@ -710,13 +710,13 @@ async def generate_voiceover_with_timestamps(
     duration = librosa.get_duration(path=audio_path)
     if duration > 88.0:
         logger.warning(
-            "⏳ Durasi audio (%.2fs) melebihi batas 88s. "
+            " Durasi audio (%.2fs) melebihi batas 88s. "
             "Peregangan waktu (time-stretch) akan dieksekusi secara aman oleh FFmpeg "
             "pada tahap render video menggunakan filter atempo.", duration
         )
 
     logger.info(
-        f"📊 Sinkronisasi selesai: {matched_count}/{total} kata match "
+        f" Sinkronisasi selesai: {matched_count}/{total} kata match "
         f"({accuracy*100:.1f}% akurasi), {missed} kata di-interpolasi."
     )
 

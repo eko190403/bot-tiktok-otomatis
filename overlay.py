@@ -71,7 +71,7 @@ def apply_text_watermark(video_clip, channel_name: str = "@RuangPikir"):
     except Exception as e:
         import logging
         logging.getLogger("video_pipeline").warning(
-            "⚠️ Watermark gagal ditambahkan: %s. Melanjutkan tanpa watermark.", e
+            " Watermark gagal ditambahkan: %s. Melanjutkan tanpa watermark.", e
         )
         return video_clip
 
@@ -170,7 +170,7 @@ def apply_visual_cta(video_clip):
         return CompositeVideoClip([video_clip, cta_clip])
     except Exception as e:
         import logging
-        logging.getLogger("video_pipeline").warning("⚠️ Visual CTA gagal: %s", e)
+        logging.getLogger("video_pipeline").warning(" Visual CTA gagal: %s", e)
         return video_clip
 
 def apply_cinematic_overlay(video_clip):
@@ -181,5 +181,5 @@ def apply_cinematic_overlay(video_clip):
     akan dieksekusi secara native via subprocess FFmpeg setelah proses MoviePy selesai.
     """
     import logging
-    logging.getLogger("video_pipeline").info("🎬 Cinematic Overlay didelegasikan ke native FFmpeg.")
+    logging.getLogger("video_pipeline").info(" Cinematic Overlay didelegasikan ke native FFmpeg.")
     return video_clip

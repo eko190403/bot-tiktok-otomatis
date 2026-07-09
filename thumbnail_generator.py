@@ -22,7 +22,7 @@ def extract_frame_from_video(video_path: str, output_image_path: str, timestamp_
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
         return True
     except Exception as e:
-        logger.error(f"⚠️ Gagal mengekstrak frame dari video: {e}")
+        logger.error(f" Gagal mengekstrak frame dari video: {e}")
         return False
 
 def generate_thumbnail(hook_text: str, background_path: str, output_path: str = "output/thumbnail.jpg", brand_name: str = "Ruang Pikir") -> bool:
@@ -33,7 +33,7 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
         if not os.path.exists(background_path):
-            logger.warning(f"⚠️ Background thumbnail tidak ditemukan: {background_path}")
+            logger.warning(f" Background thumbnail tidak ditemukan: {background_path}")
             return False
 
         # 1. Buka background dan posisikan di tengah (1280x720)
@@ -86,7 +86,7 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
                 
         if font is None:
             font = ImageFont.load_default()
-            logger.info("ℹ️ Menggunakan default font PIL karena font sistem tebal tidak ditemukan.")
+            logger.info(" Menggunakan default font PIL karena font sistem tebal tidak ditemukan.")
             
         # 4. Bungkus teks agar muat di layar
         text = hook_text.upper()
@@ -160,9 +160,9 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
         
         # 7. Simpan hasil akhir
         img_combined.save(output_path, "JPEG", quality=95)
-        logger.info(f"✨ Thumbnail berhasil dibuat: {output_path}")
+        logger.info(f" Thumbnail berhasil dibuat: {output_path}")
         return True
         
     except Exception as e:
-        logger.error(f"❌ Gagal menghasilkan thumbnail: {e}")
+        logger.error(f" Gagal menghasilkan thumbnail: {e}")
         return False

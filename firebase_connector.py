@@ -19,19 +19,19 @@ try:
                 firebase_admin.initialize_app(cred)
             db = firestore.client()
             is_firebase_enabled = True
-            logger.info("🔥 Firebase initialized. Firestore aktif sebagai single source of truth.")
+            logger.info(" Firebase initialized. Firestore aktif sebagai single source of truth.")
         except Exception as e:
-            logger.error(f"❌ Gagal inisialisasi Firebase Admin SDK: {e}")
+            logger.error(f" Gagal inisialisasi Firebase Admin SDK: {e}")
     else:
-        logger.warning("⚠️ firebase_service_account.json tidak ditemukan. Firestore tidak aktif — pipeline akan berhenti jika mencoba akses DB.")
+        logger.warning(" firebase_service_account.json tidak ditemukan. Firestore tidak aktif — pipeline akan berhenti jika mencoba akses DB.")
 except ImportError:
-    logger.warning("⚠️ Pustaka 'firebase-admin' belum terpasang. Firestore tidak aktif.")
+    logger.warning(" Pustaka 'firebase-admin' belum terpasang. Firestore tidak aktif.")
 
 
 def _require_firestore(func_name: str) -> bool:
     """Cek apakah Firestore aktif. Log error dan return False jika tidak."""
     if not is_firebase_enabled or db is None:
-        logger.error(f"❌ [{func_name}] Firestore tidak aktif. Operasi dibatalkan.")
+        logger.error(f" [{func_name}] Firestore tidak aktif. Operasi dibatalkan.")
         return False
     return True
 
@@ -61,7 +61,7 @@ def get_recent_history(limit: int = 25) -> list:
             for d in docs
         ]
     except Exception as e:
-        logger.error(f"❌ Gagal membaca riwayat dari Firestore: {e}")
+        logger.error(f" Gagal membaca riwayat dari Firestore: {e}")
         return []
 
 
@@ -77,9 +77,9 @@ def save_to_history(hook: str, story: str, cta: str, caption: str) -> None:
             "cta": cta,
             "caption": caption,
         })
-        logger.info("🔥 Naskah berhasil disimpan ke Firestore history.")
+        logger.info(" Naskah berhasil disimpan ke Firestore history.")
     except Exception as e:
-        logger.error(f"❌ Gagal menyimpan naskah ke Firestore: {e}")
+        logger.error(f" Gagal menyimpan naskah ke Firestore: {e}")
 
 
 # ─────────────────────────────────────────────
@@ -95,9 +95,9 @@ def save_video_draft(video_id: str, data: dict) -> None:
             "timestamp": int(time.time()),
             **data,
         })
-        logger.info(f"🔥 Draf video '{video_id}' tersimpan ke Firestore.")
+        logger.info(f" Draf video '{video_id}' tersimpan ke Firestore.")
     except Exception as e:
-        logger.error(f"❌ Gagal menyimpan draf video ke Firestore: {e}")
+        logger.error(f" Gagal menyimpan draf video ke Firestore: {e}")
 
 
 def get_video_draft(video_id: str) -> dict:
@@ -108,7 +108,7 @@ def get_video_draft(video_id: str) -> dict:
         doc = db.collection("drafts").document(video_id).get()
         return doc.to_dict() if doc.exists else {}
     except Exception as e:
-        logger.error(f"❌ Gagal membaca draf dari Firestore: {e}")
+        logger.error(f" Gagal membaca draf dari Firestore: {e}")
         return {}
 
 
@@ -129,9 +129,9 @@ def cleanup_old_drafts(days: int = 7) -> None:
                 batch = db.batch()
         if count % 400 != 0:
             batch.commit()
-        logger.info(f"🧹 Berhasil menghapus {count} draf kedaluwarsa dari Firestore.")
+        logger.info(f" Berhasil menghapus {count} draf kedaluwarsa dari Firestore.")
     except Exception as e:
-        logger.error(f"❌ Gagal membersihkan draf dari Firestore: {e}")
+        logger.error(f" Gagal membersihkan draf dari Firestore: {e}")
 
 
 def update_draft_status(video_id: str, platform: str, platform_video_id: str) -> None:
@@ -143,9 +143,9 @@ def update_draft_status(video_id: str, platform: str, platform_video_id: str) ->
             "platform": platform,
             "platform_video_id": platform_video_id,
         })
-        logger.info(f"🔥 Status draf '{video_id}' diperbarui di Firestore.")
+        logger.info(f" Status draf '{video_id}' diperbarui di Firestore.")
     except Exception as e:
-        logger.error(f"❌ Gagal memperbarui status draf di Firestore: {e}")
+        logger.error(f" Gagal memperbarui status draf di Firestore: {e}")
 
 
 def update_draft_stats(video_id: str, views: int, likes: int) -> None:
@@ -196,7 +196,7 @@ def update_draft_stats(video_id: str, views: int, likes: int) -> None:
                 
         batch.commit()
     except Exception as e:
-        logger.error(f"❌ Gagal memperbarui stats draf & analitik di Firestore: {e}")
+        logger.error(f" Gagal memperbarui stats draf & analitik di Firestore: {e}")
 
 
 # ─────────────────────────────────────────────
@@ -224,7 +224,7 @@ def get_top_performing_scripts(limit: int = 3) -> list:
             for d in docs
         ]
     except Exception as e:
-        logger.warning(f"⚠️ Gagal mengambil naskah populer dari Firestore: {e}")
+        logger.warning(f" Gagal mengambil naskah populer dari Firestore: {e}")
         return []
 
 
@@ -249,7 +249,7 @@ def get_active_youtube_video_ids(limit: int = 50) -> dict:
                     video_map[doc.id] = yt_id
         return video_map
     except Exception as e:
-        logger.warning(f"⚠️ Gagal mengambil active YouTube video dari Firestore: {e}")
+        logger.warning(f" Gagal mengambil active YouTube video dari Firestore: {e}")
         return {}
 
 
@@ -261,7 +261,7 @@ def get_previous_views(video_id: str) -> int:
         doc = db.collection("drafts").document(video_id).get()
         return doc.to_dict().get("views", 0) if doc.exists else 0
     except Exception as e:
-        logger.warning(f"⚠️ Gagal membaca views sebelumnya dari Firestore: {e}")
+        logger.warning(f" Gagal membaca views sebelumnya dari Firestore: {e}")
         return 0
 
 
@@ -290,7 +290,7 @@ def get_viral_video_ids(min_views: int = 500, limit: int = 3, channel_id: str = 
                         break
         return video_map
     except Exception as e:
-        logger.warning(f"⚠️ Gagal mengambil viral video dari Firestore: {e}")
+        logger.warning(f" Gagal mengambil viral video dari Firestore: {e}")
         return {}
 
 
@@ -304,7 +304,7 @@ def mark_comments_analyzed(video_id: str, comment_insight: str = "") -> None:
             "comment_insight": comment_insight,
         })
     except Exception as e:
-        logger.error(f"❌ Gagal menandai komentar teranalisis di Firestore: {e}")
+        logger.error(f" Gagal menandai komentar teranalisis di Firestore: {e}")
 
 
 def get_latest_comment_insight() -> str:
@@ -325,7 +325,7 @@ def get_latest_comment_insight() -> str:
         )
         return candidates[0].get("comment_insight", "") if candidates else ""
     except Exception as e:
-        logger.warning(f"⚠️ Gagal mengambil comment insight dari Firestore: {e}")
+        logger.warning(f" Gagal mengambil comment insight dari Firestore: {e}")
         return ""
 
 
@@ -343,9 +343,9 @@ def save_hook_candidate(hook_b: str) -> None:
             "timestamp": int(time.time()),
             "used": False,
         })
-        logger.info("🎯 Hook kandidat B berhasil disimpan ke Firestore.")
+        logger.info(" Hook kandidat B berhasil disimpan ke Firestore.")
     except Exception as e:
-        logger.error(f"❌ Gagal menyimpan hook kandidat ke Firestore: {e}")
+        logger.error(f" Gagal menyimpan hook kandidat ke Firestore: {e}")
 
 
 def get_best_hook_candidate() -> str:
@@ -363,7 +363,7 @@ def get_best_hook_candidate() -> str:
             db.collection("hook_candidates").document("latest").update({"used": True})
             return hook
     except Exception as e:
-        logger.error(f"⚠️ Gagal membaca hook kandidat dari Firestore: {e}")
+        logger.error(f" Gagal membaca hook kandidat dari Firestore: {e}")
     return ""
 
 
@@ -390,7 +390,7 @@ def get_last_upload_timestamp(channel_id: str) -> int:
             if data.get("channel_id") == channel_id:
                 return data.get("timestamp", 0)
     except Exception as e:
-        logger.error(f"⚠️ Gagal membaca timestamp terakhir dari Firestore: {e}")
+        logger.error(f" Gagal membaca timestamp terakhir dari Firestore: {e}")
     return 0
 
 
@@ -411,7 +411,7 @@ def get_top_themes(limit: int = 5) -> list:
         )
         return [{"theme": d.id, **d.to_dict()} for d in docs]
     except Exception as e:
-        logger.warning(f"⚠️ Gagal mengambil theme performance dari Firestore: {e}")
+        logger.warning(f" Gagal mengambil theme performance dari Firestore: {e}")
         return []
 
 
@@ -428,7 +428,7 @@ def get_top_hooks(limit: int = 3) -> list:
         )
         return [{"hook": d.id, **d.to_dict()} for d in docs]
     except Exception as e:
-        logger.warning(f"⚠️ Gagal mengambil hook performance dari Firestore: {e}")
+        logger.warning(f" Gagal mengambil hook performance dari Firestore: {e}")
         return []
 
 
@@ -440,7 +440,7 @@ def is_clip_used(clip_id: str) -> bool:
         doc = db.collection("used_clips").document(str(clip_id)).get()
         return doc.exists
     except Exception as e:
-        logger.warning(f"⚠️ Gagal memeriksa used_clips di Firestore: {e}")
+        logger.warning(f" Gagal memeriksa used_clips di Firestore: {e}")
         return False
 
 _used_clips_queue = []
@@ -448,7 +448,7 @@ _used_clips_queue = []
 def mark_clip_used(clip_id: str) -> None:
     """Tandai klip Pexels sebagai sudah dipakai (simpan di antrean memori dulu)."""
     _used_clips_queue.append(str(clip_id))
-    logger.info(f"🔖 Klip Pexels '{clip_id}' dimasukkan ke antrean memori (belum dicatat ke database).")
+    logger.info(f" Klip Pexels '{clip_id}' dimasukkan ke antrean memori (belum dicatat ke database).")
 
 def commit_used_clips() -> None:
     """Catat secara permanen semua klip yang ada di antrean ke Firestore (dieksekusi jika video sukses dibuat)."""
@@ -457,15 +457,15 @@ def commit_used_clips() -> None:
     for clip_id in _used_clips_queue:
         try:
             db.collection("used_clips").document(clip_id).set({"used_at": int(time.time())})
-            logger.info(f"✅ Klip '{clip_id}' resmi dicatat sebagai dipakai di database.")
+            logger.info(f" Klip '{clip_id}' resmi dicatat sebagai dipakai di database.")
         except Exception as e:
-            logger.error(f"❌ Gagal mencatat klip {clip_id}: {e}")
+            logger.error(f" Gagal mencatat klip {clip_id}: {e}")
     _used_clips_queue.clear()
 
 def clear_used_clips_queue() -> None:
     """Hapus antrean klip jika terjadi error (video gagal dibuat)."""
     if _used_clips_queue:
-        logger.info(f"🧹 Membersihkan {len(_used_clips_queue)} klip dari antrean memori (video batal/gagal dibuat).")
+        logger.info(f" Membersihkan {len(_used_clips_queue)} klip dari antrean memori (video batal/gagal dibuat).")
     _used_clips_queue.clear()
 
 
@@ -486,7 +486,7 @@ def cleanup_used_clips(days: int = 30) -> None:
                 batch = db.batch()
         if count % 400 != 0:
             batch.commit()
-        logger.info(f"🧹 Berhasil menghapus {count} entri used_clips yang kedaluwarsa dari Firestore.")
+        logger.info(f" Berhasil menghapus {count} entri used_clips yang kedaluwarsa dari Firestore.")
     except Exception as e:
-        logger.error(f"❌ Gagal membersihkan used_clips dari Firestore: {e}")
+        logger.error(f" Gagal membersihkan used_clips dari Firestore: {e}")
 

@@ -67,7 +67,7 @@ class GeminiClientPool:
     """Poin 3: Client Pool reuse object tanpa instansiasi berulang saat runtime."""
     def __init__(self, api_keys: list):
         if not api_keys:
-            raise ValueError("❌ Tidak ada GEMINI_API_KEY yang ditemukan di GitHub Secrets.")
+            raise ValueError(" Tidak ada GEMINI_API_KEY yang ditemukan di GitHub Secrets.")
         self.api_keys = api_keys
         self.clients = [genai.Client(api_key=key) for key in api_keys]
         self.cooldowns = [0.0] * len(api_keys)
@@ -152,7 +152,7 @@ async def call_groq_fallback(prompt: str, is_json: bool = True) -> str:
         else:
             raise RuntimeError(f"Groq API mengembalikan status {response.status_code}: {response.text}")
     except Exception as e:
-        logger.error(f"❌ Groq fallback gagal: {e}")
+        logger.error(f" Groq fallback gagal: {e}")
         raise e
 
 async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature: float = None) -> str:
@@ -188,20 +188,20 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
             
             # Jika 403 / API Key terblokir, karantina kunci ini 24 jam agar tidak dipakai lagi
             if "403" in err_msg or "PERMISSION_DENIED" in err_msg:
-                logger.error("❌ Kunci API Slot-%d diblokir Google (403). Mengkarantina selama 24 jam...", idx + 1)
+                logger.error(" Kunci API Slot-%d diblokir Google (403). Mengkarantina selama 24 jam...", idx + 1)
                 await client_pool.set_cooldown(idx, duration=86400)
                 continue
                 
             logger.warning("[%s] Gangguan API Gemini: %s. Mencoba model lain/kunci lain.", EV_GEMINI_CRASH, e)
             
     # Jika Gemini gagal total, coba Groq API Fallback
-    logger.warning("⚠️ Semua percobaan Gemini gagal atau rate-limited. Memicu fallback ke Groq API...")
+    logger.warning(" Semua percobaan Gemini gagal atau rate-limited. Memicu fallback ke Groq API...")
     try:
         res = await call_groq_fallback(prompt, is_json)
-        logger.info("✅ Sukses mendapatkan konten cadangan dari Groq API.")
+        logger.info(" Sukses mendapatkan konten cadangan dari Groq API.")
         return res
     except Exception as groq_err:
-        logger.error(f"❌ Groq API Fallback gagal juga: {groq_err}")
+        logger.error(f" Groq API Fallback gagal juga: {groq_err}")
         if last_err:
             raise last_err
         raise RuntimeError("Seluruh penyedia AI (Gemini & Groq) gagal merespon.")
@@ -228,7 +228,7 @@ def get_indonesia_trending_searches() -> list:
                 trends.append(title.text.strip())
         return trends[:5]
     except Exception as e:
-        logger.warning("⚠️ Gagal mengambil Google Trends: %s", e)
+        logger.warning(" Gagal mengambil Google Trends: %s", e)
         return []
 
 
@@ -250,18 +250,18 @@ async def analyze_comments_with_gemini(comments: list) -> str:
         result = await call_gemini_with_retry(prompt, is_json=False)
         return result.strip() if result else ""
     except Exception as e:
-        logger.warning("⚠️ Gagal menganalisis komentar dengan Gemini: %s", e)
+        logger.warning(" Gagal menganalisis komentar dengan Gemini: %s", e)
         return ""
 
 # NICHE_CONFIG dipindahkan ke config/channels.json
 
 async def generate_structured_script(channel_cfg: dict) -> dict:
-    logger.info("🧠 Gemini sedang merancang naskah berstruktur otomatis...")
+    logger.info(" Gemini sedang merancang naskah berstruktur otomatis...")
     import random
     
     config = channel_cfg
     chosen_theme = random.choice(config["themes"])
-    logger.info("🎯 Tema terpilih: %s", chosen_theme)
+    logger.info(" Tema terpilih: %s", chosen_theme)
     
     # Baca riwayat naskah untuk mencegah repetisi ide (lewat Firebase / cadangan Lokal)
     exclude_prompt = ""
@@ -279,7 +279,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     except Exception as e:
         logger.warning(" Gagal membaca riwayat naskah: %s", e)
 
-    # ⭐ LEVEL 5: Ambil naskah paling populer sebagai contoh gaya sukses untuk AI
+    #  LEVEL 5: Ambil naskah paling populer sebagai contoh gaya sukses untuk AI
     performance_prompt = ""
     try:
         import firebase_connector
@@ -294,11 +294,11 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
                 views = sc.get("views", 0)
                 caption = sc.get("caption", "")
                 performance_prompt += f"\n[Naskah Sukses #{i} — {views:,} views]\n{caption}\n"
-            logger.info("⭐ Level 5: Menyuntikkan %d naskah sukses ke prompt Gemini.", len(top_scripts))
+            logger.info(" Level 5: Menyuntikkan %d naskah sukses ke prompt Gemini.", len(top_scripts))
     except Exception as e:
-        logger.warning("⚠️ Gagal mengambil naskah populer untuk feedback loop: %s", e)
+        logger.warning(" Gagal mengambil naskah populer untuk feedback loop: %s", e)
 
-    # ⭐ LEVEL 5 ADVANCED: Ambil insight dari analisis komentar penonton
+    #  LEVEL 5 ADVANCED: Ambil insight dari analisis komentar penonton
     comment_insight_prompt = ""
     try:
         import firebase_connector
@@ -309,19 +309,19 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
                 f"\"{insight}\"\n"
                 f"Sesuaikan topik atau sudut pandang naskah agar menjawab/merefleksikan insight di atas."
             )
-            logger.info("⭐ Level 5 Advanced: Menyuntikkan insight komentar penonton.")
+            logger.info(" Level 5 Advanced: Menyuntikkan insight komentar penonton.")
     except Exception as e:
-        logger.warning("⚠️ Gagal mengambil insight komentar: %s", e)
+        logger.warning(" Gagal mengambil insight komentar: %s", e)
 
-    # ⭐ LEVEL 5 A/B TESTING: Periksa apakah ada hook kandidat B dari percobaan sebelumnya
+    #  LEVEL 5 A/B TESTING: Periksa apakah ada hook kandidat B dari percobaan sebelumnya
     hook_candidate = ""
     try:
         import firebase_connector
         hook_candidate = firebase_connector.get_best_hook_candidate()
         if hook_candidate:
-            logger.info("🎯 A/B Testing: Menggunakan Hook kandidat B hasil A/B test sebelumnya: '%s'", hook_candidate)
+            logger.info(" A/B Testing: Menggunakan Hook kandidat B hasil A/B test sebelumnya: '%s'", hook_candidate)
     except Exception as e:
-        logger.warning("⚠️ Gagal mengambil hook kandidat B: %s", e)
+        logger.warning(" Gagal mengambil hook kandidat B: %s", e)
 
     # Tentukan apakah kita akan memicu pembuatan A/B hook untuk run saat ini (peluang 25%)
     trigger_ab_test = random.random() < 0.25
@@ -330,13 +330,13 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         ab_test_instruction = (
             "\n8. 'hook_b': Hasilkan SATU variasi hook alternatif (versi B) yang berbeda gaya/pendekatan dengan 'hook' utama, tapi membahas subjek yang sama. Format teks harus KAPITAL, maks 10 kata. Contoh: 'JANGAN SAMPAI TANDUK KEPALA KAMU DIATUR ORANG LAIN'\n"
         )
-        logger.info("🎯 A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
+        logger.info(" A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
     hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. STRATEGI WAJIB: Gunakan taktik 'Negative Hook' (menargetkan rasa sakit psikologis). WAJIB: Pecah Hook menjadi dua bagian menggunakan tanda baca (koma atau tanda tanya) agar ada jeda napas yang natural (Contoh: 'SUSAH BILANG TIDAK? MEREKA AKAN MENGINJAKMU'). JANGAN buat satu kalimat panjang tanpa tanda baca! HINDARI Hook filosofis, teatrikal, atau kaku. Gunakan bahasa percakapan santai. SANGAT PENTING: JANGAN gunakan pola repetitif ('TAHUKAH KAMU').\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
-    # ⭐ LEVEL 6 TREND JACKING: Ambil kata kunci yang sedang tren di Indonesia
+    #  LEVEL 6 TREND JACKING: Ambil kata kunci yang sedang tren di Indonesia
     trends_prompt = ""
     try:
         trends = get_indonesia_trending_searches()
@@ -346,9 +346,9 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
                 f"Jika memungkinkan dan terasa alami, kaitkan atau hubungkan materi konten dengan salah satu tren di atas "
                 f"untuk menunggangi gelombang pencarian (Trend Jacking) tanpa memaksakan."
             )
-            logger.info("⭐ Level 6: Mengintegrasikan %d tren teratas ke dalam prompt.", len(trends))
+            logger.info(" Level 6: Mengintegrasikan %d tren teratas ke dalam prompt.", len(trends))
     except Exception as e:
-        logger.warning("⚠️ Gagal mengintegrasikan tren jacking: %s", e)
+        logger.warning(" Gagal mengintegrasikan tren jacking: %s", e)
 
     prompt = (
         f"{config['system_prompt']}"
@@ -361,7 +361,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         "4. 'caption': Judul/caption TikTok yang santai, relate, atau sedikit dark jokes (jangan terlalu formal/kaku), ditambah hashtag viral (contoh: #ruangpikir #psikologi #overthinking #fyp). Maks 150 karakter.\n"
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
-        "7. 'interactive_comment': Satu kalimat pancingan (pinned comment) yang terasa seperti obrolan tongkrongan Gen-Z, memancing emosi atau curhatan di kolom komentar. JANGAN kaku seperti kuesioner ('Apakah kamu pernah...'). Gunakan gaya bahasa santai (contoh: 'Jujur, siapa yang sering relate banget sama yang terakhir? 👀' atau 'Coba tag temen lu yang kelakuannya persis kayak gini wkwk'). Maks 15 kata.\n"
+        "7. 'interactive_comment': Satu kalimat pancingan (pinned comment) yang terasa seperti obrolan tongkrongan Gen-Z, memancing emosi atau curhatan di kolom komentar. JANGAN kaku seperti kuesioner ('Apakah kamu pernah...'). Gunakan gaya bahasa santai (contoh: 'Jujur, siapa yang sering relate banget sama yang terakhir? ' atau 'Coba tag temen lu yang kelakuannya persis kayak gini wkwk'). Maks 15 kata.\n"
         "8. 'yt_title': Judul video YouTube yang dioptimasi untuk SEO. Harus kuat, provokatif, mengandung kata kunci utama, dan TIDAK mengandung hashtag. Panjang maksimal 90 karakter. Contoh: 'Fakta Psikologi Gelap yang Tersembunyi di Balik Pujian Bertubi-Tubi'\n"
         "9. 'yt_description': Deskripsi video YouTube yang lengkap dan dioptimasi untuk mesin pencari (SEO). Struktur: (a) 2 kalimat ringkasan konten yang engaging, (b) poin-poin utama yang dibahas (bullet list), (c) kalimat CTA mengajak subscribe dan follow, (d) semua hashtag yang relevan. Total panjang 300-500 karakter. Tulis dalam Bahasa Indonesia.\n"
         f"{ab_test_instruction}\n"
@@ -377,7 +377,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
             import firebase_connector
             firebase_connector.save_hook_candidate(parsed_json["hook_b"])
         except Exception as e:
-            logger.warning("⚠️ Gagal menyimpan hook kandidat B ke database: %s", e)
+            logger.warning(" Gagal menyimpan hook kandidat B ke database: %s", e)
 
     if isinstance(parsed_json, dict):
         parsed_json["niche"] = config.get("niche", "Unknown")
@@ -469,7 +469,7 @@ async def run_retention_download(loop, keyword: str) -> list:
         if filename:
             return [filename]
     except Exception as e:
-        logger.warning("⚠️ Gagal mengunduh retention video: %s", e)
+        logger.warning(" Gagal mengunduh retention video: %s", e)
     return []
 
 async def run_download_with_retry(loop, keywords: list, target_count: int = 4, aesthetic_style: str = "dark cinematic cold moody tone", max_retry: int = 3) -> list:
@@ -493,14 +493,14 @@ async def run_retention_with_fallback(loop, retention_keyword: str, keywords: li
     Return: (results_list, is_fallback_boolean)"""
     results = await run_retention_download(loop, retention_keyword)
     if not results:
-        logger.warning("⚠️ YouTube-DL gagal (kemungkinan IP diblokir). Mengaktifkan fallback otomatis ke Pexels/Pixabay...")
+        logger.warning(" YouTube-DL gagal (kemungkinan IP diblokir). Mengaktifkan fallback otomatis ke Pexels/Pixabay...")
         results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
         return results, True
     return results, False
 
 
 def safe_close_resources(resources: dict, files_to_delete: list):
-    logger.info("🧹 Memulai pembersihan resource secara aman...")
+    logger.info(" Memulai pembersihan resource secara aman...")
     for name, obj in resources.items():
         if obj is not None:
             try:
@@ -550,7 +550,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
     voice_pitch = channel_cfg.get("voice_pitch", "+0Hz")
     watermark_name = channel_cfg.get("watermark", "@RuangPikir")
     
-    logger.info("🎯 Channel terpilih: %s (Niche: %s)", channel_id, niche_description)
+    logger.info(" Channel terpilih: %s (Niche: %s)", channel_id, niche_description)
 
     
     try:
@@ -562,7 +562,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             try:
                 with open(draft_script_path, "r", encoding="utf-8") as f:
                     script_data = json.load(f)
-                logger.info("♻️ Menggunakan draf naskah dari cache (%s)", draft_script_path)
+                logger.info(" Menggunakan draf naskah dari cache (%s)", draft_script_path)
             except Exception as e:
                 logger.warning(" Gagal memuat draf naskah: %s", e)
                 
@@ -584,7 +584,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         import random
         chosen_visual_theme = random.choice(list(SubtitleStyles.THEMES.keys()))
         SubtitleStyles.CHOSEN_THEME = chosen_visual_theme
-        logger.info("🎨 A/B Testing: Tema visual terpilih untuk video ini: %s", chosen_visual_theme)
+        logger.info(" A/B Testing: Tema visual terpilih untuk video ini: %s", chosen_visual_theme)
 
         # Simpan metadata dinamis untuk dibaca uploader di app.py
         tags = script_data.get("tags", ["faktapsikologi", "mindset", "stoikisme", "ruangpikir"])
@@ -640,7 +640,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     failed_tokens=ts_data["meta"]["failed_tokens"]
                 )
                 reused_audio_and_timestamps = True
-                logger.info("♻️ Menggunakan draf audio & timestamps dari cache")
+                logger.info(" Menggunakan draf audio & timestamps dari cache")
             except Exception as e:
                 logger.warning(" Gagal memuat cache audio & timestamps: %s. Mengulang proses sintesis.", e)
                 
@@ -662,7 +662,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             else:
                 video_files = results
         else:
-            logger.info("⚡ Menjalankan download background dan TTS secara bersamaan...")
+            logger.info(" Menjalankan download background dan TTS secara bersamaan...")
             if bg_type == "retention":
                 download_task = run_retention_with_fallback(loop, retention_keyword, keywords, needed_clips, aesthetic_style)
             else:
@@ -810,7 +810,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             segment_durations.append(dur)
             current_time += dur
             
-        logger.info("🎬 Mode Dynamic Cut-Rate: Dihasilkan %d potongan video yang tidak rata.", len(segment_durations))
+        logger.info(" Mode Dynamic Cut-Rate: Dihasilkan %d potongan video yang tidak rata.", len(segment_durations))
 
         if bg_type == "retention" and video_files:
             # Mode Layar Penuh (ASMR/Gameplay)
@@ -852,9 +852,9 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 
                 moviepy_resources["combined_bg"] = darkened
                 moviepy_resources["processed_clips"].append(darkened) # for resource tracking
-                logger.info("🎬 Menggunakan Full-Screen Retention Background (Start: %.1fs)", start_time)
+                logger.info(" Menggunakan Full-Screen Retention Background (Start: %.1fs)", start_time)
             except Exception as e:
-                logger.error("❌ Gagal memproses retention background: %s", e)
+                logger.error(" Gagal memproses retention background: %s", e)
                 moviepy_resources["combined_bg"] = ColorClip(size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration)
         else:
             # Mode Klasik (Pexels / Pixabay)
@@ -870,11 +870,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                         if random.random() < 0.25:
                             # 25% peluang klip ini akan bergetar (Camera Shake) selama 1-2 detik
                             processed_clip = apply_camera_shake(processed_clip, intensity=random.randint(4, 7), limit_duration=random.uniform(1.0, 2.0))
-                            logger.info("🎬 Efek Camera Shake diterapkan pada klip %d", i)
+                            logger.info(" Efek Camera Shake diterapkan pada klip %d", i)
                         if random.random() < 0.15:
                             # 15% peluang flashbang di awal klip
                             processed_clip = apply_flashbang(processed_clip, duration=0.1)
-                            logger.info("🎬 Efek Flashbang diterapkan pada klip %d", i)
+                            logger.info(" Efek Flashbang diterapkan pada klip %d", i)
                             
                     moviepy_resources["processed_clips"].append(processed_clip)
                 except Exception as ce:
@@ -960,7 +960,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                             with open(img_path, "wb") as f:
                                 f.write(response.read())
                     except Exception as err:
-                        logger.warning("⚠️ Gagal mengunduh emoji NER %s: %s", clean_w, err)
+                        logger.warning(" Gagal mengunduh emoji NER %s: %s", clean_w, err)
                         continue
                 
                 # Render emoji clip
@@ -982,9 +982,9 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                         )
                         ner_clips.append(e_clip)
                         emojis_added += 1
-                        logger.info("🎨 NER Sync: Menambahkan ikon '%s' pada %.2fs", clean_w, w["start"])
+                        logger.info(" NER Sync: Menambahkan ikon '%s' pada %.2fs", clean_w, w["start"])
                     except Exception as c_err:
-                        logger.warning("⚠️ Gagal memproses klip emoji NER: %s", c_err)
+                        logger.warning(" Gagal memproses klip emoji NER: %s", c_err)
 
         moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips + ner_clips, use_bgclip=True)
 
@@ -1065,7 +1065,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                         return frame * vol[0]
 
                 bg_music_clip = bg_music_clip.transform(make_frame)
-                logger.info("🎵 Musik latar berhasil dimuat dengan Dinamika Audio (Ducking & Swells): %s", chosen_music)
+                logger.info(" Musik latar berhasil dimuat dengan Dinamika Audio (Ducking & Swells): %s", chosen_music)
             except Exception as me:
                 logger.warning(" Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
                 bg_music_clip = None
@@ -1275,13 +1275,13 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             if os.path.exists(temp_output_path): os.remove(temp_output_path)
             return False
             
-        # 🔥 POST-PROCESSING FFMPEG NATIVE (ATEMPO DELEGATION)
+        #  POST-PROCESSING FFMPEG NATIVE (ATEMPO DELEGATION)
         # Sesuai aturan YouTube Shorts Extended 2025, batas maks adalah 3 menit.
         # Kita set batas pelindung di 88.0 detik agar video tetap aman.
         if total_duration > 88.0:
             stretch_factor = total_duration / 88.0
             logger.warning(
-                "⏳ Durasi video (%.2fs) melampaui batas 88s. "
+                " Durasi video (%.2fs) melampaui batas 88s. "
                 "Menjalankan FFmpeg atempo compression (factor: %.3f)...", total_duration, stretch_factor
             )
             compressed_temp = temp_output_path.replace(".mp4", "_compressed.mp4")
@@ -1304,7 +1304,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 os.replace(compressed_temp, temp_output_path)
                 logger.info(" FFmpeg atempo compression berhasil!")
             except Exception as ffmpeg_err:
-                logger.error("❌ FFmpeg atempo compression gagal: %s", ffmpeg_err)
+                logger.error(" FFmpeg atempo compression gagal: %s", ffmpeg_err)
                 if os.path.exists(compressed_temp):
                     try: os.remove(compressed_temp)
                     except OSError: pass

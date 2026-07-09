@@ -50,7 +50,7 @@ def get_channel_config(channel_id: str = "ruangpikir") -> dict:
                     cfg["id"] = first_key
                     return cfg
         except Exception as e:
-            print(f"⚠️ Gagal membaca config/channels.json: {e}")
+            print(f" Gagal membaca config/channels.json: {e}")
             
     # Default fallback
     return {

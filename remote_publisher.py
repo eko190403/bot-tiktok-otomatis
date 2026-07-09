@@ -16,12 +16,12 @@ def send_telegram_direct_message(chat_id: str, text: str):
     try:
         requests.post(url, json=payload, timeout=15)
     except Exception as e:
-        print(f"⚠️ Gagal mengirim status Telegram: {e}")
+        print(f" Gagal mengirim status Telegram: {e}")
 
 
 def download_video_from_telegram(file_id: str, dest_path: str):
     """Mengunduh berkas video draf dari server Telegram menggunakan file_id."""
-    print(f"📡 Mendapatkan lokasi berkas Telegram untuk file_id: {file_id}...")
+    print(f" Mendapatkan lokasi berkas Telegram untuk file_id: {file_id}...")
     info_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getFile?file_id={file_id}"
     
     try:
@@ -35,7 +35,7 @@ def download_video_from_telegram(file_id: str, dest_path: str):
             raise ValueError(f"file_path tidak ditemukan di respons Telegram: {file_data}")
             
         download_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_path}"
-        print(f"📥 Mengunduh video dari {download_url}...")
+        print(f" Mengunduh video dari {download_url}...")
         
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         with requests.get(download_url, stream=True, timeout=60) as r:
@@ -43,9 +43,9 @@ def download_video_from_telegram(file_id: str, dest_path: str):
             with open(dest_path, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-        print(f"💾 Video sukses diunduh ke: {dest_path} ({os.path.getsize(dest_path)} bytes)")
+        print(f" Video sukses diunduh ke: {dest_path} ({os.path.getsize(dest_path)} bytes)")
     except Exception as e:
-        print(f"❌ Gagal mengunduh berkas dari Telegram: {e}")
+        print(f" Gagal mengunduh berkas dari Telegram: {e}")
         raise e
 
 
@@ -64,16 +64,16 @@ async def main():
     platform_name = "YouTube Shorts" if platform == "youtube" else "TikTok"
     send_telegram_direct_message(
         chat_id, 
-        f"⏳ <b>Memulai Publikasi Cloud:</b> Mengambil draf <code>{video_id}</code> untuk {platform_name}..."
+        f" <b>Memulai Publikasi Cloud:</b> Mengambil draf <code>{video_id}</code> untuk {platform_name}..."
     )
     
     # 1. Ambil draf dari Firestore/Lokal
     import firebase_connector
     draft = firebase_connector.get_video_draft(video_id)
     if not draft:
-        err_msg = f"❌ <b>Gagal Publikasi:</b> Draf video dengan ID <code>{video_id}</code> tidak ditemukan di database Firestore/Lokal!"
+        err_msg = f" <b>Gagal Publikasi:</b> Draf video dengan ID <code>{video_id}</code> tidak ditemukan di database Firestore/Lokal!"
         send_telegram_direct_message(chat_id, err_msg)
-        print(f"❌ Draf tidak ditemukan untuk ID: {video_id}")
+        print(f" Draf tidak ditemukan untuk ID: {video_id}")
         sys.exit(1)
         
     file_id = draft.get("file_id")
@@ -85,7 +85,7 @@ async def main():
     yt_description = draft.get("yt_description", "")
     
     if not file_id:
-        send_telegram_direct_message(chat_id, f"❌ <b>Eror:</b> file_id Telegram tidak ditemukan pada draf <code>{video_id}</code>!")
+        send_telegram_direct_message(chat_id, f" <b>Eror:</b> file_id Telegram tidak ditemukan pada draf <code>{video_id}</code>!")
         sys.exit(1)
         
     # 2. Unduh video ke folder sementara
@@ -93,13 +93,13 @@ async def main():
     try:
         download_video_from_telegram(file_id, local_video_path)
     except Exception as dl_err:
-        send_telegram_direct_message(chat_id, f"❌ <b>Gagal Unduh Video:</b> Terjadi kesalahan mengunduh dari server Telegram.\nDetail: <code>{dl_err}</code>")
+        send_telegram_direct_message(chat_id, f" <b>Gagal Unduh Video:</b> Terjadi kesalahan mengunduh dari server Telegram.\nDetail: <code>{dl_err}</code>")
         sys.exit(1)
         
     # 3. Jalankan pengunggahan sesuai platform
     try:
         if platform == "youtube":
-            print(f"🚀 Memulai unggah ke YouTube Shorts...")
+            print(f" Memulai unggah ke YouTube Shorts...")
             from youtube_uploader import upload_to_youtube
             youtube_url = await upload_to_youtube(
                 local_video_path,
@@ -116,18 +116,18 @@ async def main():
                 yt_video_id = youtube_url.split("/")[-1]
                 firebase_connector.update_draft_status(video_id, "youtube", yt_video_id)
             except Exception as e:
-                print(f"⚠️ Gagal memperbarui status publikasi di database: {e}")
+                print(f" Gagal memperbarui status publikasi di database: {e}")
             
             msg = (
-                "🚀 <b>YOUTUBE SHORTS UPLOAD SUKSES via TELEGRAM!</b>\n\n"
-                f"🔗 <b>Tautan Shorts:</b> {youtube_url}\n"
-                f"✍️ <b>Caption:</b>\n<i>{caption}</i>\n\n"
-                f"💬 <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
+                " <b>YOUTUBE SHORTS UPLOAD SUKSES via TELEGRAM!</b>\n\n"
+                f" <b>Tautan Shorts:</b> {youtube_url}\n"
+                f" <b>Caption:</b>\n<i>{caption}</i>\n\n"
+                f" <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
             )
             send_telegram_direct_message(chat_id, msg)
             
         elif platform == "tiktok":
-            print(f"🚀 Memulai unggah ke TikTok Creator Studio...")
+            print(f" Memulai unggah ke TikTok Creator Studio...")
             from uploader import upload_to_tiktok
             tiktok_username = await upload_to_tiktok(
                 local_video_path,
@@ -139,18 +139,18 @@ async def main():
             try:
                 firebase_connector.update_draft_status(video_id, "tiktok", tiktok_username)
             except Exception as e:
-                print(f"⚠️ Gagal memperbarui status publikasi di database: {e}")
+                print(f" Gagal memperbarui status publikasi di database: {e}")
                 
             msg = (
-                "🚀 <b>TIKTOK UPLOAD SUKSES via TELEGRAM!</b>\n\n"
-                f"👤 <b>Akun TikTok:</b> <code>{tiktok_username}</code>\n"
-                f"✍️ <b>Caption & Hashtags:</b>\n<i>{caption}</i>\n\n"
-                f"💬 <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
+                " <b>TIKTOK UPLOAD SUKSES via TELEGRAM!</b>\n\n"
+                f" <b>Akun TikTok:</b> <code>{tiktok_username}</code>\n"
+                f" <b>Caption & Hashtags:</b>\n<i>{caption}</i>\n\n"
+                f" <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
             )
             send_telegram_direct_message(chat_id, msg)
             
     except Exception as upload_err:
-        print(f"❌ Gagal mempublikasikan video: {upload_err}")
+        print(f" Gagal mempublikasikan video: {upload_err}")
         escaped_err = html.escape(str(upload_err))
         
         # Deteksi khusus: Cookie TikTok Kedaluwarsa
@@ -158,8 +158,8 @@ async def main():
             cookie_expired_keywords = ["cookies kedaluwarsa", "cookie expired", "login ulang", "login", "signup"]
             if any(kw in str(upload_err).lower() for kw in cookie_expired_keywords):
                 msg = (
-                    "🔑 <b>COOKIE TIKTOK KEDALUWARSA!</b>\n\n"
-                    "❗ <b>Tindakan yang diperlukan:</b>\n"
+                    " <b>COOKIE TIKTOK KEDALUWARSA!</b>\n\n"
+                    " <b>Tindakan yang diperlukan:</b>\n"
                     "1. Login ulang ke TikTok di browser.\n"
                     "2. Ekspor cookie menggunakan ekstensi EditThisCookie.\n"
                     "3. Perbarui secret <code>TIKTOK_COOKIES</code> di GitHub Settings → Secrets."
@@ -168,9 +168,9 @@ async def main():
                 sys.exit(1)
 
         msg = (
-            f"⚠️ <b>PUBLIKASI {platform_name.upper()} GAGAL!</b>\n\n"
-            f"🎬 <b>Draf ID:</b> <code>{video_id}</code>\n"
-            f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
+            f" <b>PUBLIKASI {platform_name.upper()} GAGAL!</b>\n\n"
+            f" <b>Draf ID:</b> <code>{video_id}</code>\n"
+            f" <b>Error Log:</b>\n<code>{escaped_err}</code>"
         )
         send_telegram_direct_message(chat_id, msg)
         
@@ -181,7 +181,7 @@ async def main():
             try:
                 send_telegram_photo(
                     screenshot_path,
-                    caption=f"📸 <b>Bukti Kegagalan Layar (TikTok Remote)</b>"
+                    caption=f" <b>Bukti Kegagalan Layar (TikTok Remote)</b>"
                 )
             except:
                 pass
@@ -194,7 +194,7 @@ async def main():
             except:
                 pass
                 
-    print("✅ Proses remote publishing selesai dengan sukses!")
+    print(" Proses remote publishing selesai dengan sukses!")
 
 
 if __name__ == "__main__":

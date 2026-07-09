@@ -113,7 +113,7 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
     # Kirim komentar otomatis jika disertakan
     if video_id and comment_text:
         try:
-            print(f"💬 Menulis komentar otomatis pertama di YouTube...")
+            print(f" Menulis komentar otomatis pertama di YouTube...")
             comment_body = {
                 "snippet": {
                     "videoId": video_id,
@@ -125,9 +125,9 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
                 }
             }
             youtube.commentThreads().insert(part="snippet", body=comment_body).execute()
-            print("💬 Sukses mempublikasikan komentar pertama di YouTube!")
+            print(" Sukses mempublikasikan komentar pertama di YouTube!")
         except Exception as comm_err:
-            print(f"⚠️ Gagal memposting komentar otomatis pertama: {comm_err}")
+            print(f" Gagal memposting komentar otomatis pertama: {comm_err}")
             
     print(f" Tautan Video: {video_url}")
     return video_url
@@ -140,7 +140,7 @@ async def get_youtube_stats(video_ids: list) -> dict:
         
     cred_file = "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
-        print(f"⚠️ {cred_file} tidak ditemukan. Melewati update statistik.")
+        print(f" {cred_file} tidak ditemukan. Melewati update statistik.")
         return {}
         
     try:
@@ -178,7 +178,7 @@ async def get_youtube_stats(video_ids: list) -> dict:
             
         return stats
     except Exception as e:
-        print(f"⚠️ Gagal mengambil statistik dari YouTube API: {e}")
+        print(f" Gagal mengambil statistik dari YouTube API: {e}")
         return {}
 
 
@@ -186,7 +186,7 @@ async def get_top_comments(video_id: str, max_results: int = 20) -> list:
     """Mengambil komentar teratas dari video YouTube menggunakan YouTube Data API v3."""
     cred_file = "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
-        print(f"⚠️ {cred_file} tidak ditemukan. Melewati pengambilan komentar.")
+        print(f" {cred_file} tidak ditemukan. Melewati pengambilan komentar.")
         return []
         
     try:
@@ -223,7 +223,7 @@ async def get_top_comments(video_id: str, max_results: int = 20) -> list:
         comments.sort(key=lambda x: x["likes"], reverse=True)
         return [c["text"] for c in comments]
     except Exception as e:
-        print(f"⚠️ Gagal mengambil komentar dari YouTube API: {e}")
+        print(f" Gagal mengambil komentar dari YouTube API: {e}")
         return []
 
 
@@ -284,26 +284,26 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2) -> None
                         "textOriginal": reply_text.strip()
                     }
                 }
-                print(f"💬 Memposting balasan otomatis ke komentar '{comment_text[:40]}...'")
+                print(f" Memposting balasan otomatis ke komentar '{comment_text[:40]}...'")
                 await loop.run_in_executor(
                     None, 
                     lambda: youtube.comments().insert(part="snippet", body=reply_body).execute()
                 )
-                print("💬 Balasan sukses diposting!")
+                print(" Balasan sukses diposting!")
                 
     except Exception as e:
-        print(f"⚠️ Gagal membalas komentar otomatis di YouTube: {e}")
+        print(f" Gagal membalas komentar otomatis di YouTube: {e}")
 
 
 async def upload_thumbnail(video_id: str, thumbnail_path: str, channel_id: str = None) -> bool:
     """Mengunggah kustom thumbnail untuk video YouTube menggunakan YouTube Data API v3."""
     if not os.path.exists(thumbnail_path):
-        print(f"⚠️ Berkas thumbnail tidak ditemukan: {thumbnail_path}")
+        print(f" Berkas thumbnail tidak ditemukan: {thumbnail_path}")
         return False
         
     cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
-        print(f"⚠️ {cred_file} tidak ditemukan. Melewati upload thumbnail.")
+        print(f" {cred_file} tidak ditemukan. Melewati upload thumbnail.")
         return False
         
     try:
@@ -332,11 +332,11 @@ async def upload_thumbnail(video_id: str, thumbnail_path: str, channel_id: str =
         
         import asyncio
         loop = asyncio.get_event_loop()
-        print(f"🖼️ Mengunggah custom thumbnail untuk Video ID: {video_id}...")
+        print(f" Mengunggah custom thumbnail untuk Video ID: {video_id}...")
         response = await loop.run_in_executor(None, request.execute)
-        print("🖼️ Sukses mengunggah custom thumbnail!")
+        print(" Sukses mengunggah custom thumbnail!")
         return True
     except Exception as e:
-        print(f"⚠️ Gagal mengunggah thumbnail ke YouTube: {e}")
+        print(f" Gagal mengunggah thumbnail ke YouTube: {e}")
         return False
 

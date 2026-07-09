@@ -71,7 +71,7 @@ def seconds_to_vtt_time(seconds: float) -> str:
 def parse_subtitle_file(file_path: str) -> list:
     """Membaca file SRT atau VTT dan memparsing isinya menjadi list segment."""
     if not os.path.exists(file_path):
-        print(f"❌ File subtitle tidak ditemukan: {file_path}")
+        print(f" File subtitle tidak ditemukan: {file_path}")
         sys.exit(1)
         
     with open(file_path, "r", encoding="utf-8-sig") as f:
@@ -122,7 +122,7 @@ def parse_subtitle_file(file_path: str) -> list:
 
 def extract_and_convert_audio(input_path: str, output_wav_path: str):
     """Mengekstrak audio dari video atau mengonversi audio ke WAV 16kHz Mono."""
-    print(f"🎵 Memproses input media: {input_path}")
+    print(f" Memproses input media: {input_path}")
     ext = os.path.splitext(input_path)[1].lower()
     
     is_video = ext in ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv']
@@ -135,15 +135,15 @@ def extract_and_convert_audio(input_path: str, output_wav_path: str):
         else:
             cmd = ["ffmpeg", "-y", "-i", input_path, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", output_wav_path]
             
-        print(f"⚙️ Menjalankan perintah FFmpeg: {' '.join(cmd)}")
+        print(f" Menjalankan perintah FFmpeg: {' '.join(cmd)}")
         subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print(f"✅ Audio standar berhasil diekstraksi ke: {output_wav_path}")
+        print(f" Audio standar berhasil diekstraksi ke: {output_wav_path}")
         return
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(f"⚠️ FFmpeg CLI gagal atau tidak ditemukan ({e}). Menggunakan moviepy/librosa sebagai fallback...")
+        print(f" FFmpeg CLI gagal atau tidak ditemukan ({e}). Menggunakan moviepy/librosa sebagai fallback...")
         
     if is_video:
-        print("📹 Menggunakan moviepy untuk mengekstrak audio...")
+        print(" Menggunakan moviepy untuk mengekstrak audio...")
         from moviepy import AudioFileClip
         audio_clip = AudioFileClip(input_path)
         audio_clip.write_audiofile(
@@ -156,17 +156,17 @@ def extract_and_convert_audio(input_path: str, output_wav_path: str):
         )
         audio_clip.close()
     else:
-        print("🎵 Menggunakan librosa/soundfile untuk konversi...")
+        print(" Menggunakan librosa/soundfile untuk konversi...")
         y, sr = librosa.load(input_path, sr=16000, mono=True)
         sf.write(output_wav_path, y, 16000, subtype='PCM_16')
-    print(f"✅ Audio standar berhasil diekstraksi ke: {output_wav_path}")
+    print(f" Audio standar berhasil diekstraksi ke: {output_wav_path}")
 
 
 # ----------------- VOICE ACTIVITY DETECTION (VAD) -----------------
 
 def analyze_vad(audio_path: str) -> list:
     """Deteksi aktivitas suara (VAD) menggunakan analisis energi RMS dinamis."""
-    print("🎙️ Menjalankan Deteksi Aktivitas Suara (VAD) berbasis RMS...")
+    print(" Menjalankan Deteksi Aktivitas Suara (VAD) berbasis RMS...")
     y, sr = librosa.load(audio_path, sr=16000, mono=True)
     duration = len(y) / sr
     
@@ -218,7 +218,7 @@ def analyze_vad(audio_path: str) -> list:
         
     # Saring segmen suara yang terlalu pendek (< 0.1 detik dianggap derau/noise)
     filtered_segments = [(s, e) for s, e in merged_segments if (e - s) >= 0.1]
-    print(f"✅ VAD selesai. Mendeteksi {len(filtered_segments)} segmen percakapan aktif dari total {duration:.2f} detik.")
+    print(f" VAD selesai. Mendeteksi {len(filtered_segments)} segmen percakapan aktif dari total {duration:.2f} detik.")
     return filtered_segments
 
 
@@ -336,12 +336,12 @@ def interpolate_timestamps(subtitle_words: list, aligned_results: list, audio_du
 
 def forced_alignment_whisper(subtitle_segments: list, audio_path: str, model_size: str = "tiny") -> list:
     """Mencocokkan kata-kata subtitle dengan suara riil menggunakan OpenAI Whisper."""
-    print(f"🤖 Mengunduh/memuat model Whisper '{model_size}' (CPU friendly)...")
+    print(f" Mengunduh/memuat model Whisper '{model_size}' (CPU friendly)...")
     # pyrefly: ignore [missing-import]
     import whisper
     model = whisper.load_model(model_size)
     
-    print("🎙️ Memulai pengenalan ucapan Whisper dengan word-level timestamps...")
+    print(" Memulai pengenalan ucapan Whisper dengan word-level timestamps...")
     result = model.transcribe(audio_path, word_timestamps=True)
     
     # Ekstrak kata-kata dari transkripsi Whisper
@@ -357,13 +357,13 @@ def forced_alignment_whisper(subtitle_segments: list, audio_path: str, model_siz
                     "start": w["start"],
                     "end": w["end"]
                 })
-    print(f"🗣️ Whisper mendeteksi {len(whisper_words)} kata bersuara di audio.")
+    print(f" Whisper mendeteksi {len(whisper_words)} kata bersuara di audio.")
     
     # Ambil daftar kata dari subtitle asli
     subtitle_words = get_words_from_segments(subtitle_segments)
     
     # Lakukan urutan alignment
-    print("🔗 Mencocokkan kata teks asli dengan data timestamp audio...")
+    print(" Mencocokkan kata teks asli dengan data timestamp audio...")
     alignment = align_sequences(subtitle_words, whisper_words)
     
     aligned_results = []
@@ -408,7 +408,7 @@ def forced_alignment_whisper(subtitle_segments: list, audio_path: str, model_siz
 
 def adjust_with_vad(subtitle_segments: list, vad_segments: list) -> list:
     """Menyelaraskan batas waktu subtitle dengan segmen VAD agar pas dengan suara."""
-    print("⏳ Menyelaraskan stempel waktu akhir dengan Voice Activity Detection...")
+    print(" Menyelaraskan stempel waktu akhir dengan Voice Activity Detection...")
     
     # Hitung offset rata-rata
     offsets = []
@@ -420,7 +420,7 @@ def adjust_with_vad(subtitle_segments: list, vad_segments: list) -> list:
     if offsets:
         avg_offset = np.mean(offsets)
         std_offset = np.std(offsets)
-        print(f"📊 Offset Rata-rata Subtitle Baru vs Lama: {avg_offset:+.3f}s (Deviasi Standar: {std_offset:.3f}s)")
+        print(f" Offset Rata-rata Subtitle Baru vs Lama: {avg_offset:+.3f}s (Deviasi Standar: {std_offset:.3f}s)")
         
     # Koreksi batas waktu start & end dengan VAD
     for seg in subtitle_segments:
@@ -475,7 +475,7 @@ def adjust_with_vad(subtitle_segments: list, vad_segments: list) -> list:
 
 def write_subtitle_file(segments: list, output_path: str):
     """Menyimpan data subtitle baru dalam format SRT atau VTT."""
-    print(f"💾 Mengekspor subtitle hasil sinkronisasi ke: {output_path}")
+    print(f" Mengekspor subtitle hasil sinkronisasi ke: {output_path}")
     ext = os.path.splitext(output_path)[1].lower()
     is_vtt = ext == ".vtt"
     
@@ -491,7 +491,7 @@ def write_subtitle_file(segments: list, output_path: str):
             
             f.write(f"{idx}\n{start_str} --> {end_str}\n{text}\n\n")
             
-    print("🎉 File subtitle berhasil diekspor sempurna!")
+    print(" File subtitle berhasil diekspor sempurna!")
 
 
 # ----------------- MAIN PIPELINE -----------------

@@ -53,9 +53,9 @@ def main():
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(cred_data, f, indent=4, ensure_ascii=False)
         
-    print("\n✅ Otorisasi Sukses!")
-    print(f"💾 Kredensial penting tersimpan di: {output_file}")
-    print("\n⚠️ PERINGATAN KEAMANAN:")
+    print("\n Otorisasi Sukses!")
+    print(f" Kredensial penting tersimpan di: {output_file}")
+    print("\n PERINGATAN KEAMANAN:")
     print(f"1. Jangan pernah memasukkan (commit) berkas '{output_file}' atau 'client_secret.json' ke GitHub!")
     print(f"2. Buka berkas '{output_file}', salin seluruh isinya, dan masukkan ke")
     print(f"   GitHub Secrets repositori Anda dengan nama rahasia 'YOUTUBE_CREDENTIALS_{channel_id.upper()}'.")

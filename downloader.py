@@ -10,7 +10,7 @@ except Exception:
 def search_pexels_videos(keyword: str, per_page: int = 5, page: int = 1) -> list:
     """Mencari video portrait di Pexels berdasarkan keyword dari Gemini."""
     if not PEXELS_API_KEY:
-        raise ValueError("❌ PEXELS_API_KEY belum dikonfigurasi di GitHub Secrets.")
+        raise ValueError(" PEXELS_API_KEY belum dikonfigurasi di GitHub Secrets.")
         
     headers = {"Authorization": PEXELS_API_KEY}
     url = f"https://api.pexels.com/videos/search?query={keyword}&per_page={per_page}&page={page}&orientation=portrait"
@@ -22,9 +22,9 @@ def search_pexels_videos(keyword: str, per_page: int = 5, page: int = 1) -> list
             if response.status_code == 200:
                 return response.json().get("videos", [])
             else:
-                print(f"⚠️ Pexels API mengembalikan status {response.status_code} pada percobaan {attempt + 1}/3.")
+                print(f" Pexels API mengembalikan status {response.status_code} pada percobaan {attempt + 1}/3.")
         except Exception as e:
-            print(f"⚠️ Gagal menghubungi Pexels untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
+            print(f" Gagal menghubungi Pexels untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
         if attempt < 2:
             time.sleep(2)
     return []
@@ -32,7 +32,7 @@ def search_pexels_videos(keyword: str, per_page: int = 5, page: int = 1) -> list
 def search_pixabay_videos(keyword: str, per_page: int = 15, page: int = 1) -> list:
     """Mencari video di Pixabay dan menormalisasi outputnya agar sesuai dengan format Pexels."""
     if not PIXABAY_API_KEY:
-        print("⚠️ PIXABAY_API_KEY belum dikonfigurasi. Lewati pencarian Pixabay.")
+        print(" PIXABAY_API_KEY belum dikonfigurasi. Lewati pencarian Pixabay.")
         return []
         
     import urllib.parse
@@ -62,9 +62,9 @@ def search_pixabay_videos(keyword: str, per_page: int = 15, page: int = 1) -> li
                         })
                 return normalized
             else:
-                print(f"⚠️ Pixabay API mengembalikan status {response.status_code} pada percobaan {attempt + 1}/3.")
+                print(f" Pixabay API mengembalikan status {response.status_code} pada percobaan {attempt + 1}/3.")
         except Exception as e:
-            print(f"⚠️ Gagal menghubungi Pixabay untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
+            print(f" Gagal menghubungi Pixabay untuk keyword '{keyword}' pada percobaan {attempt + 1}/3: {e}")
         if attempt < 2:
             time.sleep(2)
     return []
@@ -103,10 +103,10 @@ def download_youtube_retention_video(keyword: str) -> str:
     # Cek apakah sudah ada file mp4 di direktori (Gunakan yang ada agar tidak download ulang)
     existing_files = [f for f in os.listdir(retention_dir) if f.endswith(".mp4")]
     if existing_files:
-        print(f"📦 Menggunakan video retention yang sudah ada di cache: {existing_files[0]}")
+        print(f" Menggunakan video retention yang sudah ada di cache: {existing_files[0]}")
         return os.path.join(retention_dir, existing_files[0])
         
-    print(f"📡 Mencari dan mengunduh video retention dari YouTube: '{keyword}'...")
+    print(f" Mencari dan mengunduh video retention dari YouTube: '{keyword}'...")
     
     ydl_opts = {
         'format': 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]',
@@ -137,12 +137,12 @@ def download_youtube_retention_video(keyword: str) -> str:
                     netscape_str += f"{domain}\t{include_subdomain}\t{path}\t{secure}\t{expiry}\t{name}\t{value}\n"
                 with open("cookies.txt", "w", encoding="utf-8") as f:
                     f.write(netscape_str)
-                print("🔄 Berhasil mengonversi format cookie JSON menjadi format Netscape (TXT).")
+                print(" Berhasil mengonversi format cookie JSON menjadi format Netscape (TXT).")
         except Exception as e:
-            print(f"⚠️ Gagal mengonversi cookies.txt (Abaikan jika sudah berformat txt): {e}")
+            print(f" Gagal mengonversi cookies.txt (Abaikan jika sudah berformat txt): {e}")
             
         ydl_opts['cookiefile'] = "cookies.txt"
-        print("🍪 Menggunakan cookies.txt untuk otentikasi YouTube-DL")
+        print(" Menggunakan cookies.txt untuk otentikasi YouTube-DL")
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -151,14 +151,14 @@ def download_youtube_retention_video(keyword: str) -> str:
             if 'entries' in info and len(info['entries']) > 0:
                 entry = info['entries'][0]
                 filename = ydl.prepare_filename(entry)
-                print(f"✅ Berhasil mengunduh retention video: {filename}")
+                print(f" Berhasil mengunduh retention video: {filename}")
                 return filename
             elif 'id' in info:
                 filename = ydl.prepare_filename(info)
-                print(f"✅ Berhasil mengunduh retention video: {filename}")
+                print(f" Berhasil mengunduh retention video: {filename}")
                 return filename
     except Exception as e:
-        print(f"⚠️ Gagal mengunduh video retention YouTube: {e}")
+        print(f" Gagal mengunduh video retention YouTube: {e}")
         
     return ""
 
@@ -170,7 +170,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
     reusable_clips = []  # Tempat menyimpan klip yang pernah dipakai untuk fallback darurat
     clip_idx = 0
     
-    print(f"📡 Memulai pencarian video AI (Pexels & Pixabay) berdasarkan keyword: {keywords} (Target: {target_count} klip)")
+    print(f" Memulai pencarian video AI (Pexels & Pixabay) berdasarkan keyword: {keywords} (Target: {target_count} klip)")
     
     # Hitung jumlah klip yang perlu diambil dari masing-masing keyword secara rata
     num_kws = len(keywords) if keywords else 1
@@ -210,11 +210,11 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
             try:
                 if vid_id and firebase_connector and getattr(firebase_connector, "is_clip_used", None):
                     if firebase_connector.is_clip_used(vid_id):
-                        print(f"⛔ Klip {vid_id} pernah dipakai. Disimpan untuk cadangan darurat (reuse).")
+                        print(f" Klip {vid_id} pernah dipakai. Disimpan untuk cadangan darurat (reuse).")
                         reusable_clips.append(vid_data)
                         continue
             except Exception as e:
-                print(f"⚠️ Gagal memeriksa used_clips: {e}")
+                print(f" Gagal memeriksa used_clips: {e}")
             pool_dir = os.path.join("assets", "video_pool")
             os.makedirs(pool_dir, exist_ok=True)
             cached_file = os.path.join(pool_dir, f"{vid_id}.mp4") if vid_id else None
@@ -225,7 +225,7 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                 
                 # Cek apakah sudah ada di cache lokal
                 if cached_file and os.path.exists(cached_file) and os.path.getsize(cached_file) > 0:
-                    print(f"📦 Menggunakan klip cache Pexels: {cached_file} -> {file_path}")
+                    print(f" Menggunakan klip cache Pexels: {cached_file} -> {file_path}")
                     import shutil
                     try:
                         shutil.copy2(cached_file, file_path)
@@ -240,9 +240,9 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                         kws_clip_count += 1
                         continue
                     except Exception as copy_err:
-                        print(f"⚠️ Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
+                        print(f" Gagal menyalin cache: {copy_err}. Mengulang unduhan...")
                 
-                print(f"📥 Mengunduh klip {clip_idx + 1}/{target_count} untuk keyword '{kw}'...")
+                print(f" Mengunduh klip {clip_idx + 1}/{target_count} untuk keyword '{kw}'...")
                 import time
                 for attempt in range(3):
                     try:
@@ -256,9 +256,9 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                                 try:
                                     with open(cached_file, "wb") as cf:
                                         cf.write(resp.content)
-                                    print(f"💾 Klip disimpan ke cache lokal: {cached_file}")
+                                    print(f" Klip disimpan ke cache lokal: {cached_file}")
                                 except Exception as cache_err:
-                                    print(f"⚠️ Gagal menyimpan ke cache: {cache_err}")
+                                    print(f" Gagal menyimpan ke cache: {cache_err}")
 
                             downloaded_paths.append(file_path)
                             # tandai sebagai dipakai di Firestore
@@ -272,9 +272,9 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                             kws_clip_count += 1
                             break
                         else:
-                            print(f"⚠️ Gagal mengunduh klip (status {resp.status_code}) pada percobaan {attempt + 1}/3.")
+                            print(f" Gagal mengunduh klip (status {resp.status_code}) pada percobaan {attempt + 1}/3.")
                     except Exception as e:
-                        print(f"⚠️ Gagal mengunduh klip {clip_idx} pada percobaan {attempt + 1}/3: {e}")
+                        print(f" Gagal mengunduh klip {clip_idx} pada percobaan {attempt + 1}/3: {e}")
                     if attempt < 2:
                         time.sleep(2)
                     
@@ -282,12 +282,12 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
     if len(downloaded_paths) < target_count:
         remaining_count = target_count - len(downloaded_paths)
         if downloaded_paths:
-            print(f"⚠️ Hanya berhasil mengunduh {len(downloaded_paths)}/{target_count} klip dari kata kunci utama.")
-            print(f"📡 Mengisi sisa {remaining_count} klip menggunakan fallback Pexels online...")
+            print(f" Hanya berhasil mengunduh {len(downloaded_paths)}/{target_count} klip dari kata kunci utama.")
+            print(f" Mengisi sisa {remaining_count} klip menggunakan fallback Pexels online...")
         else:
-            print("⚠️ Keyword spesifik tidak menghasilkan video. Mencari klip fallback di Pexels online...")
+            print(" Keyword spesifik tidak menghasilkan video. Mencari klip fallback di Pexels online...")
             
-        print(f"ℹ️ Kekurangan {remaining_count} klip. Menggunakan tema fallback Multi-Source (dark cinematic)...")
+        print(f" Kekurangan {remaining_count} klip. Menggunakan tema fallback Multi-Source (dark cinematic)...")
         # Acak halaman pencarian fallback agar tidak selalu dapat klip yang sama
         random_page = random.randint(1, 3)
         fallback_videos = search_multi_source("dark cinematic", per_page=20, page=random_page)
@@ -325,12 +325,12 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                             except Exception:
                                 pass
                     except Exception as e:
-                        print(f"⚠️ Gagal mengunduh klip fallback Pexels: {e}")
+                        print(f" Gagal mengunduh klip fallback Pexels: {e}")
                         
     # 3. Fallback Darurat: REUSE (Menggunakan ulang klip yang pernah dipakai, tapi diacak)
     if len(downloaded_paths) < target_count and reusable_clips:
         remaining_count = target_count - len(downloaded_paths)
-        print(f"♻️ Darurat: Kekurangan {remaining_count} klip. Menggunakan ulang (REUSE) klip yang pernah dipakai agar proses tidak gagal...")
+        print(f" Darurat: Kekurangan {remaining_count} klip. Menggunakan ulang (REUSE) klip yang pernah dipakai agar proses tidak gagal...")
         random.shuffle(reusable_clips)
         for vid_data in reusable_clips:
             if len(downloaded_paths) >= target_count:
@@ -345,14 +345,14 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                         with open(file_path, "wb") as f:
                             f.write(resp.content)
                         downloaded_paths.append(file_path)
-                        print(f"✅ Berhasil me-reuse klip {vid_data.get('id')}.")
+                        print(f" Berhasil me-reuse klip {vid_data.get('id')}.")
                 except Exception as e:
-                    print(f"⚠️ Gagal me-reuse klip: {e}")
+                    print(f" Gagal me-reuse klip: {e}")
                         
     # Fallback Folder Lokal (Prioritas Terakhir, hanya jika Pexels gagal total atau internet mati)
     if len(downloaded_paths) < target_count:
         remaining_count = target_count - len(downloaded_paths)
-        print(f"⚠️ Pexels Fallback gagal memenuhi {remaining_count} klip. Menggunakan folder fallback_clips lokal...")
+        print(f" Pexels Fallback gagal memenuhi {remaining_count} klip. Menggunakan folder fallback_clips lokal...")
         
         fallback_dir = os.path.join("assets", "fallback_clips")
         local_fallbacks = []
@@ -369,8 +369,8 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
                 try:
                     shutil.copy2(src_path, file_path)
                     downloaded_paths.append(file_path)
-                    print(f"📦 Menggunakan klip fallback lokal: {src_path} -> {file_path}")
+                    print(f" Menggunakan klip fallback lokal: {src_path} -> {file_path}")
                 except Exception as copy_err:
-                    print(f"⚠️ Gagal menyalin klip fallback lokal: {copy_err}")
+                    print(f" Gagal menyalin klip fallback lokal: {copy_err}")
             
     return downloaded_paths

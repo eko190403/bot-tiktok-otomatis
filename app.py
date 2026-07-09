@@ -15,7 +15,7 @@ def send_telegram_message(message: str):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        print("⚠️ TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Notifikasi dilewati.")
+        print(" TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Notifikasi dilewati.")
         return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     
@@ -35,10 +35,10 @@ def send_telegram_message(message: str):
             )
             with urllib.request.urlopen(req, timeout=12) as response:
                 response.read()
-            print("📨 Notifikasi status upload berhasil dikirim ke Telegram.")
+            print(" Notifikasi status upload berhasil dikirim ke Telegram.")
             return
         except Exception as e:
-            print(f"⚠️ Percobaan {attempt + 1}/3 gagal mengirim notifikasi ke Telegram: {e}")
+            print(f" Percobaan {attempt + 1}/3 gagal mengirim notifikasi ke Telegram: {e}")
             if attempt < 2:
                 time.sleep(2)
 
@@ -52,12 +52,12 @@ def send_telegram_photo(photo_path: str, caption: str = ""):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        print("⚠️ TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Notifikasi dilewati.")
+        print(" TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Notifikasi dilewati.")
         return
     url = f"https://api.telegram.org/bot{token}/sendPhoto"
     
     if not os.path.exists(photo_path):
-        print(f"⚠️ File foto tidak ditemukan: {photo_path}")
+        print(f" File foto tidak ditemukan: {photo_path}")
         return
         
     for attempt in range(3):
@@ -67,12 +67,12 @@ def send_telegram_photo(photo_path: str, caption: str = ""):
                 data = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
                 response = requests.post(url, files=files, data=data, timeout=15)
                 if response.status_code == 200:
-                    print("📨 Notifikasi screenshot berhasil dikirim ke Telegram.")
+                    print(" Notifikasi screenshot berhasil dikirim ke Telegram.")
                     return
                 else:
-                    print(f"⚠️ Telegram sendPhoto gagal dengan status {response.status_code} pada percobaan {attempt + 1}/3: {response.text}")
+                    print(f" Telegram sendPhoto gagal dengan status {response.status_code} pada percobaan {attempt + 1}/3: {response.text}")
         except Exception as e:
-            print(f"⚠️ Percobaan {attempt + 1}/3 gagal mengirim screenshot ke Telegram: {e}")
+            print(f" Percobaan {attempt + 1}/3 gagal mengirim screenshot ke Telegram: {e}")
         if attempt < 2:
             time.sleep(2)
 
@@ -88,26 +88,26 @@ async def send_telegram_video_with_buttons(video_path: str, caption: str, video_
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        print("⚠️ TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Video tidak bisa dikirim.")
+        print(" TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diset. Video tidak bisa dikirim.")
         return None
     url = f"https://api.telegram.org/bot{token}/sendVideo"
     
     if not os.path.exists(video_path):
-        print(f"⚠️ Berkas video tidak ditemukan untuk dikirim ke Telegram: {video_path}")
+        print(f" Berkas video tidak ditemukan untuk dikirim ke Telegram: {video_path}")
         return None
         
     reply_markup = {
         "inline_keyboard": [
             [
-                {"text": "🚀 Upload YouTube", "callback_data": f"pub:yt:{video_id}"},
-                {"text": "🚀 Upload TikTok", "callback_data": f"pub:tt:{video_id}"}
+                {"text": " Upload YouTube", "callback_data": f"pub:yt:{video_id}"},
+                {"text": " Upload TikTok", "callback_data": f"pub:tt:{video_id}"}
             ]
         ]
     }
     
     for attempt in range(3):
         try:
-            print(f"📡 Mengirim berkas video draf beserta tombol kontrol ke Telegram (percobaan {attempt + 1}/3)...")
+            print(f" Mengirim berkas video draf beserta tombol kontrol ke Telegram (percobaan {attempt + 1}/3)...")
             with open(video_path, "rb") as f:
                 files = {"video": f}
                 data = {
@@ -122,12 +122,12 @@ async def send_telegram_video_with_buttons(video_path: str, caption: str, video_
                     res_data = response.json()
                     video_obj = res_data.get("result", {}).get("video", {})
                     file_id = video_obj.get("file_id")
-                    print(f"📨 Video draf berhasil dikirim ke Telegram! File ID: {file_id}")
+                    print(f" Video draf berhasil dikirim ke Telegram! File ID: {file_id}")
                     return file_id
                 else:
-                    print(f"⚠️ Telegram sendVideo gagal dengan status {response.status_code} pada percobaan {attempt + 1}/3: {response.text}")
+                    print(f" Telegram sendVideo gagal dengan status {response.status_code} pada percobaan {attempt + 1}/3: {response.text}")
         except Exception as e:
-            print(f"⚠️ Percobaan {attempt + 1}/3 gagal mengirim video dengan tombol ke Telegram: {e}")
+            print(f" Percobaan {attempt + 1}/3 gagal mengirim video dengan tombol ke Telegram: {e}")
         if attempt < 2:
             time.sleep(3)
     return None
@@ -143,7 +143,7 @@ async def main():
 
     firebase_connector = None
     try:
-        print(f"🚀 Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
+        print(f" Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
         
         # Cegah double upload berdekatan khusus untuk trigger jadwal otomatis (cron schedule)
         import os
@@ -158,11 +158,11 @@ async def main():
                 # Batasi minimal 3 jam (10800 detik) antar upload otomatis
                 if elapsed_seconds < 10800:
                     hours_ago = elapsed_seconds / 3600
-                    print(f"⚠️ Channel {channel_id} baru saja mengunggah video {hours_ago:.2f} jam yang lalu.")
-                    print("ℹ️ Lewati jadwal otomatis kali ini untuk mencegah upload berdekatan. Selesai.")
+                    print(f" Channel {channel_id} baru saja mengunggah video {hours_ago:.2f} jam yang lalu.")
+                    print(" Lewati jadwal otomatis kali ini untuk mencegah upload berdekatan. Selesai.")
                     return
                     
-        # 🛡️ PRIME TIME SCHEDULER: Jangan publikasi di jam tidur (01:00 - 06:00 WIB)
+        #  PRIME TIME SCHEDULER: Jangan publikasi di jam tidur (01:00 - 06:00 WIB)
         if is_schedule and not args.force:
             from datetime import datetime, timezone, timedelta
             wib_timezone = timezone(timedelta(hours=7))
@@ -170,8 +170,8 @@ async def main():
             hour = current_wib.hour
             
             if 1 <= hour <= 6:
-                print(f"😴 Saat ini jam {hour:02d}:00 WIB. Waktunya penonton tidur.")
-                print("ℹ️ Membatalkan eksekusi otomatis untuk mencegah video sepi. Selesai.")
+                print(f" Saat ini jam {hour:02d}:00 WIB. Waktunya penonton tidur.")
+                print(" Membatalkan eksekusi otomatis untuk mencegah video sepi. Selesai.")
                 return
 
         
@@ -180,7 +180,7 @@ async def main():
             import firebase_connector
             firebase_connector.cleanup_old_drafts(days=7)
         except Exception as clean_err:
-            print(f"⚠️ Gagal menjalankan pembersihan draf otomatis: {clean_err}")
+            print(f" Gagal menjalankan pembersihan draf otomatis: {clean_err}")
             
         # Jalankan pembaruan statistik video YouTube secara otomatis
         try:
@@ -188,7 +188,7 @@ async def main():
             from youtube_uploader import get_youtube_stats
             yt_video_map = firebase_connector.get_active_youtube_video_ids(limit=50)
             if yt_video_map:
-                print(f"📊 Menemukan {len(yt_video_map)} video YouTube untuk diperiksa statistiknya...")
+                print(f" Menemukan {len(yt_video_map)} video YouTube untuk diperiksa statistiknya...")
                 stats = await get_youtube_stats(list(yt_video_map.values()))
                 for draft_id, yt_id in yt_video_map.items():
                     if yt_id in stats:
@@ -197,31 +197,31 @@ async def main():
                         likes = stats[yt_id]["likes"]
                         firebase_connector.update_draft_stats(draft_id, views, likes)
                         
-                        # 🔥 VIRAL ALERT: Deteksi lonjakan views > 200%
+                        #  VIRAL ALERT: Deteksi lonjakan views > 200%
                         if prev_views > 0 and views >= prev_views * 3:
                             growth_pct = int((views / prev_views - 1) * 100)
                             viral_msg = (
-                                f"🔥 <b>VIDEO VIRAL ALERT!</b>\n\n"
-                                f"📈 <b>Lonjakan Views:</b> {prev_views:,} → {views:,} (+{growth_pct}%)\n"
-                                f"👍 <b>Likes:</b> {likes:,}\n\n"
-                                f"🎬 <b>Draft ID:</b> <code>{draft_id}</code>\n"
-                                f"🔗 https://youtu.be/{yt_id}\n\n"
-                                f"💡 Video ini sedang viral! Pertimbangkan membuat konten lanjutan."
+                                f" <b>VIDEO VIRAL ALERT!</b>\n\n"
+                                f" <b>Lonjakan Views:</b> {prev_views:,} → {views:,} (+{growth_pct}%)\n"
+                                f" <b>Likes:</b> {likes:,}\n\n"
+                                f" <b>Draft ID:</b> <code>{draft_id}</code>\n"
+                                f" https://youtu.be/{yt_id}\n\n"
+                                f" Video ini sedang viral! Pertimbangkan membuat konten lanjutan."
                             )
                             send_telegram_message(viral_msg)
-                            print(f"🔥 VIRAL ALERT dikirim! Views naik {growth_pct}% untuk {draft_id}")
+                            print(f" VIRAL ALERT dikirim! Views naik {growth_pct}% untuk {draft_id}")
                             
-                print("📊 Pembaruan statistik video YouTube selesai.")
+                print(" Pembaruan statistik video YouTube selesai.")
         except Exception as stats_err:
-            print(f"⚠️ Gagal memperbarui statistik video: {stats_err}")
+            print(f" Gagal memperbarui statistik video: {stats_err}")
 
-        # 💬 ANALISIS KOMENTAR & BALASAN OTOMATIS: Baca komentar video viral, buat insight AI, dan balas otomatis
+        #  ANALISIS KOMENTAR & BALASAN OTOMATIS: Baca komentar video viral, buat insight AI, dan balas otomatis
         try:
             import firebase_connector
             from youtube_uploader import get_top_comments, reply_to_youtube_comments
             viral_map = firebase_connector.get_viral_video_ids(min_views=500, limit=2, channel_id=channel_id)
             if viral_map:
-                print(f"💬 Ditemukan {len(viral_map)} video viral untuk dianalisis komentarnya...")
+                print(f" Ditemukan {len(viral_map)} video viral untuk dianalisis komentarnya...")
                 from video_builder import analyze_comments_with_gemini
                 for draft_id, yt_id in viral_map.items():
                     # 1. Jalankan Balasan Otomatis menggunakan Gemini
@@ -256,24 +256,24 @@ async def main():
                             insight = await analyze_comments_with_gemini(clean_comments)
                         if insight:
                             firebase_connector.mark_comments_analyzed(draft_id, insight)
-                            print(f"💬 Insight komentar disimpan untuk {draft_id}: {insight[:80]}...")
+                            print(f" Insight komentar disimpan untuk {draft_id}: {insight[:80]}...")
         except Exception as comment_err:
-            print(f"⚠️ Gagal menganalisis/membalas komentar video: {comment_err}")
+            print(f" Gagal menganalisis/membalas komentar video: {comment_err}")
 
 
         
         # Lakukan import secara lokal di dalam fungsi untuk melacak jika eror berasal dari file import
-        print("📦 Meng-import modul video_builder...")
+        print(" Meng-import modul video_builder...")
         from video_builder import create_video
         
         if firebase_connector:
             firebase_connector.clear_used_clips_queue()
         
-        print(f"🎬 Menjalankan fungsi create_video() untuk channel: {channel_id}...")
+        print(f" Menjalankan fungsi create_video() untuk channel: {channel_id}...")
         success = await create_video(channel_id=channel_id)
         
         if success:
-            print("✅ Video Berhasil Dirender Sempurna!")
+            print(" Video Berhasil Dirender Sempurna!")
             
             # Ambil metadata hasil rancangan Gemini dari berkas
             from config import DIR_TEMP
@@ -303,7 +303,7 @@ async def main():
                         yt_description = meta_data.get("yt_description", "")
                     os.remove(metadata_path) # Bersihkan setelah dibaca
                 except Exception as meta_err:
-                    print(f"⚠️ Gagal membaca/menghapus metadata: {meta_err}")
+                    print(f" Gagal membaca/menghapus metadata: {meta_err}")
 
             # Cari file video terbaru di folder output untuk diunggah (digunakan untuk TikTok & YouTube)
             import glob
@@ -314,7 +314,7 @@ async def main():
             thumbnail_path = "output/thumbnail.jpg"
             has_thumbnail = False
             if latest_video:
-                print("🖼️ Memulai proses pembuatan auto-thumbnail...")
+                print(" Memulai proses pembuatan auto-thumbnail...")
                 try:
                     import subprocess
                     import asyncio
@@ -332,11 +332,11 @@ async def main():
                     )
                     if os.path.exists(thumbnail_path):
                         has_thumbnail = True
-                        print(f"✨ Thumbnail berhasil dibuat: {thumbnail_path}")
+                        print(f" Thumbnail berhasil dibuat: {thumbnail_path}")
                     else:
-                        print(f"⚠️ FFmpeg gagal membuat thumbnail: {result.stderr[-200:]}")
+                        print(f" FFmpeg gagal membuat thumbnail: {result.stderr[-200:]}")
                 except Exception as thumb_err:
-                    print(f"⚠️ Gagal membuat thumbnail: {thumb_err}")
+                    print(f" Gagal membuat thumbnail: {thumb_err}")
 
             # Poin 9: Integrasi Upload Otomatis ke TikTok
             enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
@@ -344,24 +344,24 @@ async def main():
             
             if enable_upload and channel_id == "ruangpikir":
                 if latest_video:
-                    print("📤 Memicu pengunggahan otomatis ke TikTok...")
+                    print(" Memicu pengunggahan otomatis ke TikTok...")
                     from uploader import upload_to_tiktok
-                    print(f"🎬 Menemukan video terbaru untuk TikTok: {latest_video}. Memulai upload...")
+                    print(f" Menemukan video terbaru untuk TikTok: {latest_video}. Memulai upload...")
                     try:
                         tiktok_username = await upload_to_tiktok(latest_video, caption=caption, comment_text=interactive_comment)
-                        print("🚀 Sukses mengunggah video ke TikTok!")
+                        print(" Sukses mengunggah video ke TikTok!")
                         any_upload_success = True
                         
                         # Kirim notifikasi SUKSES ke Telegram
                         msg = (
-                            "🚀 <b>TIKTOK UPLOAD SUKSES!</b>\n\n"
-                            f"👤 <b>Akun TikTok:</b> <code>{tiktok_username}</code>\n"
-                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
-                            f"✍️ <b>Caption & Hashtags:</b>\n<i>{caption}</i>"
+                            " <b>TIKTOK UPLOAD SUKSES!</b>\n\n"
+                            f" <b>Akun TikTok:</b> <code>{tiktok_username}</code>\n"
+                            f" <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
+                            f" <b>Caption & Hashtags:</b>\n<i>{caption}</i>"
                         )
                         send_telegram_message(msg)
                     except Exception as upload_err:
-                        print(f"❌ Gagal mengunggah ke TikTok: {upload_err}")
+                        print(f" Gagal mengunggah ke TikTok: {upload_err}")
                         
                         # Ambil username untuk ditaruh di log error
                         from uploader import get_tiktok_username_from_cookies
@@ -374,19 +374,19 @@ async def main():
                         cookie_expired_keywords = ["cookies kedaluwarsa", "cookie expired", "login ulang", "login" , "signup"]
                         if any(kw in str(upload_err).lower() for kw in cookie_expired_keywords):
                             msg = (
-                                "🔑 <b>COOKIE TIKTOK KEDALUWARSA!</b>\n\n"
-                                f"👤 <b>Akun:</b> <code>{failed_user}</code>\n\n"
-                                "❗ <b>Tindakan yang diperlukan:</b>\n"
+                                " <b>COOKIE TIKTOK KEDALUWARSA!</b>\n\n"
+                                f" <b>Akun:</b> <code>{failed_user}</code>\n\n"
+                                " <b>Tindakan yang diperlukan:</b>\n"
                                 "1. Login ulang ke TikTok di browser.\n"
                                 "2. Ekspor cookie menggunakan ekstensi EditThisCookie.\n"
                                 "3. Perbarui secret <code>TIKTOK_COOKIES</code> di GitHub Settings → Secrets."
                             )
                         else:
                             msg = (
-                                "⚠️ <b>TIKTOK UPLOAD GAGAL!</b>\n\n"
-                                f"👤 <b>Akun TikTok:</b> <code>{failed_user}</code>\n"
-                                f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
-                                f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
+                                " <b>TIKTOK UPLOAD GAGAL!</b>\n\n"
+                                f" <b>Akun TikTok:</b> <code>{failed_user}</code>\n"
+                                f" <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
+                                f" <b>Error Log:</b>\n<code>{escaped_err}</code>"
                             )
                         send_telegram_message(msg)
                         
@@ -395,20 +395,20 @@ async def main():
                         if os.path.exists(screenshot_path):
                             send_telegram_photo(
                                 screenshot_path,
-                                caption=f"📸 <b>Bukti Kegagalan Layar (TikTok Upload)</b>\nAkun: <code>{failed_user}</code>"
+                                caption=f" <b>Bukti Kegagalan Layar (TikTok Upload)</b>\nAkun: <code>{failed_user}</code>"
                             )
                 else:
-                    print("⚠️ Tidak ada file video di folder output untuk diunggah ke TikTok.")
+                    print(" Tidak ada file video di folder output untuk diunggah ke TikTok.")
             else:
-                print("ℹ️ Pengunggahan otomatis ke TikTok dinonaktifkan (ENABLE_TIKTOK_UPLOAD=false).")
+                print(" Pengunggahan otomatis ke TikTok dinonaktifkan (ENABLE_TIKTOK_UPLOAD=false).")
 
             # Integrasi Upload Otomatis ke YouTube Shorts
             enable_yt_upload = os.getenv("ENABLE_YOUTUBE_UPLOAD", "false").lower() == "true"
             if enable_yt_upload:
                 if latest_video:
-                    print("📤 Memicu pengunggahan otomatis ke YouTube Shorts...")
+                    print(" Memicu pengunggahan otomatis ke YouTube Shorts...")
                     from youtube_uploader import upload_to_youtube
-                    print(f"🎬 Menemukan video terbaru untuk YouTube: {latest_video}. Memulai upload...")
+                    print(f" Menemukan video terbaru untuk YouTube: {latest_video}. Memulai upload...")
                     try:
                         youtube_url = await upload_to_youtube(
                             latest_video, 
@@ -420,7 +420,7 @@ async def main():
                             yt_description=yt_description,
                             channel_id=channel_id
                         )
-                        print("🚀 Sukses mengunggah video ke YouTube Shorts!")
+                        print(" Sukses mengunggah video ke YouTube Shorts!")
                         any_upload_success = True
                         
                         # Ekstrak ID dari URL https://youtu.be/ID
@@ -432,7 +432,7 @@ async def main():
                                 from youtube_uploader import upload_thumbnail
                                 await upload_thumbnail(yt_video_id, thumbnail_path, channel_id=channel_id)
                             except Exception as thumb_up_err:
-                                print(f"⚠️ Gagal mengunggah thumbnail ke YouTube: {thumb_up_err}")
+                                print(f" Gagal mengunggah thumbnail ke YouTube: {thumb_up_err}")
                                 
                         # Simpan info publikasi ke draf agar performanya bisa dipantau
                         direct_video_id = f"video_{int(time.time())}"
@@ -454,26 +454,26 @@ async def main():
                             }
                             firebase_connector.save_video_draft(direct_video_id, draft_data)
                         except Exception as draft_err:
-                            print(f"⚠️ Gagal mencatat draf untuk direct upload: {draft_err}")
+                            print(f" Gagal mencatat draf untuk direct upload: {draft_err}")
                             
                         # Kirim notifikasi SUKSES ke Telegram
                         msg = (
-                            "🚀 <b>YOUTUBE SHORTS UPLOAD SUKSES!</b>\n\n"
-                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n"
-                            f"🔗 <b>Tautan Shorts:</b> {youtube_url}\n\n"
-                            f"✍️ <b>Caption:</b>\n<i>{caption}</i>"
+                            " <b>YOUTUBE SHORTS UPLOAD SUKSES!</b>\n\n"
+                            f" <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n"
+                            f" <b>Tautan Shorts:</b> {youtube_url}\n\n"
+                            f" <b>Caption:</b>\n<i>{caption}</i>"
                         )
                         send_telegram_message(msg)
                     except Exception as yt_err:
-                        print(f"❌ Gagal mengunggah ke YouTube Shorts: {yt_err}")
+                        print(f" Gagal mengunggah ke YouTube Shorts: {yt_err}")
                         
                         # Kirim notifikasi GAGAL ke Telegram
                         import html
                         escaped_err = html.escape(str(yt_err))
                         msg = (
-                            "⚠️ <b>YOUTUBE SHORTS UPLOAD GAGAL!</b>\n\n"
-                            f"🎬 <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
-                            f"❌ <b>Error Log:</b>\n<code>{escaped_err}</code>"
+                            " <b>YOUTUBE SHORTS UPLOAD GAGAL!</b>\n\n"
+                            f" <b>Video:</b> <code>{os.path.basename(latest_video)}</code>\n\n"
+                            f" <b>Error Log:</b>\n<code>{escaped_err}</code>"
                         )
                         send_telegram_message(msg)
                         
@@ -482,23 +482,23 @@ async def main():
                         if os.path.exists(yt_screenshot):
                             send_telegram_photo(
                                 yt_screenshot,
-                                caption="📸 <b>Bukti Kegagalan Layar (YouTube Upload)</b>"
+                                caption=" <b>Bukti Kegagalan Layar (YouTube Upload)</b>"
                             )
                 else:
-                    print("⚠️ Tidak ada file video di folder output untuk diunggah ke YouTube Shorts.")
+                    print(" Tidak ada file video di folder output untuk diunggah ke YouTube Shorts.")
             else:
-                print("ℹ️ Pengunggahan otomatis ke YouTube Shorts dinonaktifkan (ENABLE_YOUTUBE_UPLOAD=false).")
+                print(" Pengunggahan otomatis ke YouTube Shorts dinonaktifkan (ENABLE_YOUTUBE_UPLOAD=false).")
 
             # Mode Draf Jarak Jauh (Telegram Control Panel) jika kedua upload mati
             if not enable_upload and not enable_yt_upload and latest_video:
-                print("📝 Mode Draf Aktif: Mengirim video ke Telegram dengan panel tombol...")
+                print(" Mode Draf Aktif: Mengirim video ke Telegram dengan panel tombol...")
                 video_id = f"video_{int(time.time())}"
                 
                 # Kirim ke Telegram dan dapatkan file_id
                 tg_caption = (
-                    "🎬 <b>Draf Video Siap!</b>\n\n"
-                    f"✍️ <b>Caption:</b>\n<i>{caption}</i>\n\n"
-                    f"💬 <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
+                    " <b>Draf Video Siap!</b>\n\n"
+                    f" <b>Caption:</b>\n<i>{caption}</i>\n\n"
+                    f" <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
                 )
                 file_id = await send_telegram_video_with_buttons(latest_video, caption=tg_caption, video_id=video_id)
                 
@@ -519,7 +519,7 @@ async def main():
                     try:
                         firebase_connector.save_video_draft(video_id, draft_data)
                     except Exception as draft_err:
-                        print(f"⚠️ Gagal mencatat draf ke database: {draft_err}")
+                        print(f" Gagal mencatat draf ke database: {draft_err}")
             
             # 6. Commit status "Terpakai" HANYA jika upload sukses (mencegah pemborosan clip saat testing)
             if firebase_connector:
@@ -527,18 +527,18 @@ async def main():
                     firebase_connector.commit_used_clips()
                 else:
                     logger = __import__("logging").getLogger("bot")
-                    logger.info("ℹ️ Tidak ada video yang berhasil diunggah ke sosmed. Antrean klip Pexels dibuang (tidak ditandai terpakai).")
+                    logger.info(" Tidak ada video yang berhasil diunggah ke sosmed. Antrean klip Pexels dibuang (tidak ditandai terpakai).")
                     firebase_connector.clear_used_clips_queue()
                 
         else:
-            print("❌ Gagal membuat video (Kembalian Bernilai False).")
+            print(" Gagal membuat video (Kembalian Bernilai False).")
             if firebase_connector:
                 firebase_connector.clear_used_clips_queue()
             sys.exit(1)
             
     except Exception as e:
-        print(f"❌ Terjadi Eror Fatal pada Pipeline Utama: {e}")
-        print("\n🔍 DETAIL TRACEBACK EROR:")
+        print(f" Terjadi Eror Fatal pada Pipeline Utama: {e}")
+        print("\n DETAIL TRACEBACK EROR:")
         traceback.print_exc()
         sys.exit(1)
 

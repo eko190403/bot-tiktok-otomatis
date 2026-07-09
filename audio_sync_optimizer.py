@@ -131,7 +131,7 @@ def calculate_speaking_rate(timestamps: list, audio_file_path: str) -> float:
     word_count = len(timestamps)
     speaking_rate = word_count / total_duration if total_duration > 0 else 0
 
-    logger.info(f"📊 Speaking Rate Detected: {speaking_rate:.2f} words/sec")
+    logger.info(f" Speaking Rate Detected: {speaking_rate:.2f} words/sec")
     return speaking_rate
 
 
@@ -187,7 +187,7 @@ def smooth_duration_outliers(timestamps: list, std_dev_threshold: float = 2.0) -
             ts_copy = ts.copy()
             ts_copy["duration"] = float(median_duration)
             ts_copy["end"] = ts_copy["start"] + float(median_duration)
-            logger.warning(f"⚠️ Duration outlier detected: {duration:.2f}s → {median_duration:.2f}s")
+            logger.warning(f" Duration outlier detected: {duration:.2f}s → {median_duration:.2f}s")
             result.append(ts_copy)
         else:
             result.append(ts)
@@ -209,7 +209,7 @@ async def optimize_subtitle_timing(
     Menerima & mengembalikan list objek WordTimestamp (dataclass) agar kompatibel
     dengan video_pipeline.py — konversi ke/dari dict dilakukan secara internal.
     """
-    logger.info("🎯 Memulai optimasi timing subtitle presisi tinggi...")
+    logger.info(" Memulai optimasi timing subtitle presisi tinggi...")
 
     optimized = _to_dict_list(timestamps)
 
@@ -218,17 +218,17 @@ async def optimize_subtitle_timing(
         try:
             time_frames, energy, silence_regions = analyze_audio_energy(audio_file_path)
             if silence_regions:
-                logger.info(f"📍 Terdeteksi {len(silence_regions)} region jeda pembicaraan")
+                logger.info(f" Terdeteksi {len(silence_regions)} region jeda pembicaraan")
                 optimized = adjust_timestamps_with_gaps(optimized, silence_regions)
         except Exception as e:
-            logger.warning(f"⚠️ VAD failed, melanjutkan tanpa gap detection: {e}")
+            logger.warning(f" VAD failed, melanjutkan tanpa gap detection: {e}")
 
     # Step 2: Smoothing duration outliers
     if enable_smoothing:
         try:
             optimized = smooth_duration_outliers(optimized)
         except Exception as e:
-            logger.warning(f"⚠️ Smoothing gagal, dilewati: {e}")
+            logger.warning(f" Smoothing gagal, dilewati: {e}")
 
     # Step 3: Validasi continuity ringan (tidak boleh ada overlap) sebelum konversi balik
     optimized = _validate_and_fix_continuity(optimized)
@@ -240,7 +240,7 @@ async def optimize_subtitle_timing(
 
     if len(result) != len(target_tokens):
         logger.warning(
-            f"⚠️ Panjang timestamp ({len(result)}) tidak sama dengan target_tokens "
+            f" Panjang timestamp ({len(result)}) tidak sama dengan target_tokens "
             f"({len(target_tokens)}) — periksa upstream (audio.py), ini seharusnya tidak terjadi."
         )
 
@@ -249,9 +249,9 @@ async def optimize_subtitle_timing(
         audio_duration = librosa.get_duration(path=audio_file_path)
         result = validate_timeline_invariants(result, audio_duration)
     except Exception as e:
-        logger.warning(f"⚠️ Validasi invariant final gagal, memakai hasil optimasi apa adanya: {e}")
+        logger.warning(f" Validasi invariant final gagal, memakai hasil optimasi apa adanya: {e}")
 
-    logger.info(f"✅ Optimasi selesai. Total timestamps: {len(result)}")
+    logger.info(f" Optimasi selesai. Total timestamps: {len(result)}")
     return result
 
 
