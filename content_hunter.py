@@ -37,9 +37,13 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "--write-info-json",
         "--no-playlist",
-        "-o", f"{download_dir}/%(id)s.%(ext)s",
-        search_query
+        "-o", f"{download_dir}/%(id)s.%(ext)s"
     ]
+    
+    if os.path.exists("cookies.txt"):
+        command.extend(["--cookies", "cookies.txt"])
+        
+    command.append(search_query)
     
     logger.info(f" 🕵️ Content Hunter sedang melacak video untuk keyword: '{keyword}'...")
     try:
