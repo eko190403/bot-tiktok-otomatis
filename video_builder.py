@@ -552,12 +552,12 @@ async def run_hunter_workflow(loop, channel_cfg: dict, keywords: list, target_co
     from video_processor import process_hunter_video
     
     try:
-        trending_keywords = channel_cfg.get("trending_keywords", ["lucu viral"])
-        keyword = random.choice(trending_keywords)
+        target_accounts = channel_cfg.get("target_ig_accounts", ["https://www.instagram.com/dagelan/"])
+        target_url = random.choice(target_accounts)
         
         # 1. Hunt Video Mentah
         def do_hunt():
-            return hunt_trending_video(keyword)
+            return hunt_trending_video(target_url)
             
         hunt_res = await loop.run_in_executor(None, do_hunt)
         if not hunt_res:

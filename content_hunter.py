@@ -43,106 +43,120 @@ def json_cookies_to_netscape(json_filepath: str, netscape_filepath: str) -> bool
         logger.warning(f" Gagal mengonversi cookie JSON ke Netscape: {e}")
         return False
 
-def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
+def hunt_trending_video(target_url: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
     """
-    Mencari dan mengunduh satu video trending berdasarkan keyword menggunakan TikWM (TikTok).
-    Mengembalikan dictionary berisi path file dan metadata (username, judul).
+    Memindai profil Instagram target menggunakan yt-dlp untuk mendapatkan video terbaru.
     """
+    import subprocess
+    import random
+    
     os.makedirs(download_dir, exist_ok=True)
     
-    # Bersihkan sisa metadata dari pencarian sebelumnya
     for old_json in glob.glob(f"{download_dir}/*.info.json"):
         try:
             os.remove(old_json)
         except Exception:
             pass
             
-    logger.info(f" 🕵️ Content Hunter sedang melacak TikTok untuk keyword: '{keyword}'...")
+    logger.info(f" 🕵️ Content Hunter memindai Instagram target: '{target_url}'...")
     
+    cmd = [
+        "yt-dlp",
+        target_url,
+        "--playlist-end", "10",
+        "--dump-json",
+        "--ignore-errors",
+        "--no-warnings"
+    ]
+    
+    if os.path.exists("cookies.txt"):
+        cmd.extend(["--cookies", "cookies.txt"])
+        
     try:
-        # Panggil API TikWM untuk pencarian TikTok
-        res = requests.post("https://tikwm.com/api/feed/search", data={"keywords": keyword, "count": 12}, timeout=20)
-        res.raise_for_status()
-        data = res.json()
-        
-        videos = data.get("data", {}).get("videos", [])
-        if not videos:
-            logger.error(" ❌ TikWM tidak mengembalikan hasil pencarian TikTok.")
-            return None
-            
-        import random
-        random.shuffle(videos)
-        
-        selected_video = None
-        for v in videos:
-            play_count = v.get("play_count", 0)
-            duration = v.get("duration", 0)
-            title_lower = v.get("title", "").lower()
-            
-            if play_count >= 30000:
-                # Filter Split-Screen & Bersambung (Reaction/Duet/Part) via judul
-                if any(x in title_lower for x in ["react", "duet", "reaction", "part"]):
-                    logger.info(" ⏭️ Video dilewati: Kemungkinan format reaksi/duet/bersambung (indikasi split-screen).")
-                    continue
-                    
-                # SOP Durasi: 15-70 detik agar AI punya waktu untuk Voice Hook & narasi yang utuh
-                if 15 <= duration <= 70:
-                    selected_video = v
-                    break
-                else:
-                    logger.info(f" ⏭️ Video dilewati: Durasi tidak sesuai ({duration}s)")
-                
-        if not selected_video:
-            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 30k dan durasi 15-70s.")
-            return None
-            
-        video_id = selected_video.get("video_id")
-        uploader = selected_video.get("author", {}).get("unique_id", "unknown_user")
-        title = sanitize_title(selected_video.get("title", "Untitled"))
-        duration = selected_video.get("duration", 0)
-        play_url = selected_video.get("play")
-        
-        if not play_url:
-            logger.error(" ❌ URL unduhan MP4 TikTok tidak ditemukan.")
-            return None
-            
-        ext = "mp4"
-        filepath = os.path.join(download_dir, f"{video_id}.{ext}")
-        info_path = os.path.join(download_dir, f"{video_id}.info.json")
-        
-        # Unduh MP4 mentah (Tanpa Watermark)
-        logger.info(f" 📥 Mengunduh video mentah TikTok: {video_id}")
-        mp4_res = requests.get(play_url, stream=True, timeout=30)
-        mp4_res.raise_for_status()
-        with open(filepath, 'wb') as f:
-            for chunk in mp4_res.iter_content(chunk_size=8192):
-                f.write(chunk)
-                
-        # Simpan metadata JSON agar kompatibel dengan alur video_builder yang lama
-        metadata = {
-            "id": video_id,
-            "ext": ext,
-            "uploader": uploader,
-            "title": title,
-            "duration": duration,
-            "source": "tiktok"
-        }
-        with open(info_path, 'w', encoding='utf-8') as f:
-            json.dump(metadata, f)
-            
-        logger.info(f" ✅ Target terkunci! Video diunduh dari TikTok @{uploader} | Durasi: {duration}s")
-        return {
-            "filepath": filepath,
-            "uploader": uploader,
-            "title": title,
-            "duration": duration,
-            "id": video_id,
-            "metadata": metadata
-        }
-        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     except Exception as e:
-        logger.error(f" ❌ Gagal mencari atau mengunduh video TikTok: {e}")
+        logger.error(f" ❌ yt-dlp gagal dieksekusi: {e}")
         return None
+        
+    videos = []
+    for line in result.stdout.strip().split("\n"):
+        if not line: continue
+        try:
+            v_data = json.loads(line)
+            videos.append(v_data)
+        except:
+            pass
+            
+    if not videos:
+        logger.error(f" ❌ Tidak ada video ditemukan di {target_url}. (Mungkin butuh cookies IG yang valid atau profil diprivasi).")
+        if result.stderr:
+            logger.error(f" Error: {result.stderr[:200]}")
+        return None
+        
+    random.shuffle(videos)
+    
+    selected_video = None
+    for v in videos:
+        title_lower = v.get("title", "").lower()
+        desc_lower = v.get("description", "").lower()
+        if any(x in title_lower or x in desc_lower for x in ["react", "duet", "reaction", "part"]):
+            continue
+            
+        duration = v.get("duration")
+        if duration and not (15 <= duration <= 70):
+            continue
+            
+        selected_video = v
+        break
+            
+    if not selected_video:
+        selected_video = videos[0] # Fallback
+        
+    video_id = selected_video.get("id", "unknown_id")
+    uploader = selected_video.get("uploader", "unknown_user")
+    title = sanitize_title(selected_video.get("title", "Untitled"))
+    duration = selected_video.get("duration", 0)
+    webpage_url = selected_video.get("webpage_url", target_url)
+    
+    filepath = os.path.join(download_dir, f"{video_id}.mp4")
+    info_path = os.path.join(download_dir, f"{video_id}.info.json")
+    
+    logger.info(f" 📥 Mengunduh video IG: {video_id} dari {uploader}")
+    dl_cmd = [
+        "yt-dlp",
+        webpage_url,
+        "-o", filepath,
+        "--no-warnings"
+    ]
+    if os.path.exists("cookies.txt"):
+        dl_cmd.extend(["--cookies", "cookies.txt"])
+        
+    subprocess.run(dl_cmd, capture_output=True)
+    
+    if not os.path.exists(filepath):
+        logger.error(" ❌ Gagal mengunduh file video IG.")
+        return None
+        
+    metadata = {
+        "id": video_id,
+        "ext": "mp4",
+        "uploader": uploader,
+        "title": title,
+        "duration": duration,
+        "source": "instagram"
+    }
+    with open(info_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f)
+        
+    logger.info(f" ✅ Target terkunci! Video IG diunduh dari @{uploader} | Durasi: {duration}s")
+    return {
+        "filepath": filepath,
+        "uploader": uploader,
+        "title": title,
+        "duration": duration,
+        "id": video_id,
+        "metadata": metadata
+    }
 
 if __name__ == "__main__":
     # Test sederhana
