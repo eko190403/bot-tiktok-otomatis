@@ -150,7 +150,10 @@ jobs:
           python app.py --channel misterisemesta || echo "⚠️ Gagal di misterisemesta, lanjut ke channel berikutnya..."
           
           echo "🚀 Menjalankan pipeline untuk Pola Disiplin..."
-          python app.py --channel poladisiplin || echo "⚠️ Gagal di poladisiplin, selesai."
+          python app.py --channel poladisiplin || echo "⚠️ Gagal di poladisiplin, lanjut ke channel berikutnya..."
+          
+          echo "🚀 Menjalankan pipeline untuk Komedi Hunter..."
+          python app.py --channel komedihunter || echo "⚠️ Gagal di komedihunter, selesai."
 
       - name: Jalankan Remote Control Publisher (Kirim ke Medsos)
         if: github.event.action == 'telegram_publish'
