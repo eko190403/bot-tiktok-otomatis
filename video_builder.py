@@ -923,7 +923,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             
             file = video_files[0]
             try:
-                retention_clip = VideoFileClip(file).with_audio(None)
+                raw_clip = VideoFileClip(file)
+                if bg_type == "hunter":
+                    retention_clip = raw_clip
+                else:
+                    retention_clip = raw_clip.with_audio(None)
                 
                 # Jika video background lebih pendek dari total naskah, LOOP video tersebut!
                 if retention_clip.duration < total_duration:
@@ -1112,9 +1116,10 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         os.makedirs(music_dir, exist_ok=True)
         music_files = [f for f in os.listdir(music_dir) if f.lower().endswith(music_extensions) and f not in sfx_names]
         
-        if not music_files:
-            logger.info(" Folder assets/music/ kosong. Mengunduh backsound gratis bebas hak cipta secara otomatis...")
-            import urllib.request
+        if bg_type != "hunter":
+            if not music_files:
+                logger.info(" Folder assets/music/ kosong. Mengunduh backsound gratis bebas hak cipta secara otomatis...")
+                import urllib.request
             import random
             
             # List lagu dark/cinematic stoic dari Incompetech (Kevin MacLeod)
@@ -1141,7 +1146,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             except Exception as dl_err:
                 logger.warning(" Gagal mengunduh backsound otomatis dari Incompetech: %s. Melanjutkan tanpa musik.", dl_err)
                 
-        if music_files:
+        if music_files and bg_type != "hunter":
             import random
             chosen_music = os.path.join(music_dir, random.choice(music_files))
             try:
@@ -1301,6 +1306,13 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 
         # Gabungkan audio TTS + musik latar + SFX
         audio_sources = [moviepy_resources["audio_clip"]]
+        
+        # Ekstrak audio asli jika mode hunter
+        if bg_type == "hunter" and moviepy_resources["combined_bg"].audio is not None:
+            from moviepy.audio.fx import MultiplyVolume
+            orig_audio = moviepy_resources["combined_bg"].audio.with_effects([MultiplyVolume(0.4)])
+            audio_sources.append(orig_audio)
+            
         if bg_music_clip is not None:
             audio_sources.append(bg_music_clip)
         if sfx_clips:

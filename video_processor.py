@@ -31,8 +31,8 @@ def process_hunter_video(raw_filepath: str, uploader: str, output_path: str, add
             logger.info(" Memotong video menjadi 55 detik...")
             clip = clip.subclipped(0, 55)
             
-        # Terapkan sedikit perubahan kecepatan (1.05x) untuk menghindari deteksi re-upload mentah
-        clip = clip.with_effects([vfx.MultiplySpeed(1.05)])
+        # Terapkan sedikit perubahan kecepatan (1.05x) untuk menghindari deteksi re-upload mentah (KECUALI KOMEDI)
+        # clip = clip.with_effects([vfx.MultiplySpeed(1.05)]) # Dinonaktifkan agar gerakan dan audio komedi tetap natural
         
         if add_watermark and uploader:
             # Gunakan fungsi dari overlay.py yang sudah teruji aman (tanpa ImageMagick)
@@ -51,7 +51,7 @@ def process_hunter_video(raw_filepath: str, uploader: str, output_path: str, add
             fps=30,
             codec="libx264",
             preset="ultrafast",
-            audio=False, # Audio asli dibuang, akan diganti TTS
+            audio=True, # Pertahankan audio asli (Dulu False, sekarang True agar terdengar di Komedi)
             logger=None
         )
         
