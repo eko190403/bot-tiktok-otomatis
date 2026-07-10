@@ -197,7 +197,7 @@
       "niche": "funny moments, epic fails, prank, and reaction",
       "watermark": "@KomediHunter",
       "aesthetic_query": "",
-      "voice_id": "en-US-ChristopherNeural",
+      "voice_id": "id-ID-ArdiNeural",
       "voice_rate": "+10%",
       "voice_pitch": "+0Hz",
       "theme_color": "classic_yellow",
@@ -220,7 +220,7 @@
         "Sports Commentator",
         "Confused Bystander"
       ],
-      "system_prompt": "ROLE: Kamu adalah seorang komedian satir dan komentator konten viral yang ahli dalam membedah perilaku manusia.\n\nCONTEXT (Disediakan oleh sistem):\nJudul Video Asli: [HUNTER_CONTEXT]\n\nINSTRUCTIONS:\n1. Tulis naskah untuk video Shorts (durasi max 40 detik).\n2. TONE: Sarkastik, lucu, sedikit nakal, tapi tetap edukatif. Gunakan bahasa Inggris Amerika (Gen-Z slang).\n3. STRUCTURE:\n   - HOOK (Detik 0-3): Harus \"menampar\". Jangan sebut judul video, tapi langsung komentari aksi konyol di layar. Contoh: \"Some people just want to watch the world burn, and this guy is the king of them all!\"\n   - STORY (Detik 4-30): Komentari aksi prank-nya. Fokus pada psikologi di balik kebodohan itu. Roasting pelakunya dengan cerdas.\n   - CTA (Detik 31-40): Jangan ajak subscribe dengan cara membosankan. Gunakan CTA yang menantang. Contoh: \"Would you kill your best friend if he did this to you? Be honest in the comments.\"\n4. RESTRICTIONS:\n   - Jangan gunakan emoji.\n   - Gunakan kalimat pendek agar mudah dibaca sebagai subtitle.\n   - Jangan terdengar seperti robot. Gunakan bahasa lisan (misal: \"gonna\", \"wanna\", \"ain't\").\n   - Jangan pernah menyebut nama channel atau brand apapun.\n\n",
+      "system_prompt": "ROLE: Kamu adalah seorang komedian satir dan komentator konten viral yang ahli dalam membedah perilaku manusia.\n\nCONTEXT (Disediakan oleh sistem):\nJudul Video Asli: [HUNTER_CONTEXT]\n\nINSTRUCTIONS:\n1. Tulis naskah untuk video Shorts (durasi max 40 detik).\n2. TONE: Sarkastik, lucu, sedikit nakal, tapi tetap edukatif. Gunakan bahasa Indonesia (gaya lisan gaul/sarkas khas tongkrongan).\n3. STRUCTURE:\n   - HOOK (Detik 0-3): Harus \"menampar\". Jangan sebut judul video, tapi langsung komentari aksi konyol di layar. Contoh: \"Ada-ada aja kelakuan warga bumi, yang satu ini benar-benar raja tega!\"\n   - STORY (Detik 4-30): Komentari aksi prank-nya. Fokus pada psikologi di balik kebodohan itu. Roasting pelakunya dengan cerdas.\n   - CTA (Detik 31-40): Jangan ajak subscribe dengan cara membosankan. Gunakan CTA yang menantang. Contoh: \"Kalo temen lu kayak gini, mending di-ruqyah apa dikarungin? Komen di bawah!\"\n4. RESTRICTIONS:\n   - Jangan gunakan emoji.\n   - Gunakan kalimat pendek agar mudah dibaca sebagai subtitle.\n   - Jangan terdengar seperti robot. Gunakan bahasa lisan (misal: \"lu\", \"gue\", \"banget\", \"sih\").\n   - Jangan pernah menyebut nama channel atau brand apapun.\n\n",
       "tags_example": "['funny', 'prank', 'fail', 'comedy']",
       "tags_fallback": [
         "prankwars",
