@@ -4,6 +4,7 @@ import json
 import logging
 import subprocess
 import re
+import requests
 from typing import Optional, Dict
 
 logger = logging.getLogger("bot")
@@ -44,7 +45,7 @@ def json_cookies_to_netscape(json_filepath: str, netscape_filepath: str) -> bool
 
 def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
     """
-    Mencari dan mengunduh satu video trending (Shorts) berdasarkan keyword menggunakan yt-dlp.
+    Mencari dan mengunduh satu video trending berdasarkan keyword menggunakan TikWM (TikTok).
     Mengembalikan dictionary berisi path file dan metadata (username, judul).
     """
     os.makedirs(download_dir, exist_ok=True)
@@ -56,88 +57,72 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         except Exception:
             pass
             
-    # yt-dlp mencari hingga 15 video shorts sampai menemukan yang lolos filter. 
-    search_query = f"ytsearch15:{keyword} shorts"
+    logger.info(f" 🕵️ Content Hunter sedang melacak TikTok untuk keyword: '{keyword}'...")
     
-    # -f: format terbaik (MP4)
-    # --write-info-json: menyimpan metadata lengkap (.info.json)
-    # --no-playlist: pastikan hanya 1 video
-    # -o: template nama file
-    command = [
-        "yt-dlp",
-        "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-        "--write-info-json",
-        "--no-write-playlist-metafiles",
-        "--no-playlist",
-        "--match-filter", "view_count >= 100000",
-        "--max-downloads", "1",
-        "--js-runtimes", "node",
-        "--extractor-args", "youtube:player_client=ios,android,web",
-        "-o", f"{download_dir}/%(id)s.%(ext)s"
-    ]
-    
-    if os.path.exists("cookies.txt"):
-        try:
-            with open("cookies.txt", "r") as f:
-                content = f.read().strip()
-            if content.startswith("[") or content.startswith("{"):
-                logger.info(" Mengonversi cookies.txt (JSON) ke format Netscape untuk yt-dlp...")
-                if json_cookies_to_netscape("cookies.txt", "cookies_netscape.txt"):
-                    command.extend(["--cookies", "cookies_netscape.txt"])
-                else:
-                    command.extend(["--cookies", "cookies.txt"])
-            else:
-                command.extend(["--cookies", "cookies.txt"])
-        except Exception:
-            command.extend(["--cookies", "cookies.txt"])
-            
-    command.append(search_query)
-    
-    logger.info(f" 🕵️ Content Hunter sedang melacak video untuk keyword: '{keyword}'...")
     try:
-        # Jalankan yt-dlp
-        subprocess.run(command, capture_output=True, text=True, check=True)
+        # Panggil API TikWM untuk pencarian TikTok
+        res = requests.post("https://tikwm.com/api/feed/search", data={"keywords": keyword, "count": 12}, timeout=20)
+        res.raise_for_status()
+        data = res.json()
         
-        # Cari file .info.json terbaru di direktori
-        # yt-dlp biasanya menyimpan dengan nama id.info.json
-        list_of_files = glob.glob(f"{download_dir}/*.info.json")
-        if not list_of_files:
-            logger.error(" ❌ Hunter gagal menemukan metadata video yang diunduh.")
+        videos = data.get("data", {}).get("videos", [])
+        if not videos:
+            logger.error(" ❌ TikWM tidak mengembalikan hasil pencarian TikTok.")
             return None
             
-        # Ambil file terbaru yang diunduh
-        latest_info = max(list_of_files, key=os.path.getctime)
-        
-        with open(latest_info, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
+        selected_video = None
+        for v in videos:
+            play_count = v.get("play_count", 0)
+            if play_count >= 100000:
+                selected_video = v
+                break
+                
+        if not selected_video:
+            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 100k.")
+            return None
             
-        video_id = metadata.get("id")
-        ext = metadata.get("ext", "mp4")
-        uploader = metadata.get("uploader", "unknown_user")
-        title = sanitize_title(metadata.get("title", "Untitled"))
-        duration = metadata.get("duration", 0)
+        video_id = selected_video.get("video_id")
+        uploader = selected_video.get("author", {}).get("unique_id", "unknown_user")
+        title = sanitize_title(selected_video.get("title", "Untitled"))
+        duration = selected_video.get("duration", 0)
+        play_url = selected_video.get("play")
         
+        if not play_url:
+            logger.error(" ❌ URL unduhan MP4 TikTok tidak ditemukan.")
+            return None
+            
+        ext = "mp4"
         filepath = os.path.join(download_dir, f"{video_id}.{ext}")
+        info_path = os.path.join(download_dir, f"{video_id}.info.json")
         
-        if not os.path.exists(filepath):
-             logger.error(f" ❌ File video mentah tidak ditemukan: {filepath}")
-             return None
-             
-        logger.info(f" ✅ Target terkunci! Video diunduh dari @{uploader} | Durasi: {duration}s")
-        
-        return {
-            "filepath": filepath,
+        # Unduh MP4 mentah (Tanpa Watermark)
+        logger.info(f" 📥 Mengunduh video mentah TikTok: {video_id}")
+        mp4_res = requests.get(play_url, stream=True, timeout=30)
+        mp4_res.raise_for_status()
+        with open(filepath, 'wb') as f:
+            for chunk in mp4_res.iter_content(chunk_size=8192):
+                f.write(chunk)
+                
+        # Simpan metadata JSON agar kompatibel dengan alur video_builder yang lama
+        metadata = {
+            "id": video_id,
+            "ext": ext,
             "uploader": uploader,
             "title": title,
             "duration": duration,
-            "id": video_id
+            "source": "tiktok"
+        }
+        with open(info_path, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f)
+            
+        logger.info(f" ✅ Target terkunci! Video diunduh dari TikTok @{uploader} | Durasi: {duration}s")
+        return {
+            "filepath": filepath,
+            "metadata": metadata
         }
         
-    except subprocess.CalledProcessError as e:
-        logger.error(f" ❌ yt-dlp gagal mengunduh video: {e.stderr}")
-        return None
     except Exception as e:
-        logger.error(f" ❌ Kesalahan sistem pada Content Hunter: {e}")
+        logger.error(f" ❌ Gagal mencari atau mengunduh video TikTok: {e}")
         return None
 
 if __name__ == "__main__":
