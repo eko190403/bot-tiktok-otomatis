@@ -3,9 +3,20 @@ import glob
 import json
 import logging
 import subprocess
+import re
 from typing import Optional, Dict
 
 logger = logging.getLogger("bot")
+
+def sanitize_title(title: str) -> str:
+    """Membersihkan judul dari emoji, hashtag berlebihan, dan junk characters."""
+    # Hapus hashtag
+    title = re.sub(r'#\w+', '', title)
+    # Hapus karakter non-ascii (seperti emoji, simbol aneh)
+    title = title.encode('ascii', 'ignore').decode('ascii')
+    # Bersihkan whitespace ekstra
+    title = ' '.join(title.split())
+    return title.strip()
 
 def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
     """
@@ -51,7 +62,7 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         video_id = metadata.get("id")
         ext = metadata.get("ext", "mp4")
         uploader = metadata.get("uploader", "unknown_user")
-        title = metadata.get("title", "Untitled")
+        title = sanitize_title(metadata.get("title", "Untitled"))
         duration = metadata.get("duration", 0)
         
         filepath = os.path.join(download_dir, f"{video_id}.{ext}")

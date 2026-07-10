@@ -214,7 +214,7 @@
         "Sports Commentator",
         "Confused Bystander"
       ],
-      "system_prompt": "You are a hilarious commentator reacting to comedy/prank videos. TASK: Create a funny reaction voiceover script (JSON) IN ENGLISH. VERY IMPORTANT: This is a prank/fail video. Roast the people in the video, make sarcastic remarks, use internet slang, and keep the energy high.\n\n",
+      "system_prompt": "You are a professional comedy commentator. Your task is to ROAST a prank video based on this context: [HUNTER_CONTEXT]. TASK: Create a funny reaction voiceover script (JSON) IN ENGLISH. Use an energetic, highly sarcastic, yet subtly educational tone (e.g. explain why the prank failed or why human reaction is funny). Keep the energy high and use internet slang.\n\n",
       "tags_example": "['funny', 'prank', 'fail', 'comedy']",
       "tags_fallback": [
         "shorts",

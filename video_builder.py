@@ -351,13 +351,15 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     except Exception as e:
         logger.warning(" Gagal mengintegrasikan tren jacking: %s", e)
 
-    hunter_prompt = ""
+    system_prompt = config.get("system_prompt", "")
     if "hunter_context" in config:
-        hunter_prompt = f"KONTEKS VIDEO (SANGAT PENTING): {config['hunter_context']}\nBuat naskah yang merespon, mengomentari, atau me-roasting kejadian dalam video tersebut secara spesifik!\n\n"
+        if "[HUNTER_CONTEXT]" in system_prompt:
+            system_prompt = system_prompt.replace("[HUNTER_CONTEXT]", config['hunter_context'])
+        else:
+            system_prompt += f"\nKONTEKS VIDEO (SANGAT PENTING): {config['hunter_context']}\nBuat naskah yang merespon, mengomentari, atau me-roasting kejadian dalam video tersebut secara spesifik!\n\n"
         
     prompt = (
-        f"{config['system_prompt']}"
-        f"{hunter_prompt}"
+        f"{system_prompt}"
         f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n"
         f"SUDUT PANDANG (ANGLE): Bahas tema di atas secara spesifik melalui lensa/sudut pandang: '{chosen_angle}'. Gabungkan tema dan angle ini secara kreatif agar konten terasa segar dan tidak klise.\n\n"
         "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
@@ -529,9 +531,8 @@ async def run_hunter_workflow(loop, channel_cfg: dict, keywords: list, target_co
             
         hunt_res = await loop.run_in_executor(None, do_hunt)
         if not hunt_res:
-            logger.warning(" Hunter gagal mendapatkan video. Fallback ke Pexels.")
-            results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
-            return results, True, None
+            logger.warning(" Hunter gagal mendapatkan video. Membatalkan mode Hunter.")
+            return [], True, None
             
         raw_filepath = hunt_res["filepath"]
         uploader = hunt_res["uploader"]
@@ -544,15 +545,13 @@ async def run_hunter_workflow(loop, channel_cfg: dict, keywords: list, target_co
             
         proc_res = await loop.run_in_executor(None, do_process)
         if not proc_res:
-            logger.warning(" Processor gagal memodifikasi video. Fallback ke Pexels.")
-            results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
-            return results, True, None
+            logger.warning(" Processor gagal memodifikasi video. Membatalkan mode Hunter.")
+            return [], True, None
             
         return [processed_filepath], False, hunt_res
     except Exception as e:
         logger.error(f" Error tak terduga pada run_hunter_workflow: {e}")
-        results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
-        return results, True, None
+        return [], True, None
 
 def safe_close_resources(resources: dict, files_to_delete: list):
     logger.info(" Memulai pembersihan resource secara aman...")
@@ -626,7 +625,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     channel_cfg["hunter_context"] = f"Judul Video Asli: '{h_meta.get('title', 'Unknown')}' oleh {h_meta.get('uploader', 'Unknown')}."
                     logger.info(" Konteks Hunter diinjeksikan ke Prompt Gemini: %s", channel_cfg["hunter_context"])
             else:
-                bg_type = "pexels" # Gagal unduh, kembalikan ke pexels
+                logger.error(" Mode Hunter gagal mengunduh video mentah. Membatalkan eksekusi untuk channel ini agar tidak menghabiskan kuota API Gemini untuk naskah kosong.")
+                return False
         
         # 1. Cek naskah di cache
         script_data = None
