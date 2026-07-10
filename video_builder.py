@@ -1107,6 +1107,15 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
 
         moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips + ner_clips, use_bgclip=True)
 
+        # ================= INTELLIGENT AUDIO DUCKING & SWELL =================
+        import numpy as np
+        swells = []
+        for i in range(len(all_timestamps) - 1):
+            end_prev = all_timestamps[i]['end']
+            start_next = all_timestamps[i+1]['start']
+            if (start_next - end_prev) >= 0.7:
+                swells.append((end_prev + 0.1, start_next - 0.1))
+
         # ================= MUSIK LATAR OTOMATIS =================
         bg_music_clip = None
         music_dir = os.path.join(os.path.dirname(__file__), "assets", "music")
@@ -1161,16 +1170,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     bg_music_clip = concatenate_audioclips(music_clips).subclipped(0, total_duration)
                 else:
                     bg_music_clip = bg_music_raw.subclipped(0, total_duration)
-                # ================= INTELLIGENT AUDIO DUCKING & SWELL =================
-                import numpy as np
-                swells = []
-                for i in range(len(all_timestamps) - 1):
-                    end_prev = all_timestamps[i]['end']
-                    start_next = all_timestamps[i+1]['start']
-                    if (start_next - end_prev) >= 0.7:
-                        swells.append((end_prev + 0.1, start_next - 0.1))
-                
-                def make_frame(get_frame, t):
+                def make_music_frame(get_frame, t):
                     frame = get_frame(t)
                     is_array = isinstance(t, np.ndarray)
                     t_val = t if is_array else np.array([t])
@@ -1190,7 +1190,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     else:
                         return frame * vol[0]
 
-                bg_music_clip = bg_music_clip.transform(make_frame)
+                bg_music_clip = bg_music_clip.transform(make_music_frame)
                 logger.info(" Musik latar berhasil dimuat dengan Dinamika Audio (Ducking & Swells): %s", chosen_music)
             except Exception as me:
                 logger.warning(" Gagal memuat musik latar: %s. Melanjutkan tanpa musik.", me)
@@ -1309,9 +1309,28 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         
         # Ekstrak audio asli jika mode hunter
         if bg_type == "hunter" and moviepy_resources["combined_bg"].audio is not None:
-            from moviepy.audio.fx import MultiplyVolume
-            orig_audio = moviepy_resources["combined_bg"].audio.with_effects([MultiplyVolume(0.4)])
+            def make_orig_frame(get_frame, t):
+                frame = get_frame(t)
+                is_array = isinstance(t, np.ndarray)
+                t_val = t if is_array else np.array([t])
+                vol = np.full_like(t_val, 0.30, dtype=float) # Default 30% saat AI bicara
+                for (s_start, s_end) in swells:
+                    mask = (t_val >= s_start) & (t_val <= s_end)
+                    vol[mask] = 1.00 # Naik ke 100% saat AI diam (jeda/klimaks)
+                
+                fade_duration = 0.2
+                time_from_end = total_duration - t_val
+                fade_mask = (time_from_end < fade_duration) & (time_from_end > 0)
+                vol[fade_mask] *= (time_from_end[fade_mask] / fade_duration)
+                
+                if is_array:
+                    return frame * vol[:, np.newaxis]
+                else:
+                    return frame * vol[0]
+
+            orig_audio = moviepy_resources["combined_bg"].audio.transform(make_orig_frame)
             audio_sources.append(orig_audio)
+            logger.info(" Audio asli video ditambahkan dengan Dinamika Ducking (30%% -> 100%%).")
             
         if bg_music_clip is not None:
             audio_sources.append(bg_music_clip)
