@@ -131,10 +131,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES1 }}
+          IG_COOKIES: ${{ secrets.IG_COOKIES }}
         run: |
           if [ -n "$YOUTUBE_COOKIES" ]; then
             echo "$YOUTUBE_COOKIES" > cookies.txt
             echo "🍪 Berkas cookies.txt berhasil dibuat dari GitHub Secrets (YOUTUBE_COOKIES1)"
+          fi
+          
+          if [ -n "$IG_COOKIES" ]; then
+            echo "$IG_COOKIES" > ig_cookies.txt
+            echo "🍪 Berkas ig_cookies.txt berhasil dibuat dari GitHub Secrets (IG_COOKIES)"
           fi
           
           echo "🚀 Menjalankan pipeline untuk Komedi Hunter..."

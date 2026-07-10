@@ -69,8 +69,9 @@ def hunt_trending_video(target_url: str, download_dir: str = "data/raw_materials
         "--no-warnings"
     ]
     
-    if os.path.exists("cookies.txt"):
-        cmd.extend(["--cookies", "cookies.txt"])
+    cookie_file = "ig_cookies.txt" if os.path.exists("ig_cookies.txt") else ("cookies.txt" if os.path.exists("cookies.txt") else None)
+    if cookie_file:
+        cmd.extend(["--cookies", cookie_file])
         
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
@@ -128,8 +129,8 @@ def hunt_trending_video(target_url: str, download_dir: str = "data/raw_materials
         "-o", filepath,
         "--no-warnings"
     ]
-    if os.path.exists("cookies.txt"):
-        dl_cmd.extend(["--cookies", "cookies.txt"])
+    if cookie_file:
+        dl_cmd.extend(["--cookies", cookie_file])
         
     subprocess.run(dl_cmd, capture_output=True)
     
