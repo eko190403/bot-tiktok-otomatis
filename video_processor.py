@@ -1,6 +1,7 @@
 import os
 import logging
-from moviepy import VideoFileClip, TextClip, CompositeVideoClip, vfx
+from moviepy import VideoFileClip, CompositeVideoClip, vfx
+from overlay import apply_text_watermark
 
 logger = logging.getLogger("bot")
 
@@ -19,28 +20,16 @@ def process_hunter_video(raw_filepath: str, uploader: str, output_path: str, add
         # Batasi durasi maksimal 55 detik agar aman untuk Shorts
         if clip.duration > 55:
             logger.info(" Memotong video menjadi 55 detik...")
-            clip = clip.subclip(0, 55)
+            clip = clip.subclipped(0, 55)
             
         # Terapkan sedikit perubahan kecepatan (1.05x) untuk menghindari deteksi re-upload mentah
-        clip = clip.fx(vfx.speedx, 1.05)
-        
-        # Susun daftar elemen visual
-        video_elements = [clip]
+        clip = clip.with_effects([vfx.MultiplySpeed(1.05)])
         
         if add_watermark and uploader:
-            # Membuat teks kredit sumber
-            txt_clip = TextClip(
-                f"Source: @{uploader}",
-                fontsize=30,
-                color='white',
-                font='Arial-Bold',
-                bg_color='black'
-            )
-            txt_clip = txt_clip.set_opacity(0.6).set_position(("center", "bottom")).set_duration(clip.duration)
-            video_elements.append(txt_clip)
+            # Gunakan fungsi dari overlay.py yang sudah teruji aman (tanpa ImageMagick)
+            clip = apply_text_watermark(clip, f"Source: @{uploader}")
             
-        # Gabungkan elemen
-        final_clip = CompositeVideoClip(video_elements)
+        final_clip = clip
         
         # Kita tidak langsung merender di sini karena audio (voiceover) akan di-inject oleh video_builder.py
         # Skrip ini bisa dikembangkan lebih jauh untuk Auto-Cutting Matematis (Sebab-Akibat).
