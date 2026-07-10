@@ -912,6 +912,14 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             file = video_files[0]
             try:
                 retention_clip = VideoFileClip(file).with_audio(None)
+                
+                # Jika video background lebih pendek dari total naskah, LOOP video tersebut!
+                if retention_clip.duration < total_duration:
+                    from moviepy import concatenate_videoclips
+                    loops = int(total_duration / retention_clip.duration) + 1
+                    retention_clip = concatenate_videoclips([retention_clip] * loops)
+                    logger.info(" Video retention terlalu pendek. Dilakukan looping otomatis menjadi %.1fs", retention_clip.duration)
+
                 max_start = max(0, retention_clip.duration - total_duration)
                 start_time = random.uniform(0, max_start)
                 
