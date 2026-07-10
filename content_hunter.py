@@ -18,6 +18,30 @@ def sanitize_title(title: str) -> str:
     title = ' '.join(title.split())
     return title.strip()
 
+def json_cookies_to_netscape(json_filepath: str, netscape_filepath: str) -> bool:
+    """Mengonversi file cookie JSON menjadi format Netscape (diperlukan oleh yt-dlp)."""
+    try:
+        with open(json_filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        with open(netscape_filepath, 'w', encoding='utf-8') as f:
+            f.write("# Netscape HTTP Cookie File\n")
+            f.write("# http://curl.haxx.se/rfc/cookie_spec.html\n")
+            f.write("# This is a generated file!  Do not edit.\n\n")
+            for cookie in data:
+                domain = cookie.get('domain', '')
+                include_subdomains = 'TRUE' if domain.startswith('.') else 'FALSE'
+                path = cookie.get('path', '/')
+                secure = 'TRUE' if cookie.get('secure', False) else 'FALSE'
+                expiration = str(int(cookie.get('expirationDate', 0))) if 'expirationDate' in cookie else '0'
+                name = cookie.get('name', '')
+                value = cookie.get('value', '')
+                f.write(f"{domain}\t{include_subdomains}\t{path}\t{secure}\t{expiration}\t{name}\t{value}\n")
+        return True
+    except Exception as e:
+        logger.warning(f" Gagal mengonversi cookie JSON ke Netscape: {e}")
+        return False
+
 def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
     """
     Mencari dan mengunduh satu video trending (Shorts) berdasarkan keyword menggunakan yt-dlp.
@@ -42,8 +66,21 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
     ]
     
     if os.path.exists("cookies.txt"):
-        command.extend(["--cookies", "cookies.txt"])
-        
+        try:
+            # Cek apakah formatnya JSON
+            with open("cookies.txt", "r") as f:
+                content = f.read().strip()
+            if content.startswith("[") or content.startswith("{"):
+                logger.info(" Mengonversi cookies.txt (JSON) ke format Netscape untuk yt-dlp...")
+                if json_cookies_to_netscape("cookies.txt", "cookies_netscape.txt"):
+                    command.extend(["--cookies", "cookies_netscape.txt"])
+                else:
+                    command.extend(["--cookies", "cookies.txt"])
+            else:
+                command.extend(["--cookies", "cookies.txt"])
+        except Exception:
+            command.extend(["--cookies", "cookies.txt"])
+            
     command.append(search_query)
     
     logger.info(f" 🕵️ Content Hunter sedang melacak video untuk keyword: '{keyword}'...")
