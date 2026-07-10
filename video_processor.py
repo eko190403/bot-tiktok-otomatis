@@ -26,10 +26,10 @@ def process_hunter_video(raw_filepath: str, uploader: str, output_path: str, add
             clip = concatenate_videoclips([clip] * loops_needed)
             logger.info(f" Video di-loop {loops_needed}x. Durasi baru: {clip.duration}s")
             
-        # Batasi durasi maksimal 55 detik agar aman untuk Shorts
-        if clip.duration > 55:
-            logger.info(" Memotong video menjadi 55 detik...")
-            clip = clip.subclipped(0, 55)
+        # Batasi durasi maksimal 70 detik agar aman untuk Shorts
+        if clip.duration > 70:
+            logger.info(" Memotong video menjadi 70 detik...")
+            clip = clip.subclipped(0, 70)
             
         # Terapkan sedikit perubahan kecepatan (1.05x) untuk menghindari deteksi re-upload mentah (KECUALI KOMEDI)
         # clip = clip.with_effects([vfx.MultiplySpeed(1.05)]) # Dinonaktifkan agar gerakan dan audio komedi tetap natural

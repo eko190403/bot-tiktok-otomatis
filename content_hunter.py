@@ -82,15 +82,15 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
                     logger.info(" ⏭️ Video dilewati: Kemungkinan format reaksi/duet/bersambung (indikasi split-screen).")
                     continue
                     
-                # SOP Durasi: 15-50 detik agar AI punya waktu untuk Voice Hook & narasi yang utuh
-                if 15 <= duration <= 50:
+                # SOP Durasi: 15-70 detik agar AI punya waktu untuk Voice Hook & narasi yang utuh
+                if 15 <= duration <= 70:
                     selected_video = v
                     break
                 else:
                     logger.info(f" ⏭️ Video dilewati: Durasi tidak sesuai ({duration}s)")
                 
         if not selected_video:
-            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 100k dan durasi 15-50s.")
+            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 100k dan durasi 15-70s.")
             return None
             
         video_id = selected_video.get("video_id")
