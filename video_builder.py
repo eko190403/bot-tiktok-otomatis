@@ -1336,6 +1336,9 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 logger.warning(" Gagal memuat Rain Ambience: %s", e)
                 
         # Gabungkan audio TTS + musik latar + SFX
+        if bg_type == "hunter":
+            sfx_clips = [] # Bersihkan semua efek suara buatan khusus untuk mode reaksi/hunter
+            
         audio_sources = [moviepy_resources["audio_clip"]]
         
         # Ekstrak audio asli jika mode hunter
