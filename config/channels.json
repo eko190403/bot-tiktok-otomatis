@@ -197,33 +197,33 @@
       "niche": "funny moments, epic fails, prank, and reaction",
       "watermark": "@KomediHunter",
       "aesthetic_query": "",
-      "voice_id": "id-ID-ArdiNeural",
-      "voice_rate": "+15%",
-      "voice_pitch": "+10Hz",
+      "voice_id": "en-US-ChristopherNeural",
+      "voice_rate": "+10%",
+      "voice_pitch": "+0Hz",
       "theme_color": "classic_yellow",
       "background_type": "hunter",
       "trending_keywords": ["public prank usa", "funny public reaction prank", "epic prank fail"],
       "hook_style": "cause_and_effect",
       "themes": [
-        "Reaksi Ngakak",
-        "Kejadian Tak Terduga",
-        "Prank Gagal"
+        "Hilarious Reactions",
+        "Unexpected Twists",
+        "Epic Prank Fails"
       ],
       "angles": [
-        "Sarkasme",
-        "Komentator Olahraga",
-        "Polos Bingung"
+        "Sarcastic Roasting",
+        "Sports Commentator",
+        "Confused Bystander"
       ],
-      "system_prompt": "Kamu adalah komentator video komedi lucu. TUGAS: Buat naskah voiceover reaksi lucu (JSON). SANGAT PENTING: Konten ini adalah video prank/lucu. Buat hook dan narasi yang mengomentari kekonyolan di dalam video.\n\n",
-      "tags_example": "['funny', 'prank', 'ngakak', 'komedi']",
+      "system_prompt": "You are a hilarious commentator reacting to comedy/prank videos. TASK: Create a funny reaction voiceover script (JSON) IN ENGLISH. VERY IMPORTANT: This is a prank/fail video. Roast the people in the video, make sarcastic remarks, use internet slang, and keep the energy high.\n\n",
+      "tags_example": "['funny', 'prank', 'fail', 'comedy']",
       "tags_fallback": [
         "shorts",
-        "lucu",
-        "ngakak",
-        "komedi"
+        "funny",
+        "pranks",
+        "comedy"
       ],
       "lead_magnet_url": "https://linktr.ee/komedihunter",
-      "lead_magnet_copy": "👉 Gabung Grup Meme: https://linktr.ee/komedihunter"
+      "lead_magnet_copy": "👉 Join our Meme Vault: https://linktr.ee/komedihunter"
     }
   }
 }
