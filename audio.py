@@ -115,7 +115,22 @@ PHONETIC_DICTIONARY = {
     "REALITY": "realiti", "EXPECTATION": "ekspektesion", "VISION": "vision",
     "DEEP": "dip", "DARK": "dark", "PSYCHOPATH": "psikopat", "SOCIOPATH": "sosiopat",
     "EGO": "ego", "PRIDE": "praid", "RESPECT": "rispek", "TRUST": "tras",
-    "ISSUE": "isyu", "ISSUES": "isyus", "MIND-BLOWING": "maind blouing"
+    "ISSUE": "isyu", "ISSUES": "isyus", "MIND-BLOWING": "maind blouing",
+    
+    # Istilah Psikologi & Bias Kognitif (Ruang Pikir)
+    "CONFIRMATION BIAS": "konfirmesion bias", "CONFIRMATION": "konfirmesion", "BIAS": "bias",
+    "COGNITIVE DISSONANCE": "kognitif disonans", "COGNITIVE": "kognitif", "DISSONANCE": "disonans",
+    "HALO EFFECT": "heilo efek", "EFFECT": "efek",
+    "DUNNING-KRUGER": "daning kruger", "DUNNING KRUGER": "daning kruger",
+    "ECHO CHAMBER": "eko chember", "CHAMBER": "chember",
+    "IMPOSTOR SYNDROME": "imposter sindrom", "SYNDROME": "sindrom", "IMPOSTOR": "imposter",
+    "STOCKHOLM SYNDROME": "stokholm sindrom", 
+    "PLACEBO": "plasebo", "NOCEBO": "nosebo",
+    "MANDELA EFFECT": "mandela efek",
+    "BYSTANDER EFFECT": "baistender efek", "BYSTANDER": "baistender",
+    "LOVE BOMBING": "lav bombing", "BOMBING": "bombing",
+    "GUILT TRIPPING": "gilt triping", "GUILT": "gilt", "TRIPPING": "triping",
+    "GASLIGHTER": "gaeslaiter"
 }
 
 # Bobot scoring untuk DP alignment (Needleman-Wunsch style)
