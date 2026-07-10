@@ -351,21 +351,32 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     except Exception as e:
         logger.warning(" Gagal mengintegrasikan tren jacking: %s", e)
 
+    manual_context = config.get("manual_context", "")
+    hunter_context = manual_context if manual_context else config.get("hunter_context", "")
+
     system_prompt = config.get("system_prompt", "")
-    if "hunter_context" in config:
+    if hunter_context:
         if "[HUNTER_CONTEXT]" in system_prompt:
-            system_prompt = system_prompt.replace("[HUNTER_CONTEXT]", config['hunter_context'])
+            system_prompt = system_prompt.replace("[HUNTER_CONTEXT]", hunter_context)
         else:
-            system_prompt += f"\nKONTEKS VIDEO (SANGAT PENTING): {config['hunter_context']}\nBuat naskah yang merespon, mengomentari, atau me-roasting kejadian dalam video tersebut secara spesifik!\n\n"
+            system_prompt += f"\nKONTEKS VIDEO (SANGAT PENTING): {hunter_context}\nBuat naskah yang merespon, mengomentari, atau me-roasting kejadian dalam video tersebut secara spesifik!\n\n"
+            
+    bg_type = config.get("background_type", "pexels")
+    if bg_type == "hunter":
+        guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): JANGAN gunakan istilah 'psikolog', 'studi', 'riset', atau teori akademis yang kaku! Fokuslah murni pada mengomentari dan me-roasting kejadian spesifik dalam video secara lucu, sarkas, dan manusiawi.\n\n"
+        story_rule = "2. 'story': Roasting tajam dan komentar lucu tentang kelakuan orang di dalam video. Jelaskan apa yang terjadi dan komentari kekonyolannya. JANGAN bawa-bawa statistik atau teori psikologi. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural.\n"
+    else:
+        guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
+        story_rule = "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural sesuai tata bahasa baku agar AI dapat membaca dengan ritme dan tempo kecepatan yang normal.\n"
         
     prompt = (
         f"{system_prompt}"
         f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n"
         f"SUDUT PANDANG (ANGLE): Bahas tema di atas secara spesifik melalui lensa/sudut pandang: '{chosen_angle}'. Gabungkan tema dan angle ini secara kreatif agar konten terasa segar dan tidak klise.\n\n"
-        "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
+        f"{guardrail}"
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
-        "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural sesuai tata bahasa baku agar AI dapat membaca dengan ritme dan tempo kecepatan yang normal.\n"
+        f"{story_rule}"
         "3. 'cta': Ajakan bertindak (Maksimal 15 kata). SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika langsung bersambung ke kata pertama HOOK. JANGAN MENGULANG kata-kata dari Hook ke CTA! VARIASIKAN GAYA BAHASA CTA (jangan melulu pakai kata 'mulai sekarang', 'itulah kenapa', atau 'maka dari itu'). Gunakan pendekatan berbeda-beda (misal: mempertanyakan balik, menantang, atau sarkas) asalkan ujungnya tetap nyambung secara gramatikal ke Hook saat dilooping. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
         "4. 'caption': Judul/caption TikTok yang santai, relate, atau sedikit dark jokes (jangan terlalu formal/kaku), ditambah hashtag viral (contoh: #ruangpikir #psikologi #overthinking #fyp). Maks 150 karakter.\n"
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
