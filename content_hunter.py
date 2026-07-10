@@ -73,12 +73,19 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         selected_video = None
         for v in videos:
             play_count = v.get("play_count", 0)
+            duration = v.get("duration", 0)
+            
             if play_count >= 100000:
-                selected_video = v
-                break
+                # SOP Durasi: Maksimum 50 detik agar aman untuk looping/shorts. 
+                # (Di bawah 15 detik diizinkan karena akan di-loop di prosesor)
+                if duration <= 50:
+                    selected_video = v
+                    break
+                else:
+                    logger.info(f" ⏭️ Video dilewati: Durasi tidak sesuai ({duration}s)")
                 
         if not selected_video:
-            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 100k.")
+            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 100k dan durasi <= 50s.")
             return None
             
         video_id = selected_video.get("video_id")

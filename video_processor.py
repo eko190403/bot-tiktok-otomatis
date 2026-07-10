@@ -17,6 +17,15 @@ def process_hunter_video(raw_filepath: str, uploader: str, output_path: str, add
     try:
         clip = VideoFileClip(raw_filepath)
         
+        # SOP: Jika durasi sangat pendek (< 15 detik), lakukan looping agar narasi cukup panjang
+        if clip.duration > 0 and clip.duration < 15:
+            from moviepy import concatenate_videoclips
+            logger.info(f" Durasi video sangat pendek ({clip.duration}s). Melakukan looping...")
+            # Hitung butuh berapa loop untuk mencapai setidaknya ~20 detik
+            loops_needed = int(20 / clip.duration) + 1
+            clip = concatenate_videoclips([clip] * loops_needed)
+            logger.info(f" Video di-loop {loops_needed}x. Durasi baru: {clip.duration}s")
+            
         # Batasi durasi maksimal 55 detik agar aman untuk Shorts
         if clip.duration > 55:
             logger.info(" Memotong video menjadi 55 detik...")
