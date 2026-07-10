@@ -508,6 +508,39 @@ async def run_retention_with_fallback(loop, retention_keyword: str, keywords: li
         return results, True
     return results, False
 
+async def run_hunter_workflow(loop, channel_cfg: dict) -> tuple:
+    """Mengeksekusi workflow Content Hunter V2.2 (Sebab-Akibat)"""
+    import random
+    from content_hunter import hunt_trending_video
+    from video_processor import process_hunter_video
+    
+    trending_keywords = channel_cfg.get("trending_keywords", ["lucu viral"])
+    keyword = random.choice(trending_keywords)
+    
+    # 1. Hunt Video Mentah
+    def do_hunt():
+        return hunt_trending_video(keyword)
+        
+    hunt_res = await loop.run_in_executor(None, do_hunt)
+    if not hunt_res:
+        logger.warning(" Hunter gagal mendapatkan video. Fallback ke Pexels.")
+        return [], True 
+        
+    raw_filepath = hunt_res["filepath"]
+    uploader = hunt_res["uploader"]
+    
+    processed_filepath = raw_filepath.replace(".mp4", "_processed.mp4")
+    
+    # 2. Proses Visual (Fair Use)
+    def do_process():
+        return process_hunter_video(raw_filepath, uploader, processed_filepath)
+        
+    proc_res = await loop.run_in_executor(None, do_process)
+    if not proc_res:
+        logger.warning(" Processor gagal memodifikasi video. Fallback ke Pexels.")
+        return [], True
+        
+    return [processed_filepath], False
 
 def safe_close_resources(resources: dict, files_to_delete: list):
     logger.info(" Memulai pembersihan resource secara aman...")
@@ -663,6 +696,10 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 results, is_fallback = await run_retention_with_fallback(loop, retention_keyword, keywords, needed_clips, aesthetic_style)
                 if is_fallback:
                     bg_type = "pexels"
+            elif bg_type == "hunter":
+                results, is_fallback = await run_hunter_workflow(loop, channel_cfg)
+                if is_fallback:
+                    bg_type = "pexels"
             else:
                 results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
                 
@@ -675,6 +712,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             logger.info(" Menjalankan download background dan TTS secara bersamaan...")
             if bg_type == "retention":
                 download_task = run_retention_with_fallback(loop, retention_keyword, keywords, needed_clips, aesthetic_style)
+            elif bg_type == "hunter":
+                download_task = run_hunter_workflow(loop, channel_cfg)
             else:
                 download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
                 
@@ -686,7 +725,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
                 video_files = []
             else:
-                if bg_type == "retention":
+                if bg_type == "retention" or bg_type == "hunter":
                     video_files, is_fallback = results[0]
                     if is_fallback:
                         bg_type = "pexels"
@@ -822,7 +861,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             
         logger.info(" Mode Dynamic Cut-Rate: Dihasilkan %d potongan video yang tidak rata.", len(segment_durations))
 
-        if bg_type == "retention" and video_files:
+        if bg_type in ["retention", "hunter"] and video_files:
             # Mode Layar Penuh (ASMR/Gameplay)
             import random
             from moviepy import VideoFileClip

@@ -191,6 +191,39 @@
       ],
       "lead_magnet_url": "https://linktr.ee/poladisiplin",
       "lead_magnet_copy": "👉 Template Notion 'Habit Tracker' Gratis: https://linktr.ee/poladisiplin"
+    },
+    "komedihunter": {
+      "name": "Komedi Hunter",
+      "niche": "funny moments, epic fails, prank, and reaction",
+      "watermark": "@KomediHunter",
+      "aesthetic_query": "",
+      "voice_id": "id-ID-ArdiNeural",
+      "voice_rate": "+15%",
+      "voice_pitch": "+10Hz",
+      "theme_color": "classic_yellow",
+      "background_type": "hunter",
+      "trending_keywords": ["funny prank indonesia", "lucu ngakak", "epic fail lucu"],
+      "hook_style": "cause_and_effect",
+      "themes": [
+        "Reaksi Ngakak",
+        "Kejadian Tak Terduga",
+        "Prank Gagal"
+      ],
+      "angles": [
+        "Sarkasme",
+        "Komentator Olahraga",
+        "Polos Bingung"
+      ],
+      "system_prompt": "Kamu adalah komentator video komedi lucu. TUGAS: Buat naskah voiceover reaksi lucu (JSON). SANGAT PENTING: Konten ini adalah video prank/lucu. Buat hook dan narasi yang mengomentari kekonyolan di dalam video.\n\n",
+      "tags_example": "['funny', 'prank', 'ngakak', 'komedi']",
+      "tags_fallback": [
+        "shorts",
+        "lucu",
+        "ngakak",
+        "komedi"
+      ],
+      "lead_magnet_url": "https://linktr.ee/komedihunter",
+      "lead_magnet_copy": "👉 Gabung Grup Meme: https://linktr.ee/komedihunter"
     }
   }
 }
