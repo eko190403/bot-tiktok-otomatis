@@ -360,36 +360,53 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
             system_prompt = system_prompt.replace("[HUNTER_CONTEXT]", hunter_context)
         else:
             system_prompt += f"\nKONTEKS VIDEO (SANGAT PENTING): {hunter_context}\nBuat naskah yang merespon, mengomentari, atau me-roasting kejadian dalam video tersebut secara spesifik!\n\n"
-            
     bg_type = config.get("background_type", "pexels")
     if bg_type == "hunter":
-        guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Kamu adalah penonton yang sedang menonton video ini bersama temanmu. Tulis komentar sarkastik, lucu, dan spontan. Fokus HANYA pada aksi utama di video (jangan deskripsikan visual secara detail karena penonton sudah melihatnya). Gunakan slang gaul santai, JANGAN terlalu formal, dan JANGAN bawa-bawa teori akademis/psikologi.\n\n"
-        story_rule = "2. 'story': Roasting tajam dan komentar spontan. WAJIB: Gunakan elipsis (...) di setiap akhir kalimat atau saat jeda komedi agar AI berhenti berbicara sejenak (0.5 detik) layaknya orang bernapas/tertawa alami. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah MAKSIMAL 110 kata.\n"
-        cta_rule = "3. 'cta': Ajakan bertindak (Maksimal 15 kata). Berikan pertanyaan konyol atau sarkas di akhir untuk memancing komentar penonton. SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika bersambung ke kata pertama HOOK. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
+        prompt = (
+            "Kamu adalah seorang pengamat video lucu yang santai.\n\n"
+            f"TUGAS: Tulis naskah roasting singkat (maks 70 detik) berdasarkan deskripsi video: [{hunter_context}].\n\n"
+            "ATURAN WAJIB:\n"
+            "- DILARANG menyebutkan kata: 'psikolog', 'studi', 'penelitian', 'tahun 2023', atau hal-hal berbau ilmiah lainnya.\n"
+            "- FOKUS: Langsung komentari aksi lucu/konyol yang terjadi di video.\n"
+            "- GAYA BAHASA: Gunakan gaya bicara tongkrongan yang sarkastik, ceplas-ceplos, dan penuh candaan. Gunakan slang.\n"
+            "- JANGAN pernah menulis naskah yang tidak sesuai dengan isi video.\n\n"
+            "STRUKTUR JSON YANG DIHARAPKAN:\n"
+            "1. 'hook': (Detik 0-5) Langsung tebak kelakuan orang di video.\n"
+            "2. 'story': (Detik 5-30) Roasting (Komentari aksi lucu mereka). WAJIB: Gunakan elipsis (...) di setiap jeda komedi agar AI bernapas/tertawa alami 0.5 detik.\n"
+            "3. 'cta': (Detik 30-40) Closing (Pertanyaan singkat untuk memancing komentar, contoh: 'Kalian pernah ga diginiin?'). JANGAN pakai elipsis (...) di akhir CTA.\n"
+            "4. 'caption': Judul/caption TikTok yang santai/dark jokes, ditambah hashtag viral (contoh: #prank #lucu #ngakak). Maks 150 karakter.\n"
+            f"5. 'tags': Array berisi 5-10 kata kunci SEO (misal {config.get('tags_example', ['lucu', 'prank'])}).\n"
+            "6. 'category_id': ID kategori YouTube (gunakan '22' untuk People & Blogs, atau '23' untuk Comedy).\n"
+            "7. 'interactive_comment': Satu kalimat pancingan (pinned comment) bergaya tongkrongan sarkas untuk memancing emosi penonton. Maks 15 kata.\n"
+            "8. 'yt_title': Judul video YouTube Shorts yang kuat, sarkas, dan provokatif tanpa hashtag. Maks 90 karakter.\n"
+            "9. 'yt_description': Deskripsi video YouTube Shorts yang lucu, berisi ringkasan, CTA subscribe, dan hashtag relevan.\n"
+            f"{ab_test_instruction}\n"
+            f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', 'interactive_comment', 'yt_title', dan 'yt_description'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
+        )
     else:
         guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
         story_rule = "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural sesuai tata bahasa baku agar AI dapat membaca dengan ritme dan tempo kecepatan yang normal.\n"
         cta_rule = "3. 'cta': Ajakan bertindak (Maksimal 15 kata). SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika langsung bersambung ke kata pertama HOOK. JANGAN MENGULANG kata-kata dari Hook ke CTA! VARIASIKAN GAYA BAHASA CTA (jangan melulu pakai kata 'mulai sekarang', 'itulah kenapa', atau 'maka dari itu'). Gunakan pendekatan berbeda-beda (misal: mempertanyakan balik, menantang, atau sarkas) asalkan ujungnya tetap nyambung secara gramatikal ke Hook saat dilooping. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
         
-    prompt = (
-        f"{system_prompt}"
-        f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n"
-        f"SUDUT PANDANG (ANGLE): Bahas tema di atas secara spesifik melalui lensa/sudut pandang: '{chosen_angle}'. Gabungkan tema dan angle ini secara kreatif agar konten terasa segar dan tidak klise.\n\n"
-        f"{guardrail}"
-        "ATURAN WAJIB:\n"
-        f"{hook_rule}"
-        f"{story_rule}"
-        f"{cta_rule}"
-        "4. 'caption': Judul/caption TikTok yang santai, relate, atau sedikit dark jokes (jangan terlalu formal/kaku), ditambah hashtag viral (contoh: #ruangpikir #psikologi #overthinking #fyp). Maks 150 karakter.\n"
-        f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
-        "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
-        "7. 'interactive_comment': Satu kalimat pancingan (pinned comment) yang terasa seperti obrolan tongkrongan Gen-Z, memancing emosi atau curhatan di kolom komentar. JANGAN kaku seperti kuesioner ('Apakah kamu pernah...'). Gunakan gaya bahasa santai (contoh: 'Jujur, siapa yang sering relate banget sama yang terakhir? ' atau 'Coba tag temen lu yang kelakuannya persis kayak gini wkwk'). Maks 15 kata.\n"
-        "8. 'yt_title': Judul video YouTube yang dioptimasi untuk SEO. Harus kuat, provokatif, mengandung kata kunci utama, dan TIDAK mengandung hashtag. Panjang maksimal 90 karakter. Contoh: 'Fakta Psikologi Gelap yang Tersembunyi di Balik Pujian Bertubi-Tubi'\n"
-        "9. 'yt_description': Deskripsi video YouTube yang lengkap dan dioptimasi untuk mesin pencari (SEO). Struktur: (a) 2 kalimat ringkasan konten yang engaging, (b) poin-poin utama yang dibahas (bullet list), (c) kalimat CTA mengajak subscribe dan follow, (d) semua hashtag yang relevan. Total panjang 300-500 karakter. Tulis dalam Bahasa Indonesia.\n"
-        f"{ab_test_instruction}\n"
-        "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan sehari-hari yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu teman. SANGAT PENTING: JAUHI bahasa sastra kuno atau terjemahan kaku dari bahasa Inggris. Pastikan tata bahasa 100% luwes. JANGAN menghilangkan kata sambung/keterangan yang penting untuk menghemat kata (contoh SALAH: 'perhatikan sekitarmu detail', contoh BENAR: 'perhatikan sekitarmu SECARA detail'). Pastikan kalimat pembuka (hook) dan sambungan looping-nya masuk akal secara gramatikal saat digabungkan.\n"
-        f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', 'interactive_comment', 'yt_title', dan 'yt_description'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
-    )
+        prompt = (
+            f"{system_prompt}"
+            f"TEMA UTAMA: Konten kali ini HARUS berfokus membahas tentang: {chosen_theme}.\n"
+            f"SUDUT PANDANG (ANGLE): Bahas tema di atas secara spesifik melalui lensa/sudut pandang: '{chosen_angle}'. Gabungkan tema dan angle ini secara kreatif agar konten terasa segar dan tidak klise.\n\n"
+            f"{guardrail}"
+            "ATURAN WAJIB:\n"
+            f"{hook_rule}"
+            f"{story_rule}"
+            f"{cta_rule}"
+            "4. 'caption': Judul/caption TikTok yang santai, relate, atau sedikit dark jokes (jangan terlalu formal/kaku), ditambah hashtag viral (contoh: #ruangpikir #psikologi #overthinking #fyp). Maks 150 karakter.\n"
+            f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config.get('tags_example', [])}).\n"
+            "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
+            "7. 'interactive_comment': Satu kalimat pancingan (pinned comment) yang terasa seperti obrolan tongkrongan Gen-Z, memancing emosi atau curhatan di kolom komentar. JANGAN kaku seperti kuesioner ('Apakah kamu pernah...'). Gunakan gaya bahasa santai (contoh: 'Jujur, siapa yang sering relate banget sama yang terakhir? ' atau 'Coba tag temen lu yang kelakuannya persis kayak gini wkwk'). Maks 15 kata.\n"
+            "8. 'yt_title': Judul video YouTube yang dioptimasi untuk SEO. Harus kuat, provokatif, mengandung kata kunci utama, dan TIDAK mengandung hashtag. Panjang maksimal 90 karakter. Contoh: 'Fakta Psikologi Gelap yang Tersembunyi di Balik Pujian Bertubi-Tubi'\n"
+            "9. 'yt_description': Deskripsi video YouTube yang lengkap dan dioptimasi untuk mesin pencari (SEO). Struktur: (a) 2 kalimat ringkasan konten yang engaging, (b) poin-poin utama yang dibahas (bullet list), (c) kalimat CTA mengajak subscribe dan follow, (d) semua hashtag yang relevan. Total panjang 300-500 karakter. Tulis dalam Bahasa Indonesia.\n"
+            f"{ab_test_instruction}\n"
+            "GAYA BAHASA: Gunakan Bahasa Indonesia percakapan sehari-hari yang natural, energetik, dan terasa personal seolah berbicara langsung ke satu teman. SANGAT PENTING: JAUHI bahasa sastra kuno atau terjemahan kaku dari bahasa Inggris. Pastikan tata bahasa 100% luwes. JANGAN menghilangkan kata sambung/keterangan yang penting untuk menghemat kata (contoh SALAH: 'perhatikan sekitarmu detail', contoh BENAR: 'perhatikan sekitarmu SECARA detail'). Pastikan kalimat pembuka (hook) dan sambungan looping-nya masuk akal secara gramatikal saat digabungkan.\n"
+            f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', 'interactive_comment', 'yt_title', dan 'yt_description'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
+        )
     res = await call_gemini_with_retry(prompt, is_json=True, temperature=0.85)
     parsed_json = clean_and_parse_json(res)
 
