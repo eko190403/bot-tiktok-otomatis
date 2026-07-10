@@ -17,4 +17,4 @@ google-api-python-client
 google-auth-oauthlib
 google-auth-httplib2
 firebase-admin
-yt-dlp
+https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz
