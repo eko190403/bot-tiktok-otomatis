@@ -43,12 +43,14 @@ def json_cookies_to_netscape(json_filepath: str, netscape_filepath: str) -> bool
         logger.warning(f" Gagal mengonversi cookie JSON ke Netscape: {e}")
         return False
 
-def hunt_trending_video(target_url: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
+def hunt_trending_video(target_subreddit: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
     """
-    Memindai profil Instagram target menggunakan yt-dlp untuk mendapatkan video terbaru.
+    Memindai Subreddit target menggunakan PRAW untuk mendapatkan video komedi terbaik.
     """
     import subprocess
     import random
+    import praw
+    import time
     
     os.makedirs(download_dir, exist_ok=True)
     
@@ -58,84 +60,81 @@ def hunt_trending_video(target_url: str, download_dir: str = "data/raw_materials
         except Exception:
             pass
             
-    logger.info(f" 🕵️ Content Hunter memindai Instagram target: '{target_url}'...")
+    logger.info(f" 🕵️ Content Hunter memindai Subreddit target: 'r/{target_subreddit}'...")
     
-    cmd = [
-        "yt-dlp",
-        target_url,
-        "--playlist-end", "10",
-        "--dump-json",
-        "--ignore-errors",
-        "--no-warnings"
-    ]
+    reddit_client_id = os.getenv("REDDIT_CLIENT_ID")
+    reddit_client_secret = os.getenv("REDDIT_CLIENT_SECRET")
     
-    cookie_file = "ig_cookies.txt" if os.path.exists("ig_cookies.txt") else ("cookies.txt" if os.path.exists("cookies.txt") else None)
-    if cookie_file:
-        cmd.extend(["--cookies", cookie_file])
+    if not reddit_client_id or not reddit_client_secret:
+        logger.error(" ❌ Kredensial PRAW (REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET) belum dikonfigurasi di Environment Variable.")
+        return None
         
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        reddit = praw.Reddit(
+            client_id=reddit_client_id,
+            client_secret=reddit_client_secret,
+            user_agent="KomediHunterBot:v1.0 (by /u/developer)"
+        )
+        
+        subreddit = reddit.subreddit(target_subreddit)
+        # Ambil 25 post terpanas
+        hot_posts = subreddit.hot(limit=25)
+        
+        videos = []
+        for post in hot_posts:
+            if hasattr(post, "is_video") and post.is_video and hasattr(post, "secure_media") and post.secure_media:
+                reddit_video = post.secure_media.get("reddit_video", {})
+                duration = reddit_video.get("duration", 0)
+                
+                if 15 <= duration <= 70:
+                    videos.append({
+                        "id": post.id,
+                        "title": post.title,
+                        "url": post.url,
+                        "duration": duration,
+                        "uploader": str(post.author),
+                        "score": post.score
+                    })
+                    
+        if not videos:
+            logger.error(f" ❌ Tidak ada post berformat Video dengan durasi 15-70s di r/{target_subreddit} saat ini.")
+            return None
+            
+        # Acak video untuk variasi
+        random.shuffle(videos)
+        selected_video = videos[0]
+        
     except Exception as e:
-        logger.error(f" ❌ yt-dlp gagal dieksekusi: {e}")
+        logger.error(f" ❌ Gagal menarik data dari Reddit via PRAW: {e}")
         return None
         
-    videos = []
-    for line in result.stdout.strip().split("\n"):
-        if not line: continue
-        try:
-            v_data = json.loads(line)
-            videos.append(v_data)
-        except:
-            pass
-            
-    if not videos:
-        logger.error(f" ❌ Tidak ada video ditemukan di {target_url}. (Mungkin butuh cookies IG yang valid atau profil diprivasi).")
-        if result.stderr:
-            logger.error(f" Error: {result.stderr[:200]}")
-        return None
-        
-    random.shuffle(videos)
-    
-    selected_video = None
-    for v in videos:
-        title_lower = v.get("title", "").lower()
-        desc_lower = v.get("description", "").lower()
-        if any(x in title_lower or x in desc_lower for x in ["react", "duet", "reaction", "part"]):
-            continue
-            
-        duration = v.get("duration")
-        if duration and not (15 <= duration <= 70):
-            continue
-            
-        selected_video = v
-        break
-            
-    if not selected_video:
-        selected_video = videos[0] # Fallback
-        
-    video_id = selected_video.get("id", "unknown_id")
-    uploader = selected_video.get("uploader", "unknown_user")
-    title = sanitize_title(selected_video.get("title", "Untitled"))
-    duration = selected_video.get("duration", 0)
-    webpage_url = selected_video.get("webpage_url", target_url)
+    video_id = selected_video["id"]
+    uploader = selected_video["uploader"]
+    title = sanitize_title(selected_video["title"])
+    duration = selected_video["duration"]
+    webpage_url = selected_video["url"]
     
     filepath = os.path.join(download_dir, f"{video_id}.mp4")
     info_path = os.path.join(download_dir, f"{video_id}.info.json")
     
-    logger.info(f" 📥 Mengunduh video IG: {video_id} dari {uploader}")
+    logger.info(f" 📥 Mengunduh video Reddit: {video_id} dari u/{uploader} (Score: {selected_video['score']})")
+    
     dl_cmd = [
         "yt-dlp",
         webpage_url,
         "-o", filepath,
         "--no-warnings"
     ]
-    if cookie_file:
-        dl_cmd.extend(["--cookies", cookie_file])
-        
-    subprocess.run(dl_cmd, capture_output=True)
     
+    try:
+        # Delay sopan (Nana's Advice)
+        time.sleep(4)
+        subprocess.run(dl_cmd, capture_output=True, timeout=120)
+    except Exception as e:
+        logger.error(f" ❌ Error eksekusi yt-dlp untuk Reddit: {e}")
+        
     if not os.path.exists(filepath):
-        logger.error(" ❌ Gagal mengunduh file video IG.")
+        logger.error(" ❌ Gagal mengunduh file MP4 video Reddit.")
         return None
         
     metadata = {
@@ -144,12 +143,12 @@ def hunt_trending_video(target_url: str, download_dir: str = "data/raw_materials
         "uploader": uploader,
         "title": title,
         "duration": duration,
-        "source": "instagram"
+        "source": "reddit"
     }
     with open(info_path, 'w', encoding='utf-8') as f:
         json.dump(metadata, f)
         
-    logger.info(f" ✅ Target terkunci! Video IG diunduh dari @{uploader} | Durasi: {duration}s")
+    logger.info(f" ✅ Target terkunci! Video Reddit diunduh dari r/{target_subreddit} | u/{uploader} | Durasi: {duration}s")
     return {
         "filepath": filepath,
         "uploader": uploader,

@@ -209,8 +209,12 @@
         "prank arab lucu",
         "extreme reaction pranks"
       ],
-      "target_ig_accounts": [
-        "https://www.instagram.com/harbi_mi_lan_/"
+      "target_subreddits": [
+        "funny",
+        "ContagiousLaughter",
+        "pranks",
+        "Unexpected",
+        "Whatcouldgowrong"
       ],
       "hook_style": "cause_and_effect",
       "themes": [
