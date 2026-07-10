@@ -508,39 +508,46 @@ async def run_retention_with_fallback(loop, retention_keyword: str, keywords: li
         return results, True
     return results, False
 
-async def run_hunter_workflow(loop, channel_cfg: dict) -> tuple:
+async def run_hunter_workflow(loop, channel_cfg: dict, keywords: list, target_count: int, aesthetic_style: str) -> tuple:
     """Mengeksekusi workflow Content Hunter V2.2 (Sebab-Akibat)"""
     import random
     from content_hunter import hunt_trending_video
     from video_processor import process_hunter_video
     
-    trending_keywords = channel_cfg.get("trending_keywords", ["lucu viral"])
-    keyword = random.choice(trending_keywords)
-    
-    # 1. Hunt Video Mentah
-    def do_hunt():
-        return hunt_trending_video(keyword)
+    try:
+        trending_keywords = channel_cfg.get("trending_keywords", ["lucu viral"])
+        keyword = random.choice(trending_keywords)
         
-    hunt_res = await loop.run_in_executor(None, do_hunt)
-    if not hunt_res:
-        logger.warning(" Hunter gagal mendapatkan video. Fallback ke Pexels.")
-        return [], True 
+        # 1. Hunt Video Mentah
+        def do_hunt():
+            return hunt_trending_video(keyword)
+            
+        hunt_res = await loop.run_in_executor(None, do_hunt)
+        if not hunt_res:
+            logger.warning(" Hunter gagal mendapatkan video. Fallback ke Pexels.")
+            results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
+            return results, True 
+            
+        raw_filepath = hunt_res["filepath"]
+        uploader = hunt_res["uploader"]
         
-    raw_filepath = hunt_res["filepath"]
-    uploader = hunt_res["uploader"]
-    
-    processed_filepath = raw_filepath.replace(".mp4", "_processed.mp4")
-    
-    # 2. Proses Visual (Fair Use)
-    def do_process():
-        return process_hunter_video(raw_filepath, uploader, processed_filepath)
+        processed_filepath = raw_filepath.replace(".mp4", "_processed.mp4")
         
-    proc_res = await loop.run_in_executor(None, do_process)
-    if not proc_res:
-        logger.warning(" Processor gagal memodifikasi video. Fallback ke Pexels.")
-        return [], True
-        
-    return [processed_filepath], False
+        # 2. Proses Visual (Fair Use)
+        def do_process():
+            return process_hunter_video(raw_filepath, uploader, processed_filepath)
+            
+        proc_res = await loop.run_in_executor(None, do_process)
+        if not proc_res:
+            logger.warning(" Processor gagal memodifikasi video. Fallback ke Pexels.")
+            results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
+            return results, True
+            
+        return [processed_filepath], False
+    except Exception as e:
+        logger.error(f" Error tak terduga pada run_hunter_workflow: {e}")
+        results = await run_download_with_retry(loop, keywords, target_count, aesthetic_style, max_retry=3)
+        return results, True
 
 def safe_close_resources(resources: dict, files_to_delete: list):
     logger.info(" Memulai pembersihan resource secara aman...")
@@ -697,7 +704,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 if is_fallback:
                     bg_type = "pexels"
             elif bg_type == "hunter":
-                results, is_fallback = await run_hunter_workflow(loop, channel_cfg)
+                results, is_fallback = await run_hunter_workflow(loop, channel_cfg, keywords, needed_clips, aesthetic_style)
                 if is_fallback:
                     bg_type = "pexels"
             else:
@@ -713,7 +720,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             if bg_type == "retention":
                 download_task = run_retention_with_fallback(loop, retention_keyword, keywords, needed_clips, aesthetic_style)
             elif bg_type == "hunter":
-                download_task = run_hunter_workflow(loop, channel_cfg)
+                download_task = run_hunter_workflow(loop, channel_cfg, keywords, needed_clips, aesthetic_style)
             else:
                 download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
                 
