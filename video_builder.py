@@ -1313,7 +1313,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 frame = get_frame(t)
                 is_array = isinstance(t, np.ndarray)
                 t_val = t if is_array else np.array([t])
-                vol = np.full_like(t_val, 0.30, dtype=float) # Default 30% saat AI bicara
+                vol = np.full_like(t_val, 0.25, dtype=float) # Default 25% saat AI bicara (Diturunkan dari 30% agar lebih aman dari tabrakan audio)
                 for (s_start, s_end) in swells:
                     mask = (t_val >= s_start) & (t_val <= s_end)
                     vol[mask] = 1.00 # Naik ke 100% saat AI diam (jeda/klimaks)
