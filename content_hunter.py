@@ -74,18 +74,23 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         for v in videos:
             play_count = v.get("play_count", 0)
             duration = v.get("duration", 0)
+            title_lower = v.get("title", "").lower()
             
             if play_count >= 100000:
-                # SOP Durasi: Maksimum 50 detik agar aman untuk looping/shorts. 
-                # (Di bawah 15 detik diizinkan karena akan di-loop di prosesor)
-                if duration <= 50:
+                # Filter Split-Screen & Bersambung (Reaction/Duet/Part) via judul
+                if any(x in title_lower for x in ["react", "duet", "reaction", "part"]):
+                    logger.info(" ⏭️ Video dilewati: Kemungkinan format reaksi/duet/bersambung (indikasi split-screen).")
+                    continue
+                    
+                # SOP Durasi: 15-50 detik agar AI punya waktu untuk Voice Hook & narasi yang utuh
+                if 15 <= duration <= 50:
                     selected_video = v
                     break
                 else:
                     logger.info(f" ⏭️ Video dilewati: Durasi tidak sesuai ({duration}s)")
                 
         if not selected_video:
-            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 100k dan durasi <= 50s.")
+            logger.error(" ❌ Tidak ada video TikTok yang memenuhi kriteria view_count >= 100k dan durasi 15-50s.")
             return None
             
         video_id = selected_video.get("video_id")

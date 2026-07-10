@@ -363,11 +363,13 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
             
     bg_type = config.get("background_type", "pexels")
     if bg_type == "hunter":
-        guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): JANGAN gunakan istilah 'psikolog', 'studi', 'riset', atau teori akademis yang kaku! Fokuslah murni pada mengomentari dan me-roasting kejadian spesifik dalam video secara lucu, sarkas, dan manusiawi.\n\n"
-        story_rule = "2. 'story': Roasting tajam dan komentar lucu tentang kelakuan orang di dalam video. Jelaskan apa yang terjadi dan komentari kekonyolannya. JANGAN bawa-bawa statistik atau teori psikologi. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural.\n"
+        guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Kamu adalah penonton yang sedang menonton video ini bersama temanmu. Tulis komentar sarkastik, lucu, dan spontan. Fokus HANYA pada aksi utama di video (jangan deskripsikan visual secara detail karena penonton sudah melihatnya). Gunakan slang gaul santai, JANGAN terlalu formal, dan JANGAN bawa-bawa teori akademis/psikologi.\n\n"
+        story_rule = "2. 'story': Roasting tajam dan komentar spontan. WAJIB: Gunakan elipsis (...) di setiap akhir kalimat atau saat jeda komedi agar AI berhenti berbicara sejenak (0.5 detik) layaknya orang bernapas/tertawa alami. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah MAKSIMAL 110 kata.\n"
+        cta_rule = "3. 'cta': Ajakan bertindak (Maksimal 15 kata). Berikan pertanyaan konyol atau sarkas di akhir untuk memancing komentar penonton. SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika bersambung ke kata pertama HOOK. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
     else:
         guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
         story_rule = "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural sesuai tata bahasa baku agar AI dapat membaca dengan ritme dan tempo kecepatan yang normal.\n"
+        cta_rule = "3. 'cta': Ajakan bertindak (Maksimal 15 kata). SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika langsung bersambung ke kata pertama HOOK. JANGAN MENGULANG kata-kata dari Hook ke CTA! VARIASIKAN GAYA BAHASA CTA (jangan melulu pakai kata 'mulai sekarang', 'itulah kenapa', atau 'maka dari itu'). Gunakan pendekatan berbeda-beda (misal: mempertanyakan balik, menantang, atau sarkas) asalkan ujungnya tetap nyambung secara gramatikal ke Hook saat dilooping. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
         
     prompt = (
         f"{system_prompt}"
@@ -377,7 +379,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         "ATURAN WAJIB:\n"
         f"{hook_rule}"
         f"{story_rule}"
-        "3. 'cta': Ajakan bertindak (Maksimal 15 kata). SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika langsung bersambung ke kata pertama HOOK. JANGAN MENGULANG kata-kata dari Hook ke CTA! VARIASIKAN GAYA BAHASA CTA (jangan melulu pakai kata 'mulai sekarang', 'itulah kenapa', atau 'maka dari itu'). Gunakan pendekatan berbeda-beda (misal: mempertanyakan balik, menantang, atau sarkas) asalkan ujungnya tetap nyambung secara gramatikal ke Hook saat dilooping. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
+        f"{cta_rule}"
         "4. 'caption': Judul/caption TikTok yang santai, relate, atau sedikit dark jokes (jangan terlalu formal/kaku), ditambah hashtag viral (contoh: #ruangpikir #psikologi #overthinking #fyp). Maks 150 karakter.\n"
         f"5. 'tags': Array berisi 5-10 kata kunci/tag bahasa Inggris yang paling relevan dengan isi video untuk keperluan SEO (misal {config['tags_example']}).\n"
         "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
@@ -862,8 +864,6 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 else:
                     raise RuntimeError(" Tidak ada aset latar belakang yang valid dan lolos inspeksi 0-byte.")
             
-        all_timestamps = [asdict(ts) for ts in all_timestamps_dataclass]
-            
         from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip, CompositeAudioClip, ColorClip
         try:
             from moviepy.video.fx.loop import Loop
@@ -871,6 +871,20 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             from moviepy.video.fx import Loop
         
         moviepy_resources["audio_clip"] = AudioFileClip(vo_file_path)
+        
+        # STRATEGI VOICE HOOK: Tunda suara AI selama 3 detik khusus mode hunter
+        if bg_type == "hunter":
+            from moviepy.audio.AudioClip import AudioClip
+            silence_pad = AudioClip(lambda t: [0, 0], duration=3.0, fps=moviepy_resources["audio_clip"].fps)
+            from moviepy import concatenate_audioclips
+            moviepy_resources["audio_clip"] = concatenate_audioclips([silence_pad, moviepy_resources["audio_clip"]])
+            
+            # Geser seluruh timestamps mundur 3 detik agar sinkron dengan suara yang tertunda
+            for ts in all_timestamps_dataclass:
+                ts.start += 3.0
+                ts.end += 3.0
+                
+        all_timestamps = [asdict(ts) for ts in all_timestamps_dataclass]
         
         # OPTIMASI SEAMLESS LOOP (VERSI REVISI NANA): Berikan "Silence Pad" (ruang napas)
         # sebesar 0.35 detik di akhir kalimat agar loop tidak terasa "terjatuh" namun juga tidak kelamaan.
