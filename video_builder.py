@@ -901,7 +901,8 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             segment_durations.append(dur)
             current_time += dur
             
-        logger.info(" Mode Dynamic Cut-Rate: Dihasilkan %d potongan video yang tidak rata.", len(segment_durations))
+        if bg_type not in ["retention", "hunter"]:
+            logger.info(" Mode Dynamic Cut-Rate: Dihasilkan %d potongan video yang tidak rata.", len(segment_durations))
 
         if bg_type in ["retention", "hunter"] and video_files:
             # Mode Layar Penuh (ASMR/Gameplay)
