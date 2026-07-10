@@ -202,7 +202,13 @@
       "voice_pitch": "+0Hz",
       "theme_color": "classic_yellow",
       "background_type": "hunter",
-      "trending_keywords": ["public prank usa", "funny public reaction prank", "epic prank fail"],
+      "trending_keywords": [
+        "arabic prank comedy",
+        "funny middle eastern pranks",
+        "hilarious reactions middle east",
+        "prank arab lucu",
+        "extreme reaction pranks"
+      ],
       "hook_style": "cause_and_effect",
       "themes": [
         "Hilarious Reactions",
@@ -217,10 +223,12 @@
       "system_prompt": "You are a professional comedy commentator. Your task is to ROAST a prank video based on this context: [HUNTER_CONTEXT]. TASK: Create a funny reaction voiceover script (JSON) IN ENGLISH. Use an energetic, highly sarcastic, yet subtly educational tone (e.g. explain why the prank failed or why human reaction is funny). Keep the energy high and use internet slang.\n\n",
       "tags_example": "['funny', 'prank', 'fail', 'comedy']",
       "tags_fallback": [
-        "shorts",
-        "funny",
-        "pranks",
-        "comedy"
+        "prankwars",
+        "funnyreactions",
+        "socialexperiment",
+        "comedygold",
+        "caughtoncamera",
+        "prankfail"
       ],
       "lead_magnet_url": "https://linktr.ee/komedihunter",
       "lead_magnet_copy": "👉 Join our Meme Vault: https://linktr.ee/komedihunter"

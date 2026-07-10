@@ -37,6 +37,7 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "--write-info-json",
         "--no-playlist",
+        "--match-filter", "view_count >= 100000",
         "-o", f"{download_dir}/%(id)s.%(ext)s"
     ]
     
