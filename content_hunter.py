@@ -72,9 +72,25 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         "--match-filter", "view_count >= 100000",
         "--max-downloads", "1",
         "--extractor-args", "youtube:player_client=android,web",
-        "-o", f"{download_dir}/%(id)s.%(ext)s",
-        search_query
+        "-o", f"{download_dir}/%(id)s.%(ext)s"
     ]
+    
+    if os.path.exists("cookies.txt"):
+        try:
+            with open("cookies.txt", "r") as f:
+                content = f.read().strip()
+            if content.startswith("[") or content.startswith("{"):
+                logger.info(" Mengonversi cookies.txt (JSON) ke format Netscape untuk yt-dlp...")
+                if json_cookies_to_netscape("cookies.txt", "cookies_netscape.txt"):
+                    command.extend(["--cookies", "cookies_netscape.txt"])
+                else:
+                    command.extend(["--cookies", "cookies.txt"])
+            else:
+                command.extend(["--cookies", "cookies.txt"])
+        except Exception:
+            command.extend(["--cookies", "cookies.txt"])
+            
+    command.append(search_query)
     
     logger.info(f" 🕵️ Content Hunter sedang melacak video untuk keyword: '{keyword}'...")
     try:
