@@ -71,7 +71,7 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         "--no-playlist",
         "--match-filter", "view_count >= 100000",
         "--max-downloads", "1",
-        "--js-runtimes", "nodejs",
+        "--js-runtimes", "node",
         "--extractor-args", "youtube:player_client=android,web",
         "-o", f"{download_dir}/%(id)s.%(ext)s"
     ]
