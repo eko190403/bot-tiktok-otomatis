@@ -49,8 +49,15 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
     """
     os.makedirs(download_dir, exist_ok=True)
     
-    # yt-dlp mencari 1 video shorts. 
-    search_query = f"ytsearch1: {keyword} shorts"
+    # Bersihkan sisa metadata dari pencarian sebelumnya
+    for old_json in glob.glob(f"{download_dir}/*.info.json"):
+        try:
+            os.remove(old_json)
+        except Exception:
+            pass
+            
+    # yt-dlp mencari hingga 15 video shorts sampai menemukan yang lolos filter. 
+    search_query = f"ytsearch15:{keyword} shorts"
     
     # -f: format terbaik (MP4)
     # --write-info-json: menyimpan metadata lengkap (.info.json)
@@ -60,8 +67,10 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         "yt-dlp",
         "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "--write-info-json",
+        "--no-write-playlist-metafiles",
         "--no-playlist",
         "--match-filter", "view_count >= 100000",
+        "--max-downloads", "1",
         "--extractor-args", "youtube:player_client=android,web",
         "-o", f"{download_dir}/%(id)s.%(ext)s",
         search_query
