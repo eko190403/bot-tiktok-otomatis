@@ -907,7 +907,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             # Mode Layar Penuh (ASMR/Gameplay)
             import random
             from moviepy import VideoFileClip
-            from moviepy.video.fx.colorx import Colorx
+            from moviepy.video.fx import MultiplyColor
             
             file = video_files[0]
             try:
@@ -939,7 +939,7 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 cropped = sliced_clip.cropped(x1=x1, y1=y1, x2=x2, y2=y2).resized((WIDTH, HEIGHT))
                 
                 # Gelapkan (dark overlay) sebesar 30% agar teks terbaca jelas
-                darkened = cropped.with_effects([Colorx(0.7)])
+                darkened = cropped.with_effects([MultiplyColor(0.7)])
                 
                 moviepy_resources["combined_bg"] = darkened
                 moviepy_resources["processed_clips"].append(darkened) # for resource tracking
