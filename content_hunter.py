@@ -118,6 +118,10 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
         logger.info(f" ✅ Target terkunci! Video diunduh dari TikTok @{uploader} | Durasi: {duration}s")
         return {
             "filepath": filepath,
+            "uploader": uploader,
+            "title": title,
+            "duration": duration,
+            "id": video_id,
             "metadata": metadata
         }
         
