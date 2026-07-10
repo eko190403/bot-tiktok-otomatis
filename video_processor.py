@@ -1,6 +1,6 @@
 import os
 import logging
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, vfx
+from moviepy import VideoFileClip, TextClip, CompositeVideoClip, vfx
 
 logger = logging.getLogger("bot")
 
