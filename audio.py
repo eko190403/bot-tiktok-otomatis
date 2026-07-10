@@ -98,6 +98,24 @@ PHONETIC_DICTIONARY = {
     "CONSISTENCY": "konsistensi", "GRIND": "graind", "ROUTINE": "rutin",
     "RAT RACE": "ret reis", "RACE": "reis", "WEALTH": "welth",
     "MINDSET": "maindset", "RICH": "rich", "POOR": "pur", "BROKE": "brok",
+    
+    # Kosakata Bahasa Inggris Tambahan (Agar tidak dibaca logat 'dusun')
+    "BUSINESS": "bisnis", "SUCCESS": "sukses", "FAILURE": "feiler", "GOALS": "gols",
+    "ACTION": "eksion", "STRATEGY": "strategi", "IDEA": "aidia", "SYSTEM": "sistem",
+    "WORK": "werk", "SMART": "smart", "EFFORT": "efort", "PROCESS": "proses", 
+    "RESULT": "risalt", "SKILL": "skil", "UPDATE": "apdet", "UPLOAD": "aplod", 
+    "DOWNLOAD": "daunlod", "RELATABLE": "rileitebel", "CONTENT": "konten", 
+    "CREATOR": "kreator", "VIEWS": "vius", "SUBSCRIBER": "subskraiber", 
+    "ALGORITHM": "algoritma", "TRENDING": "trending", "VIRAL": "vairal", 
+    "HYPOCRITE": "hipokrit", "PERSONALITY": "personaliti", "DISORDER": "disorder", 
+    "INTROVERT": "introvert", "EXTROVERT": "ekstrovert", "ALPHA": "alfa", 
+    "SIGMA": "sigma", "MALE": "meil", "FEMALE": "fimeil", "LOGIC": "lojik", 
+    "REASON": "rison", "PURPOSE": "perpes", "MIND-BLOWING": "maind blouing", 
+    "GLOW UP": "glo ap", "GLOW-UP": "glo ap", "BULLSHIT": "bulsyit",
+    "REALITY": "realiti", "EXPECTATION": "ekspektesion", "VISION": "vision",
+    "DEEP": "dip", "DARK": "dark", "PSYCHOPATH": "psikopat", "SOCIOPATH": "sosiopat",
+    "EGO": "ego", "PRIDE": "praid", "RESPECT": "rispek", "TRUST": "tras",
+    "ISSUE": "isyu", "ISSUES": "isyus", "MIND-BLOWING": "maind blouing"
 }
 
 # Bobot scoring untuk DP alignment (Needleman-Wunsch style)
