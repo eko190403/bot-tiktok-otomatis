@@ -763,7 +763,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 logger.error("[%s] Proses unduh gagal total setelah rentetan retry. Menggunakan fallback.", EV_DOWNLOAD_FAIL)
                 video_files = []
             else:
-                if bg_type == "retention" or bg_type == "hunter":
+                if bg_type == "hunter":
+                    video_files, is_fallback, _ = results[0]
+                    if is_fallback:
+                        bg_type = "pexels"
+                elif bg_type == "retention":
                     video_files, is_fallback = results[0]
                     if is_fallback:
                         bg_type = "pexels"
