@@ -938,12 +938,16 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                     
                 cropped = sliced_clip.cropped(x1=x1, y1=y1, x2=x2, y2=y2).resized((WIDTH, HEIGHT))
                 
-                # Gelapkan (dark overlay) sebesar 30% agar teks terbaca jelas
-                darkened = cropped.with_effects([MultiplyColor(0.7)])
+                # Gelapkan (dark overlay) sebesar 30% agar teks terbaca jelas (KECUALI mode hunter)
+                if bg_type == "hunter":
+                    final_bg = cropped
+                    logger.info(" Menggunakan Full-Screen Hunter Background (Tanpa Penggelapan, Start: %.1fs)", start_time)
+                else:
+                    final_bg = cropped.with_effects([MultiplyColor(0.7)])
+                    logger.info(" Menggunakan Full-Screen Retention Background (Start: %.1fs)", start_time)
                 
-                moviepy_resources["combined_bg"] = darkened
-                moviepy_resources["processed_clips"].append(darkened) # for resource tracking
-                logger.info(" Menggunakan Full-Screen Retention Background (Start: %.1fs)", start_time)
+                moviepy_resources["combined_bg"] = final_bg
+                moviepy_resources["processed_clips"].append(final_bg) # for resource tracking
             except Exception as e:
                 logger.error(" Gagal memproses retention background: %s", e)
                 moviepy_resources["combined_bg"] = ColorClip(size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration)
