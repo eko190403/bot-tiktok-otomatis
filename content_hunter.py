@@ -70,6 +70,9 @@ def hunt_trending_video(keyword: str, download_dir: str = "data/raw_materials") 
             logger.error(" ❌ TikWM tidak mengembalikan hasil pencarian TikTok.")
             return None
             
+        import random
+        random.shuffle(videos)
+        
         selected_video = None
         for v in videos:
             play_count = v.get("play_count", 0)
