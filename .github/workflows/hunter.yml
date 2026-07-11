@@ -1,0 +1,109 @@
+name: Komedi Hunter Reposter
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: bot-tiktok-hunter
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    env:
+      ENABLE_VISUAL_CTA: "false"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Bersihkan Workspace
+        run: |
+          rm -rf temp/*
+          rm -rf output/*
+          mkdir -p temp output assets/fonts
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install FFmpeg dan ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg imagemagick
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Install Playwright Chromium & System Dependencies
+        run: |
+          python -m playwright install --with-deps chromium
+
+      - name: Kirim Notifikasi Proses Dimulai ke Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=🚀 [MANUAL TRIGGER] Mesin Komedi Hunter mulai menyedot video dari Drive. Mohon tunggu..."
+
+      - name: Siapkan Cookies TikTok dari Secret
+        env:
+          TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
+        run: |
+          if [ -n "$TIKTOK_COOKIES" ]; then
+            echo " Menulis berkas cookies.json secara dinamis dari GitHub Secrets..."
+            echo "$TIKTOK_COOKIES" > cookies.json
+          else
+            echo " Secret TIKTOK_COOKIES tidak diset. Menggunakan berkas cookies.json bawaan dari repositori."
+          fi
+
+      - name: Siapkan Kredensial YouTube dari Secret
+        env:
+          YT_CREDS_KOMEDIHUNTER: ${{ secrets.YT_CREDS_KOMEDIHUNTER }}
+        run: |
+          echo "Menyiapkan kredensial YouTube untuk Komedi Hunter..."
+          [ -n "$YT_CREDS_KOMEDIHUNTER" ] && echo "$YT_CREDS_KOMEDIHUNTER" > youtube_credentials_komedihunter.json || echo "⚠️ Secret YT_CREDS_KOMEDIHUNTER belum di-set"
+
+      - name: Siapkan Akun Layanan Firebase dari Secret
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo " Menulis berkas firebase_service_account.json secara dinamis dari GitHub Secrets..."
+            echo "$FIREBASE_SERVICE_ACCOUNT" > firebase_service_account.json
+          fi
+
+      - name: Jalankan Bot Komedi Hunter
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ENABLE_TIKTOK_UPLOAD: "true"
+          ENABLE_YOUTUBE_UPLOAD: "true"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "🚀 Menjalankan pipeline untuk Komedi Hunter..."
+          python app.py --channel komedihunter || echo "⚠️ Gagal di komedihunter."
+
+      - name: Lihat Hasil Output
+        if: always()
+        run: |
+          echo "Isi folder output:"
+          ls -lah output || true
+
+      - name: Kirim Notifikasi GAGAL ke Telegram
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "parse_mode=HTML" \
+            -d "text=<b>HUNTER PIPELINE GAGAL!</b>%0A%0A Mesin Reposter mengalami error.%0A%0A🔗 Cek log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
