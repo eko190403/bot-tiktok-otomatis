@@ -658,25 +658,25 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
                 
                 # Buat Caption dan Tag kilat pakai AI
                 filename_context = h_meta.get("title", "video lucu")
-                prompt = f"""Buatkan caption pendek lucu dan viral untuk TikTok/YouTube Shorts berdasarkan konteks kejadian ini: '{filename_context}'.
-Berikan output JSON murni tanpa markdown: {{"caption": "teks caption menarik pakai hashtag", "tags": ["lucu", "ngakak", "fyp"], "interactive_comment": "pertanyaan pancingan komen buat penonton?"}}"""
+                prompt = f"""Create a short, funny, and viral caption in ENGLISH for TikTok/YouTube Shorts based on this context: '{filename_context}'.
+Output must be pure JSON format without markdown: {{"caption": "funny caption text with hashtags", "tags": ["funny", "lmao", "fyp"], "interactive_comment": "engaging question for viewers in english?"}}"""
                 try:
                     meta_res = await call_gemini_with_retry(prompt, is_json=True)
                     meta_data = json.loads(meta_res)
                 except Exception as e:
                     logger.warning(f" Gagal meng-generate caption AI, fallback ke default: {e}")
                     meta_data = {
-                        "caption": f"Tonton sampai habis! #{channel_cfg.get('name', 'komedi')} #ngakak", 
-                        "tags": ["lucu", "ngakak", "viral"], 
-                        "interactive_comment": "Kalian pernah ngalamin gini gak?"
+                        "caption": f"Watch till the end! #{channel_cfg.get('name', 'comedy')} #funny", 
+                        "tags": ["funny", "lmao", "viral"], 
+                        "interactive_comment": "Have you ever experienced this?"
                     }
                 
                 with open(os.path.join(DIR_TEMP, "video_metadata.json"), "w", encoding="utf-8") as f:
                     json.dump({
-                        "caption": meta_data.get("caption", f"Tonton sampai habis! #{channel_cfg.get('name', 'komedi')}"),
-                        "tags": meta_data.get("tags", ["lucu", "ngakak", "viral"]),
+                        "caption": meta_data.get("caption", f"Watch till the end! #{channel_cfg.get('name', 'comedy')}"),
+                        "tags": meta_data.get("tags", ["funny", "lmao", "viral"]),
                         "category_id": "23", # 23 = Comedy di YouTube
-                        "interactive_comment": meta_data.get("interactive_comment", "Kalian pernah ngalamin gini gak?"),
+                        "interactive_comment": meta_data.get("interactive_comment", "Have you ever experienced this?"),
                         "theme": "hunter_reposter"
                     }, f, indent=4)
                     
