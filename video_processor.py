@@ -77,10 +77,10 @@ def process_ffmpeg_reposter(input_path: str, watermark_text: str, output_path: s
     cmd = [
         "ffmpeg", "-y",
         "-i", input_path,
-        "-vf", f"drawtext=text='{watermark_text}':fontcolor=white@0.7:fontsize=36:x=30:y=H-th-80:box=1:boxcolor=black@0.3:boxborderw=5",
+        "-vf", f"eq=contrast=1.05:saturation=1.1,unsharp=5:5:1.0:5:5:0.0,drawtext=text='{watermark_text}':fontcolor=white@0.7:fontsize=36:x=30:y=H-th-80:box=1:boxcolor=black@0.3:boxborderw=5",
         "-af", "asetrate=44100*1.02,aresample=44100",
         "-c:v", "libx264",
-        "-crf", "23",
+        "-crf", "18",
         "-preset", "fast",
         "-c:a", "aac",
         "-b:a", "128k",
