@@ -147,8 +147,8 @@ jobs:
             echo "🍪 Berkas ig_cookies.txt berhasil dibuat dari GitHub Secrets (IG_COOKIES)"
           fi
           
-          # echo "🚀 Menjalankan pipeline untuk Komedi Hunter..."
-          # python app.py --channel komedihunter || echo "⚠️ Gagal di komedihunter, lanjut ke channel berikutnya..."
+          echo "🚀 Menjalankan pipeline untuk Komedi Hunter..."
+          python app.py --channel komedihunter || echo "⚠️ Gagal di komedihunter, lanjut ke channel berikutnya..."
           
           echo "🚀 Menjalankan pipeline untuk Ruang Pikir..."
           python app.py --channel ruangpikir || echo "⚠️ Gagal di ruangpikir, lanjut ke channel berikutnya..."
