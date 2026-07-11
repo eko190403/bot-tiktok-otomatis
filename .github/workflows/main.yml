@@ -128,8 +128,8 @@ jobs:
           GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
           GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          ENABLE_TIKTOK_UPLOAD: "true"
-          ENABLE_YOUTUBE_UPLOAD: "true"
+          ENABLE_TIKTOK_UPLOAD: "false"
+          ENABLE_YOUTUBE_UPLOAD: "false"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES1 }}
