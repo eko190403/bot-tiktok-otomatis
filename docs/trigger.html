@@ -1,114 +1,90 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruang Pikir - Video Generator Panel</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #1e293b; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); text-align: center; max-width: 400px; width: 90%; }
-        h1 { color: #38bdf8; font-size: 1.8rem; margin-bottom: 0.5rem; }
-        p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 2rem; }
-        input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        button { background: #0284c7; color: white; border: none; padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: background 0.2s; }
-        button:hover { background: #0369a1; }
-        #status { margin-top: 1rem; font-size: 0.9rem; font-weight: 500; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vio Video Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#f8fafc;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+.card{width:100%;max-width:420px;background:#1e293b;border-radius:16px;padding:30px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+h1{text-align:center;color:#38bdf8;margin-bottom:10px}
+p{text-align:center;color:#94a3b8;margin-bottom:25px;line-height:1.5}
+input{width:100%;padding:14px;border:none;outline:none;border-radius:10px;background:#0f172a;border:1px solid #334155;color:#fff;margin-bottom:15px}
+button{width:100%;padding:14px;border:none;border-radius:10px;background:#0284c7;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;}
+button.btn-hunter{background:#eab308;}
+button.btn-analytics{background:#10b981;}
+button:disabled{opacity:.6}
+#status{margin-top:18px;text-align:center;word-break:break-word}
+</style>
 </head>
 <body>
-    <div class="card">
-        <h1>Vio Video Generator</h1>
-        <p>Ketuk tombol di bawah untuk memicu pembuatan video TikTok Auto-Pilot langsung di GitHub Actions Cloud.</p>
-        
-        <input type="password" id="patToken" placeholder="Masukkan GitHub PAT Token (ghp_...)">
-        <button onclick="triggerPipeline()">🚀 GENERATE 5 CHANNEL AI</button>
-        <button onclick="triggerHunter()" style="background: #eab308; margin-top: 10px;">🔥 REPOST KOMEDI HUNTER</button>
-        <div id="status"></div>
-    </div>
+<div class="card">
+<h1>🎬 Vio Video Generator</h1>
+<p>Tekan tombol di bawah untuk menjalankan GitHub Actions dan membuat video TikTok secara otomatis.</p>
+<input type="password" id="patToken" placeholder="Masukkan GitHub Personal Access Token">
+<button id="runBtn" onclick="triggerPipeline()">🚀 GENERATE 5 CHANNEL AI</button>
+<button id="hunterBtn" class="btn-hunter" onclick="triggerHunter()">🔥 REPOST KOMEDI HUNTER</button>
+<button id="analyticsBtn" class="btn-analytics" onclick="triggerAnalytics()">📊 UPDATE ANALISIS PENONTON</button>
+<div id="status"></div>
+</div>
+<script>
+const OWNER="eko190403";
+const REPO="bot-tiktok-otomatis";
+const tokenInput=document.getElementById("patToken");
+const statusDiv=document.getElementById("status");
+const runBtn=document.getElementById("runBtn");
+const hunterBtn=document.getElementById("hunterBtn");
+const analyticsBtn=document.getElementById("analyticsBtn");
+tokenInput.value=localStorage.getItem("ghp_token")||"";
 
-    <script>
-        async function triggerPipeline() {
-            const token = document.getElementById('patToken').value.trim();
-            const statusDiv = document.getElementById('status');
-            
-            if(!token) {
-                statusDiv.style.color = '#ef4444';
-                statusDiv.innerText = "❌ Eror: Masukkan GitHub PAT Token kamu terlebih dahulu!";
-                return;
-            }
+async function sendRequest(event_type){
+ const token=tokenInput.value.trim();
+ if(!token){statusDiv.style.color="#ef4444";statusDiv.innerHTML="❌ Masukkan GitHub Personal Access Token.";return;}
+ localStorage.setItem("ghp_token",token);
+ runBtn.disabled=true;
+ hunterBtn.disabled=true;
+ analyticsBtn.disabled=true;
+ statusDiv.style.color="#38bdf8";
+ statusDiv.innerHTML="⏳ Mengirim perintah ke GitHub Actions...";
+ try{
+   const response=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/dispatches`,{
+     method:"POST",
+     headers:{
+       "Authorization":"Bearer "+token,
+       "Accept":"application/vnd.github+json",
+       "Content-Type":"application/json"
+     },
+     body:JSON.stringify({event_type:event_type})
+   });
+   if(response.status===204){
+     statusDiv.style.color="#22c55e";
+     statusDiv.innerHTML=`✅ Workflow <b>${event_type}</b> berhasil dipicu. Buka tab Actions di GitHub untuk melihat progres.`;
+   }else{
+     statusDiv.style.color="#ef4444";
+     statusDiv.innerHTML="❌ Error "+response.status+"<br>"+await response.text();
+   }
+ }catch(e){
+   statusDiv.style.color="#ef4444";
+   statusDiv.innerHTML="❌ "+e.message;
+ }
+ runBtn.disabled=false;
+ hunterBtn.disabled=false;
+ analyticsBtn.disabled=false;
+}
 
-            statusDiv.style.color = '#38bdf8';
-            statusDiv.innerText = "⏳ Menghubungi GitHub Actions...";
+function triggerPipeline() {
+  sendRequest("run-bot");
+}
 
-            const url = "https://api.github.com/repos/eko190403/bot-tiktok-otomatis/dispatches";
-            const payload = { event_type: "webhook_trigger" };
+function triggerHunter() {
+  sendRequest("run-hunter");
+}
 
-            try {
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `token ${token}`,
-                        "Accept": "application/vnd.github.v3+json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.status === 204) {
-                    statusDiv.style.color = '#4ade80';
-                    statusDiv.innerText = "🚀 SUKSES! GitHub Actions telah dibangunkan. 5 Video sedang dirender di awan!";
-                } else {
-                    const text = await response.text();
-                    statusDiv.style.color = '#ef4444';
-                    statusDiv.innerText = `❌ Gagal (${response.status}): ${text}`;
-                }
-            } catch (err) {
-                statusDiv.style.color = '#ef4444';
-                statusDiv.innerText = `❌ Kesalahan Koneksi: ${err.message}`;
-            }
-        }
-
-        async function triggerHunter() {
-            const token = document.getElementById('patToken').value.trim();
-            const statusDiv = document.getElementById('status');
-            
-            if(!token) {
-                statusDiv.style.color = '#ef4444';
-                statusDiv.innerText = "❌ Eror: Masukkan GitHub PAT Token kamu terlebih dahulu!";
-                return;
-            }
-
-            statusDiv.style.color = '#eab308';
-            statusDiv.innerText = "⏳ Menghubungi GitHub Actions (Hunter Mode)...";
-
-            const url = "https://api.github.com/repos/eko190403/bot-tiktok-otomatis/dispatches";
-            const payload = { event_type: "run-hunter" };
-
-            try {
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `token ${token}`,
-                        "Accept": "application/vnd.github.v3+json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.status === 204) {
-                    statusDiv.style.color = '#4ade80';
-                    statusDiv.innerText = "🔥 SUKSES! Mesin Komedi Hunter mulai menyedot video dari Drive!";
-                } else {
-                    const text = await response.text();
-                    statusDiv.style.color = '#ef4444';
-                    statusDiv.innerText = `❌ Gagal (${response.status}): ${text}`;
-                }
-            } catch (err) {
-                statusDiv.style.color = '#ef4444';
-                statusDiv.innerText = `❌ Kesalahan Koneksi: ${err.message}`;
-            }
-        }
-    </script>
+function triggerAnalytics() {
+  sendRequest("run-analytics");
+}
+</script>
 </body>
 </html>
 

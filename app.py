@@ -235,7 +235,11 @@ async def main():
                     def sanitize_comments_nlp(raw_comments):
                         sanitized = []
                         for c in raw_comments:
-                            text = c.get("text", "")
+                            if isinstance(c, dict):
+                                text = c.get("text", "")
+                            else:
+                                text = str(c)
+                            
                             words = text.split()
                             # Syarat 1: Minimal 3 kata agar ada konteks
                             if len(words) < 3:
