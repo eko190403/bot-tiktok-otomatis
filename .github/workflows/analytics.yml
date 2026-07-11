@@ -1,0 +1,76 @@
+name: Bot TikTok Analytics
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - run-analytics
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: bot-tiktok-analytics
+      cancel-in-progress: false
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Siapkan Kredensial YouTube dari Secret
+        env:
+          YT_CREDS_RUANGPIKIR: ${{ secrets.YT_CREDS_RUANGPIKIR }}
+          YT_CREDS_LOGIKASTOIK: ${{ secrets.YT_CREDS_LOGIKASTOIK }}
+          YT_CREDS_RAHASIAFINANSIAL: ${{ secrets.YT_CREDS_RAHASIAFINANSIAL }}
+          YT_CREDS_MISTERISEMESTA: ${{ secrets.YT_CREDS_MISTERISEMESTA }}
+          YT_CREDS_POLADISIPLIN: ${{ secrets.YT_CREDS_POLADISIPLIN }}
+        run: |
+          [ -n "$YT_CREDS_RUANGPIKIR" ] && echo "$YT_CREDS_RUANGPIKIR" > youtube_credentials_ruangpikir.json || true
+          [ -n "$YT_CREDS_LOGIKASTOIK" ] && echo "$YT_CREDS_LOGIKASTOIK" > youtube_credentials_logikastoik.json || true
+          [ -n "$YT_CREDS_RAHASIAFINANSIAL" ] && echo "$YT_CREDS_RAHASIAFINANSIAL" > youtube_credentials_rahasiafinansial.json || true
+          [ -n "$YT_CREDS_MISTERISEMESTA" ] && echo "$YT_CREDS_MISTERISEMESTA" > youtube_credentials_misterisemesta.json || true
+          [ -n "$YT_CREDS_POLADISIPLIN" ] && echo "$YT_CREDS_POLADISIPLIN" > youtube_credentials_poladisiplin.json || true
+
+      - name: Siapkan Akun Layanan Firebase dari Secret
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "$FIREBASE_SERVICE_ACCOUNT" > firebase_service_account.json
+          fi
+
+      - name: Jalankan Analisis Penonton (Semua Channel AI)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "📊 Menjalankan analisis untuk Ruang Pikir..."
+          python app.py --channel ruangpikir --analyze-only || true
+          
+          echo "📊 Menjalankan analisis untuk Logika Stoik..."
+          python app.py --channel logikastoik --analyze-only || true
+          
+          echo "📊 Menjalankan analisis untuk Rahasia Finansial..."
+          python app.py --channel rahasiafinansial --analyze-only || true
+          
+          echo "📊 Menjalankan analisis untuk Misteri Semesta..."
+          python app.py --channel misterisemesta --analyze-only || true
+          
+          echo "📊 Menjalankan analisis untuk Pola Disiplin..."
+          python app.py --channel poladisiplin --analyze-only || true

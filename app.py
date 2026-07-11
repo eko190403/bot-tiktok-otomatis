@@ -138,6 +138,7 @@ async def main():
     parser = argparse.ArgumentParser(description="Bot Video Auto Pipeline")
     parser.add_argument("--channel", default="ruangpikir", help="Channel ID dari config/channels.json")
     parser.add_argument("--force", action="store_true", help="Paksa jalankan pipeline meskipun baru saja upload")
+    parser.add_argument("--analyze-only", action="store_true", help="Hanya jalankan analisis komentar dan stats YouTube, lewati pembuatan video")
     args, unknown = parser.parse_known_args()
     channel_id = args.channel
 
@@ -261,6 +262,10 @@ async def main():
             print(f" Gagal menganalisis/membalas komentar video: {comment_err}")
 
 
+        # --- BATAS MODE ANALISIS ---
+        if args.analyze_only:
+            print(" 🛑 Mode --analyze-only aktif. Analisis selesai, menghentikan pipeline sebelum merender video.")
+            return
         
         # Lakukan import secara lokal di dalam fungsi untuk melacak jika eror berasal dari file import
         print(" Meng-import modul video_builder...")
