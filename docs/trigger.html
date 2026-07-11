@@ -21,7 +21,8 @@
         <p>Ketuk tombol di bawah untuk memicu pembuatan video TikTok Auto-Pilot langsung di GitHub Actions Cloud.</p>
         
         <input type="password" id="patToken" placeholder="Masukkan GitHub PAT Token (ghp_...)">
-        <button onclick="triggerPipeline()">🚀 GENERATE VIDEO</button>
+        <button onclick="triggerPipeline()">🚀 GENERATE 5 CHANNEL AI</button>
+        <button onclick="triggerHunter()" style="background: #eab308; margin-top: 10px;">🔥 REPOST KOMEDI HUNTER</button>
         <div id="status"></div>
     </div>
 
@@ -55,7 +56,48 @@
 
                 if (response.status === 204) {
                     statusDiv.style.color = '#4ade80';
-                    statusDiv.innerText = "🚀 SUKSES! GitHub Actions telah dibangunkan. Video sedang dirender di awan!";
+                    statusDiv.innerText = "🚀 SUKSES! GitHub Actions telah dibangunkan. 5 Video sedang dirender di awan!";
+                } else {
+                    const text = await response.text();
+                    statusDiv.style.color = '#ef4444';
+                    statusDiv.innerText = `❌ Gagal (${response.status}): ${text}`;
+                }
+            } catch (err) {
+                statusDiv.style.color = '#ef4444';
+                statusDiv.innerText = `❌ Kesalahan Koneksi: ${err.message}`;
+            }
+        }
+
+        async function triggerHunter() {
+            const token = document.getElementById('patToken').value.trim();
+            const statusDiv = document.getElementById('status');
+            
+            if(!token) {
+                statusDiv.style.color = '#ef4444';
+                statusDiv.innerText = "❌ Eror: Masukkan GitHub PAT Token kamu terlebih dahulu!";
+                return;
+            }
+
+            statusDiv.style.color = '#eab308';
+            statusDiv.innerText = "⏳ Menghubungi GitHub Actions (Hunter Mode)...";
+
+            const url = "https://api.github.com/repos/eko190403/bot-tiktok-otomatis/dispatches";
+            const payload = { event_type: "run-hunter" };
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `token ${token}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 204) {
+                    statusDiv.style.color = '#4ade80';
+                    statusDiv.innerText = "🔥 SUKSES! Mesin Komedi Hunter mulai menyedot video dari Drive!";
                 } else {
                     const text = await response.text();
                     statusDiv.style.color = '#ef4444';
