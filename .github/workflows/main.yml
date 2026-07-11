@@ -92,6 +92,7 @@ jobs:
           YT_CREDS_RAHASIAFINANSIAL: ${{ secrets.YT_CREDS_RAHASIAFINANSIAL }}
           YT_CREDS_MISTERISEMESTA: ${{ secrets.YT_CREDS_MISTERISEMESTA }}
           YT_CREDS_POLADISIPLIN: ${{ secrets.YT_CREDS_POLADISIPLIN }}
+          YT_CREDS_KOMEDIHUNTER: ${{ secrets.YT_CREDS_KOMEDIHUNTER }}
         run: |
           echo "Menyiapkan kredensial YouTube untuk semua channel..."
           [ -n "$YT_CREDS_RUANGPIKIR" ] && echo "$YT_CREDS_RUANGPIKIR" > youtube_credentials_ruangpikir.json || echo "⚠️ Secret YT_CREDS_RUANGPIKIR belum di-set"
@@ -99,6 +100,7 @@ jobs:
           [ -n "$YT_CREDS_RAHASIAFINANSIAL" ] && echo "$YT_CREDS_RAHASIAFINANSIAL" > youtube_credentials_rahasiafinansial.json || echo "⚠️ Secret YT_CREDS_RAHASIAFINANSIAL belum di-set"
           [ -n "$YT_CREDS_MISTERISEMESTA" ] && echo "$YT_CREDS_MISTERISEMESTA" > youtube_credentials_misterisemesta.json || echo "⚠️ Secret YT_CREDS_MISTERISEMESTA belum di-set"
           [ -n "$YT_CREDS_POLADISIPLIN" ] && echo "$YT_CREDS_POLADISIPLIN" > youtube_credentials_poladisiplin.json || echo "⚠️ Secret YT_CREDS_POLADISIPLIN belum di-set"
+          [ -n "$YT_CREDS_KOMEDIHUNTER" ] && echo "$YT_CREDS_KOMEDIHUNTER" > youtube_credentials_komedihunter.json || echo "⚠️ Secret YT_CREDS_KOMEDIHUNTER belum di-set"
 
       - name: Siapkan Akun Layanan Firebase dari Secret
         env:
