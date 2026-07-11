@@ -74,3 +74,12 @@ jobs:
           
           echo "📊 Menjalankan analisis untuk Pola Disiplin..."
           python app.py --channel poladisiplin --analyze-only || true
+
+      - name: Kirim Notifikasi Selesai ke Telegram
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=✅ Laporan: Update Analisis Penonton (Views & Insight Komentar) untuk 5 Channel AI telah selesai dijalankan!"
