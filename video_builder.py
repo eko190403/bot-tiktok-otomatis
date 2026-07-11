@@ -652,8 +652,9 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
             h_results, h_fallback, h_meta = await run_hunter_workflow(loop, channel_cfg, [], 0, "")
             if not h_fallback and h_results:
                 import shutil
+                os.makedirs("output", exist_ok=True)
                 processed_video = h_results[0]
-                final_output = os.path.join(DIR_TEMP, "final_video.mp4")
+                final_output = os.path.join("output", f"video_{channel_id}_{timestamp_suffix}.mp4")
                 shutil.copy2(processed_video, final_output)
                 
                 # Buat Caption dan Tag kilat pakai AI
