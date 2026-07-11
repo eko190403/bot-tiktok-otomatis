@@ -43,117 +43,101 @@ def json_cookies_to_netscape(json_filepath: str, netscape_filepath: str) -> bool
         logger.warning(f" Gagal mengonversi cookie JSON ke Netscape: {e}")
         return False
 
-def hunt_trending_video(target_subreddit: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
+def hunt_trending_video(drive_folder_url: str, download_dir: str = "data/raw_materials") -> Optional[Dict]:
     """
-    Memindai Subreddit target menggunakan PRAW untuk mendapatkan video komedi terbaik.
+    Mengunduh folder Google Drive publik yang berisi video mentah, mengecek ke Firebase,
+    dan memilih 1 video yang belum pernah diunggah.
     """
-    import subprocess
+    import gdown
     import random
-    import praw
-    import time
+    import shutil
+    import firebase_connector
     
     os.makedirs(download_dir, exist_ok=True)
     
-    for old_json in glob.glob(f"{download_dir}/*.info.json"):
+    # Bersihkan sisa unduhan sebelumnya
+    for f in glob.glob(f"{download_dir}/*"):
         try:
-            os.remove(old_json)
+            if os.path.isfile(f):
+                os.remove(f)
+            elif os.path.isdir(f):
+                shutil.rmtree(f)
         except Exception:
             pass
             
-    logger.info(f" 🕵️ Content Hunter memindai Subreddit target: 'r/{target_subreddit}'...")
+    logger.info(f" 🕵️ Content Hunter menyedot folder Google Drive: '{drive_folder_url}'...")
     
-    reddit_client_id = os.getenv("REDDIT_CLIENT_ID")
-    reddit_client_secret = os.getenv("REDDIT_CLIENT_SECRET")
-    
-    if not reddit_client_id or not reddit_client_secret:
-        logger.error(" ❌ Kredensial PRAW (REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET) belum dikonfigurasi di Environment Variable.")
-        return None
-        
     try:
-        reddit = praw.Reddit(
-            client_id=reddit_client_id,
-            client_secret=reddit_client_secret,
-            user_agent="KomediHunterBot:v1.0 (by /u/developer)"
-        )
-        
-        subreddit = reddit.subreddit(target_subreddit)
-        # Ambil 25 post terpanas
-        hot_posts = subreddit.hot(limit=25)
-        
-        videos = []
-        for post in hot_posts:
-            if hasattr(post, "is_video") and post.is_video and hasattr(post, "secure_media") and post.secure_media:
-                reddit_video = post.secure_media.get("reddit_video", {})
-                duration = reddit_video.get("duration", 0)
-                
-                if 15 <= duration <= 70:
-                    videos.append({
-                        "id": post.id,
-                        "title": post.title,
-                        "url": post.url,
-                        "duration": duration,
-                        "uploader": str(post.author),
-                        "score": post.score
-                    })
-                    
-        if not videos:
-            logger.error(f" ❌ Tidak ada post berformat Video dengan durasi 15-70s di r/{target_subreddit} saat ini.")
-            return None
-            
-        # Acak video untuk variasi
-        random.shuffle(videos)
-        selected_video = videos[0]
-        
+        # Unduh isi folder (gdown butuh URL folder atau ID)
+        gdown.download_folder(url=drive_folder_url, output=download_dir, quiet=False, use_cookies=False)
     except Exception as e:
-        logger.error(f" ❌ Gagal menarik data dari Reddit via PRAW: {e}")
+        logger.error(f" ❌ Gagal mengunduh folder Google Drive via gdown: {e}")
         return None
         
-    video_id = selected_video["id"]
-    uploader = selected_video["uploader"]
-    title = sanitize_title(selected_video["title"])
-    duration = selected_video["duration"]
-    webpage_url = selected_video["url"]
+    # Kumpulkan semua file MP4 yang berhasil diunduh (termasuk di dalam subfolder jika ada)
+    mp4_files = []
+    for root, dirs, files in os.walk(download_dir):
+        for file in files:
+            if file.lower().endswith('.mp4'):
+                mp4_files.append(os.path.join(root, file))
+                
+    if not mp4_files:
+        logger.error(f" ❌ Tidak ada file MP4 yang ditemukan di folder Google Drive tersebut.")
+        return None
+        
+    # Acak urutan pengecekan
+    random.shuffle(mp4_files)
     
-    filepath = os.path.join(download_dir, f"{video_id}.mp4")
+    selected_filepath = None
+    video_id = None
+    
+    for filepath in mp4_files:
+        # Gunakan nama file tanpa ekstensi sebagai ID (sekaligus deskripsi kejadian)
+        filename = os.path.basename(filepath)
+        basename = os.path.splitext(filename)[0]
+        
+        # Cek ke Firebase apakah ID/nama file ini sudah pernah dipakai
+        if not firebase_connector.is_clip_used(basename):
+            selected_filepath = filepath
+            video_id = basename
+            break
+            
+    if not selected_filepath:
+        logger.warning(f" ⚠️ Semua {len(mp4_files)} video di folder Drive sudah pernah dipakai! Mengambil file acak pertama sebagai fallback (MUNGKIN DUPLIKAT).")
+        selected_filepath = mp4_files[0]
+        filename = os.path.basename(selected_filepath)
+        video_id = os.path.splitext(filename)[0]
+        
+    # Tandai akan dipakai (masuk antrean memori)
+    firebase_connector.mark_clip_used(video_id)
+    
+    # Pindahkan ke root download_dir agar mudah diakses
+    final_filepath = os.path.join(download_dir, f"{video_id}.mp4")
+    if selected_filepath != final_filepath:
+        shutil.move(selected_filepath, final_filepath)
+        
     info_path = os.path.join(download_dir, f"{video_id}.info.json")
     
-    logger.info(f" 📥 Mengunduh video Reddit: {video_id} dari u/{uploader} (Score: {selected_video['score']})")
+    # Judul/Caption didasarkan pada nama file yang ditulis oleh pengguna (ganti underscore dengan spasi)
+    title = video_id.replace("_", " ").title()
     
-    dl_cmd = [
-        "yt-dlp",
-        webpage_url,
-        "-o", filepath,
-        "--no-warnings"
-    ]
-    
-    try:
-        # Delay sopan (Nana's Advice)
-        time.sleep(4)
-        subprocess.run(dl_cmd, capture_output=True, timeout=120)
-    except Exception as e:
-        logger.error(f" ❌ Error eksekusi yt-dlp untuk Reddit: {e}")
-        
-    if not os.path.exists(filepath):
-        logger.error(" ❌ Gagal mengunduh file MP4 video Reddit.")
-        return None
-        
     metadata = {
         "id": video_id,
         "ext": "mp4",
-        "uploader": uploader,
+        "uploader": "google_drive",
         "title": title,
-        "duration": duration,
-        "source": "reddit"
+        "duration": 0, # Durasi tidak diketahui dari gdown, abaikan saja
+        "source": "google_drive"
     }
     with open(info_path, 'w', encoding='utf-8') as f:
         json.dump(metadata, f)
         
-    logger.info(f" ✅ Target terkunci! Video Reddit diunduh dari r/{target_subreddit} | u/{uploader} | Durasi: {duration}s")
+    logger.info(f" ✅ Target terkunci! Video '{title}' dipilih dari Drive.")
     return {
-        "filepath": filepath,
-        "uploader": uploader,
+        "filepath": final_filepath,
+        "uploader": "google_drive",
         "title": title,
-        "duration": duration,
+        "duration": 0,
         "id": video_id,
         "metadata": metadata
     }

@@ -548,36 +548,38 @@ async def run_retention_with_fallback(loop, retention_keyword: str, keywords: li
     return results, False
 
 async def run_hunter_workflow(loop, channel_cfg: dict, keywords: list, target_count: int, aesthetic_style: str) -> tuple:
-    """Mengeksekusi workflow Content Hunter V2.2 (Sebab-Akibat)"""
-    import random
+    """Mengeksekusi workflow Reposter V3 (Google Drive + FFmpeg Bypass)"""
     from content_hunter import hunt_trending_video
-    from video_processor import process_hunter_video
     
     try:
-        target_accounts = channel_cfg.get("target_subreddits", ["funny"])
-        target_subreddit = random.choice(target_accounts)
-        
-        # 1. Hunt Video Mentah
+        # Default placeholder, akan diabaikan jika tidak diatur di JSON
+        drive_folder_url = channel_cfg.get("drive_folder_url", "")
+        if not drive_folder_url or drive_folder_url == "MASUKKAN_LINK_GOOGLE_DRIVE_DISINI":
+            logger.error(" ❌ drive_folder_url belum diatur di channels.json!")
+            return [], True, None
+            
+        # 1. Unduh Video dari Drive & Cek Firebase
         def do_hunt():
-            return hunt_trending_video(target_subreddit)
+            return hunt_trending_video(drive_folder_url)
             
         hunt_res = await loop.run_in_executor(None, do_hunt)
         if not hunt_res:
-            logger.warning(" Hunter gagal mendapatkan video. Membatalkan mode Hunter.")
+            logger.warning(" Hunter gagal mendapatkan video dari Drive. Membatalkan eksekusi.")
             return [], True, None
             
         raw_filepath = hunt_res["filepath"]
-        uploader = hunt_res["uploader"]
         
-        processed_filepath = raw_filepath.replace(".mp4", "_processed.mp4")
+        processed_filepath = raw_filepath.replace(".mp4", "_ffmpeg_processed.mp4")
+        watermark_text = f"@{channel_cfg.get('name', 'komedihunter')}"
         
-        # 2. Proses Visual (Fair Use)
+        # 2. Proses Visual Cepat (FFmpeg Bypass)
         def do_process():
-            return process_hunter_video(raw_filepath, uploader, processed_filepath)
+            from video_processor import process_ffmpeg_reposter
+            return process_ffmpeg_reposter(raw_filepath, watermark_text, processed_filepath)
             
         proc_res = await loop.run_in_executor(None, do_process)
         if not proc_res:
-            logger.warning(" Processor gagal memodifikasi video. Membatalkan mode Hunter.")
+            logger.warning(" FFmpeg gagal memodifikasi video. Membatalkan mode Reposter.")
             return [], True, None
             
         return [processed_filepath], False, hunt_res
@@ -645,19 +647,43 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
         bg_type = channel_cfg.get("background_type", "pexels")
         
         if bg_type == "hunter":
-            logger.info(" Mode Hunter: Menonaktifkan cache naskah agar script spesifik dengan video.")
-            draft_script_path += ".ignored"
-            
-            logger.info(" Mode Hunter: Mengunduh video mentah terlebih dahulu untuk konteks Gemini...")
+            logger.info(" Mode Hunter (Reposter): Mem-bypass seluruh proses AI Voice dan MoviePy.")
             loop = asyncio.get_running_loop()
             h_results, h_fallback, h_meta = await run_hunter_workflow(loop, channel_cfg, [], 0, "")
             if not h_fallback and h_results:
-                video_files = h_results
-                if h_meta:
-                    channel_cfg["hunter_context"] = f"Judul Video Asli: '{h_meta.get('title', 'Unknown')}' oleh {h_meta.get('uploader', 'Unknown')}."
-                    logger.info(" Konteks Hunter diinjeksikan ke Prompt Gemini: %s", channel_cfg["hunter_context"])
+                import shutil
+                processed_video = h_results[0]
+                final_output = os.path.join(DIR_TEMP, "final_video.mp4")
+                shutil.copy2(processed_video, final_output)
+                
+                # Buat Caption dan Tag kilat pakai AI
+                filename_context = h_meta.get("title", "video lucu")
+                prompt = f"""Buatkan caption pendek lucu dan viral untuk TikTok/YouTube Shorts berdasarkan konteks kejadian ini: '{filename_context}'.
+Berikan output JSON murni tanpa markdown: {{"caption": "teks caption menarik pakai hashtag", "tags": ["lucu", "ngakak", "fyp"], "interactive_comment": "pertanyaan pancingan komen buat penonton?"}}"""
+                try:
+                    meta_res = await call_gemini_with_retry(prompt, is_json=True)
+                    meta_data = json.loads(meta_res)
+                except Exception as e:
+                    logger.warning(f" Gagal meng-generate caption AI, fallback ke default: {e}")
+                    meta_data = {
+                        "caption": f"Tonton sampai habis! #{channel_cfg.get('name', 'komedi')} #ngakak", 
+                        "tags": ["lucu", "ngakak", "viral"], 
+                        "interactive_comment": "Kalian pernah ngalamin gini gak?"
+                    }
+                
+                with open(os.path.join(DIR_TEMP, "video_metadata.json"), "w", encoding="utf-8") as f:
+                    json.dump({
+                        "caption": meta_data.get("caption", f"Tonton sampai habis! #{channel_cfg.get('name', 'komedi')}"),
+                        "tags": meta_data.get("tags", ["lucu", "ngakak", "viral"]),
+                        "category_id": "23", # 23 = Comedy di YouTube
+                        "interactive_comment": meta_data.get("interactive_comment", "Kalian pernah ngalamin gini gak?"),
+                        "theme": "hunter_reposter"
+                    }, f, indent=4)
+                    
+                logger.info(" ✅ Reposter selesai. Video siap diunggah.")
+                return True
             else:
-                logger.error(" Mode Hunter gagal mengunduh video mentah. Membatalkan eksekusi untuk channel ini agar tidak menghabiskan kuota API Gemini untuk naskah kosong.")
+                logger.error(" Mode Reposter gagal mengunduh atau memproses video dari Drive.")
                 return False
         
         # 1. Cek naskah di cache
