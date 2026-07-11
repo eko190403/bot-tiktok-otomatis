@@ -333,7 +333,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         )
         logger.info(" A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang mengejutkan, provokatif, dan membuat penonton TERPAKSA berhenti scroll. Maks 10 kata. STRATEGI WAJIB: Gunakan taktik 'Negative Hook' (menargetkan rasa sakit psikologis). WAJIB: Pecah Hook menjadi dua bagian menggunakan tanda baca (koma atau tanda tanya) agar ada jeda napas yang natural (Contoh: 'SUSAH BILANG TIDAK? MEREKA AKAN MENGINJAKMU'). JANGAN buat satu kalimat panjang tanpa tanda baca! HINDARI Hook filosofis, teatrikal, atau kaku. Gunakan bahasa percakapan santai. SANGAT PENTING: JANGAN gunakan pola repetitif ('TAHUKAH KAMU').\n"
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang EKSTREM, SANGAT PROVOKATIF, atau MELAWAN LOGIKA UMUM untuk menjebak otak penonton (Pattern Interrupt) di 3 detik pertama. Maks 10 kata. STRATEGI WAJIB: Gunakan 'Controversial/Negative Hook' (Contoh: 'JANGAN PERNAH BANGUN PAGI JIKA INGIN SUKSES!'). WAJIB pecah menggunakan tanda baca (, atau ?) agar ada jeda napas natural. JANGAN buat kalimat kaku atau repetitif ('Tahukah kamu').\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
@@ -388,7 +388,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     else:
         guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
         story_rule = "2. 'story': Penjelasan mendalam yang emosional, menggunakan angka/statistik spesifik (misal '93% orang tidak sadar'), analogi sederhana, dan membangun rasa penasaran. MINIMAL 4 kalimat, MAKSIMAL 6 kalimat. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 110 kata. Gunakan tanda baca koma (,) dan titik (.) secara natural sesuai tata bahasa baku agar AI dapat membaca dengan ritme dan tempo kecepatan yang normal.\n"
-        cta_rule = "3. 'cta': Ajakan bertindak (Maksimal 15 kata). SANGAT PENTING: Kalimat CTA harus dirancang khusus agar ujung akhirnya menjadi awalan kalimat yang masuk akal jika langsung bersambung ke kata pertama HOOK. JANGAN MENGULANG kata-kata dari Hook ke CTA! VARIASIKAN GAYA BAHASA CTA (jangan melulu pakai kata 'mulai sekarang', 'itulah kenapa', atau 'maka dari itu'). Gunakan pendekatan berbeda-beda (misal: mempertanyakan balik, menantang, atau sarkas) asalkan ujungnya tetap nyambung secara gramatikal ke Hook saat dilooping. JANGAN menaruh elipsis (...) di akhir CTA, biarkan mengakhiri dengan titik biasa.\n"
+        cta_rule = "3. 'cta': Ajakan bertindak (Maks 15 kata). SANGAT PENTING: CTA HARUS berupa 1 pertanyaan KONTROVERSIAL atau memecah belah opini penonton untuk memaksa mereka berdebat di kolom komentar (Engagement Farm)! (Contoh: 'Kamu tim setuju atau nolak keras soal ini?'). Syarat mutlak: Ujung akhir CTA harus menjadi awalan yang logis saat bersambung kembali ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n"
         
         prompt = (
             f"{system_prompt}"
