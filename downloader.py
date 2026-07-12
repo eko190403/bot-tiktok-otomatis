@@ -180,12 +180,15 @@ def download_video_clips(keywords: list, target_count: int = 4, aesthetic_style:
         if clip_idx >= target_count:
             break
             
-        # Poin 1: Sinkronisasi Gaya Visual Estetik (Aesthetic Matching)
-        aesthetic_query = f"{kw} {aesthetic_style}" if aesthetic_style else kw
+        # Poin 1: Pencarian Akurat Berdasarkan Objek Fisik
+        # HAPUS penggabungan dengan aesthetic_style karena string aesthetic yang panjang (misal: "deep ocean dark cinematic") 
+        # akan merusak pencarian Pexels dan mengabaikan objek aslinya.
+        aesthetic_query = kw
         videos = search_multi_source(aesthetic_query, per_page=15)
         if not videos:
-            # Fallback ke keyword murni jika pencarian estetik tidak mengembalikan video
-            videos = search_multi_source(kw, per_page=15)
+            # Fallback jika tidak ketemu, coba hilangkan kata sifat (ambil kata benda terakhir)
+            fallback_kw = kw.split()[-1] if len(kw.split()) > 1 else kw
+            videos = search_multi_source(fallback_kw, per_page=15)
             
         if not videos:
             continue
