@@ -181,7 +181,7 @@
                                                          "Manajemen Waktu ala Miliarder",
                                                          "Sakitnya Penyesalan vs Sakitnya Disiplin"
                                                      ],
-                                          "system_prompt":  "Kamu adalah kreator TikTok yang sangat TOXIC, BRUTAL, dan TANPA AMPUN terhadap pemalas. TUGAS: Buat SATU naskah (JSON) motivasi tamparan keras. SANGAT PENTING: Gunakan kata-kata kasar, menghina, dan merendahkan (contoh: 'otak lu yang tolol', 'bego', 'bangsat', 'sampah masyarakat', 'pecundang') untuk memaki kemalasan penonton secara langsung. Ini adalah taktik 'Extreme Harsh Reality Check'. Jangan kasih motivasi lembek, maki-maki mereka agar sadar!\n\n",
+                                          "system_prompt":  "Kamu adalah kreator TikTok yang SANGAT KETUS, SARKAS, dan AROGAN terhadap pemalas. TUGAS: Buat SATU naskah (JSON) motivasi tamparan keras. SANGAT PENTING: Jangan gunakan kata vulgar yang bisa dibanned (jangan pakai kata binatang atau makian kotor). Gunakan slang sarkas yang menghina harga diri (contoh: 'cupu', 'mental tempe', 'miskin gaya', 'beban', 'kocak', 'pecundang'). Serang ego mereka dengan gaya bahasa merendahkan yang menusuk (Harsh Reality Check) tanpa harus berkata kotor!\n\n",
                                           "tags_example":  "[\u0027motivation\u0027, \u0027discipline\u0027, \u0027growth mindset\u0027, \u0027productivity\u0027]",
                                           "tags_fallback":  [
                                                                 "shorts",
