@@ -75,6 +75,11 @@
     function renderKPICards(docs) {
       const totalViews = docs.reduce((a, d) => a + (d.views || 0), 0);
       const totalLikes = docs.reduce((a, d) => a + (d.likes || 0), 0);
+      
+      const docsWithDropoff = docs.filter(d => d.drop_off_second && d.drop_off_second > 0);
+      const totalDropoff = docsWithDropoff.reduce((a, d) => a + d.drop_off_second, 0);
+      const avgDropOff = docsWithDropoff.length > 0 ? (totalDropoff / docsWithDropoff.length).toFixed(1) : 0;
+      
       const topVideo = docs[0];
       const topViews = topVideo ? (topVideo.views || 0) : 0;
       const avgViews = docs.length > 0 ? Math.round(totalViews / docs.length) : 0;
@@ -83,7 +88,7 @@
       document.getElementById("kpi-total-views").textContent = totalViews.toLocaleString("id-ID");
       document.getElementById("kpi-total-likes").textContent = totalLikes.toLocaleString("id-ID");
       document.getElementById("kpi-avg-views").textContent = avgViews.toLocaleString("id-ID");
-      document.getElementById("kpi-top-views").textContent = topViews.toLocaleString("id-ID");
+      document.getElementById("kpi-avg-dropoff").textContent = avgDropOff + "s";
     }
 
     function renderTopVideosChart(docs) {
@@ -121,6 +126,53 @@
           scales: {
             x: { ticks: { color: "#9ca3af", maxRotation: 30, font: { family: "'Outfit', sans-serif" } }, grid: { color: "rgba(255,255,255,0.03)" } },
             y: { ticks: { color: "#9ca3af", font: { family: "'Outfit', sans-serif" } }, grid: { color: "rgba(255,255,255,0.03)" } }
+          },
+          animation: { duration: 800, easing: "easeOutQuart" }
+        }
+      });
+      
+      renderScatterChart(docs);
+    }
+    
+    let chartScatterInstance = null;
+    function renderScatterChart(docs) {
+      const scatterData = docs.filter(d => d.drop_off_second && d.drop_off_second > 0).map(d => ({
+        x: d.drop_off_second,
+        y: d.views || 0,
+        caption: d.caption || ""
+      }));
+      
+      const ctx = document.getElementById("chart-scatter-retention").getContext("2d");
+      if (chartScatterInstance) chartScatterInstance.destroy();
+      
+      chartScatterInstance = new Chart(ctx, {
+        type: "scatter",
+        data: {
+          datasets: [{
+            label: "Views vs Drop-off (s)",
+            data: scatterData,
+            backgroundColor: "rgba(52, 199, 89, 0.7)",
+            borderColor: "#34c759",
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return `Drop: ${ctx.raw.x}s | Views: ${ctx.raw.y.toLocaleString('id-ID')}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Drop-off Second (s)', color: "#9ca3af" }, ticks: { color: "#9ca3af" }, grid: { color: "rgba(255,255,255,0.03)" } },
+            y: { title: { display: true, text: 'Views', color: "#9ca3af" }, ticks: { color: "#9ca3af" }, grid: { color: "rgba(255,255,255,0.03)" } }
           },
           animation: { duration: 800, easing: "easeOutQuart" }
         }
@@ -163,6 +215,8 @@
       docs.slice(0, 20).forEach(d => {
         const tr = document.createElement("tr");
         const caption = d.caption || d.video_id || "-";
+        const hook = d.hook || "-";
+        const dropoff = d.drop_off_second ? d.drop_off_second + "s" : "-";
         const views = (d.views || 0).toLocaleString("id-ID");
         const likes = (d.likes || 0).toLocaleString("id-ID");
         const theme = d.theme || "-";
@@ -171,7 +225,9 @@
         const ytId = d.platform_video_id || null;
         tr.innerHTML = `
           <td class="td-caption" title="${caption}">${caption.length > 50 ? caption.substring(0, 50) + "..." : caption}</td>
+          <td class="td-caption" title="${hook}" style="color: #cbd5e1; font-style: italic;">${hook.length > 40 ? hook.substring(0, 40) + "..." : hook}</td>
           <td class="td-channel"><span class="badge-channel">${channel}</span></td>
+          <td class="td-num" style="color: #34c759;">${dropoff}</td>
           <td class="td-num">${views}</td>
           <td class="td-num">${likes}</td>
           <td><span class="theme-badge theme-${theme}">${theme}</span></td>
@@ -277,14 +333,20 @@
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">Video Dipublikasi</div><div class="kpi-value" id="kpi-total-videos">-</div></div>
         <div class="kpi-card"><div class="kpi-label">Total Penayangan (Views)</div><div class="kpi-value" id="kpi-total-views">-</div></div>
-        <div class="kpi-card"><div class="kpi-label">Total Suka (Likes)</div><div class="kpi-value" id="kpi-total-likes">-</div></div>
         <div class="kpi-card"><div class="kpi-label">Rata-rata Penayangan</div><div class="kpi-value" id="kpi-avg-views">-</div></div>
-        <div class="kpi-card"><div class="kpi-label">Penayangan Tertinggi</div><div class="kpi-value" id="kpi-top-views">-</div></div>
+        <div class="kpi-card" style="border-color: rgba(52, 199, 89, 0.3);"><div class="kpi-label" style="color: #34c759;">Avg Drop-off Time</div><div class="kpi-value" id="kpi-avg-dropoff">-</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total Suka (Likes)</div><div class="kpi-value" id="kpi-total-likes">-</div></div>
       </div>
 
-      <div class="chart-full">
-        <div class="chart-card-title">Top 10 Video Berperforma Tinggi</div>
-        <div class="chart-full-container"><canvas id="chart-top-videos"></canvas></div>
+      <div class="charts-row">
+        <div class="chart-full">
+          <div class="chart-card-title">Top 10 Video Berperforma Tinggi</div>
+          <div class="chart-full-container"><canvas id="chart-top-videos"></canvas></div>
+        </div>
+        <div class="chart-full" style="border-color: rgba(52, 199, 89, 0.2);">
+          <div class="chart-card-title" style="color: #34c759;">Korelasi Views vs Drop-off Second</div>
+          <div class="chart-full-container"><canvas id="chart-scatter-retention"></canvas></div>
+        </div>
       </div>
 
       <p class="section-title">Analisis Tematik Visual</p>
@@ -298,7 +360,7 @@
         <div class="table-header">20 Publikasi Teratas berdasarkan Views</div>
         <div style="overflow-x:auto">
           <table>
-            <thead><tr><th>Naskah (Caption)</th><th>Channel</th><th>Views</th><th>Likes</th><th>Estetika Visual</th><th>Platform</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Naskah (Caption)</th><th>Hook Awal (A/B Test)</th><th>Channel</th><th>Drop-off</th><th>Views</th><th>Likes</th><th>Estetika Visual</th><th>Platform</th><th>Aksi</th></tr></thead>
             <tbody id="table-body"></tbody>
           </table>
         </div>
