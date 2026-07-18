@@ -333,7 +333,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         )
         logger.info(" A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang SANGAT TOXIC, MERENDAHKAN, atau ME-ROASTING PENONTON SECARA LANGSUNG untuk menjebak otak mereka (Pattern Interrupt) di 3 detik pertama. Maks 10 kata. STRATEGI WAJIB: Serang kelemahan mereka dengan sapaan kasar (Contoh: 'LU MASIH MISKIN KARENA OTAK LU KOSONG!'). WAJIB pecah menggunakan tanda baca (, atau ?) agar ada jeda napas natural. JANGAN buat kalimat kaku atau repetitif ('Tahukah kamu').\n"
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang PROVOKATIF, MEMIKIRKAN, dan MEMBUAT PENASARAN (Pattern Interrupt) di 3 detik pertama. Maks 10 kata. STRATEGI WAJIB: DILARANG KERAS menggunakan kata kasar, celaan, atau makian kotor. Buat hook cerdas yang menyengat rasa ingin tahu (Contoh: '93% OTAK MANUSIA TERNYATA BISA DIMANIPULASI TANPA SADAR'). WAJIB pecah menggunakan tanda baca (, atau ?) agar ada jeda napas natural. JANGAN buat kalimat kaku atau repetitif ('Tahukah kamu').\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 

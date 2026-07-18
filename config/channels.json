@@ -1,238 +1,238 @@
 {
-    "channels":  {
-                     "ruangpikir":  {
-                                        "name":  "Ruang Pikir",
-                                        "niche":  "dark psychology and human behavior secrets",
-                                        "watermark":  "@RuangPikir",
-                                        "aesthetic_query":  "dark cinematic cold moody tone psychological surreal hypnotic deep ocean",
-                                        "voice_id":  "id-ID-ArdiNeural",
-                                        "voice_rate":  "+5%",
-                                        "voice_pitch":  "-2Hz",
-                                        "theme_color":  "classic_yellow",
-                                        "background_type":  "pexels",
-                                        "retention_keyword":  "dark cinematic cold moody tone psychological surreal hypnotic deep ocean",
-                                        "themes":  [
-                                                       "Fakta Psikologi Menarik",
-                                                       "Dark Psychology (Trik/Manipulasi)",
-                                                       "Efek/Bias Psikologis dalam Kehidupan",
-                                                       "Fakta Mind-Blowing Otak Manusia",
-                                                       "Paradoks Psikologi \u0026 Realita",
-                                                       "Fakta Unik Hubungan \u0026 Interaksi Sosial",
-                                                       "Bahasa Tubuh \u0026 Rahasia Perilaku Manusia"
-                                                   ],
-                                        "angles":  [
-                                                       "Sains Otak \u0026 Dopamin (Medis/Neuroscience)",
-                                                       "Sejarah Kuno yang Kelam (Kisah Masa Lalu)",
-                                                       "Kehidupan Asmara Gen-Z (Toxic Relationship)",
-                                                       "Tekanan Dunia Kerja/Karir (Corporate Slave)",
-                                                       "Analogi Hewan Liar (Predator vs Mangsa)",
-                                                       "Kehidupan Pertemanan (Fake Friends/Circle)"
-                                                   ],
-                                        "system_prompt":  "Kamu adalah 'Si Manipulator Dingin' (Gaslighter) di TikTok. TUGAS: Buat SATU naskah (JSON) psikologi gelap. SANGAT PENTING: Jangan teriak/memaki terang-terangan. Gunakan nada creepy, menusuk, dan seolah tahu rahasia tergelap penonton. (Contoh: 'Lu mikir lu pinter karena punya banyak temen? Padahal lu cuma lagi dimanfaatin. Kasihan banget hidup lu gampang disetir'). Buat penonton overthinking dan merasa tersudut.\n\n",
-                                        "tags_example":  "[\u0027psychology facts\u0027, \u0027dark psychology\u0027, \u0027manipulasi\u0027, \u0027mindset\u0027]",
-                                        "tags_fallback":  [
-                                                              "shorts",
-                                                              "faktapsikologi",
-                                                              "mindset",
-                                                              "ruangpikir"
-                                                          ],
-                                        "lead_magnet_url":  "https://linktr.ee/ruangpikir",
-                                        "lead_magnet_copy":  "👉 Baca E-Book Gratis \u0027Seni Membaca Pikiran\u0027: https://linktr.ee/ruangpikir"
-                                    },
-                     "logikastoik":  {
-                                         "name":  "Logika Stoik",
-                                         "niche":  "stoicism philosophy, mental toughness, and ancient wisdom",
-                                         "watermark":  "@LogikaStoik",
-                                         "aesthetic_query":  "ancient greek roman statue warm dramatic lighting vintage cinematic calm nature mountain storm ocean",
-                                         "voice_id":  "id-ID-ArdiNeural",
-                                         "voice_rate":  "+5%",
-                                         "voice_pitch":  "-4Hz",
-                                         "theme_color":  "classic_yellow",
-                                         "background_type":  "pexels",
-                                         "retention_keyword":  "ancient greek roman statue warm dramatic lighting vintage cinematic calm nature mountain storm ocean",
-                                         "themes":  [
-                                                        "Stoikisme (Filosofi Teras)",
-                                                        "Ketangguhan Mental (Mental Toughness)",
-                                                        "Mengendalikan Emosi \u0026 Reaksi",
-                                                        "Filsafat Marcus Aurelius",
-                                                        "Kebijaksanaan Kuno untuk Hidup Modern",
-                                                        "Cara Menerima Keadaan (Amor Fati)",
-                                                        "Melepaskan Ego"
-                                                    ],
-                                         "angles":  [
-                                                        "Filosofi Ksatria/Prajurit Kuno (Spartan/Gladiator)",
-                                                        "Seni Bertahan dari Hinaan (Bullying/Netizen)",
-                                                        "Ketenangan di Tengah Badai (Chaos Dunia Modern)",
-                                                        "Ekspektasi vs Realita (Kekecewaan Hidup)",
-                                                        "Paradoks Mengejar Kebahagiaan"
-                                                    ],
-                                         "system_prompt":  "Kamu adalah 'Si Arogan yang Dingin' (The Cold Critic) ahli Stoikisme. TUGAS: Buat SATU naskah (JSON). SANGAT PENTING: Remehkan orang yang baperan, playing victim, atau cengeng. Jangan pakai kata kasar, tapi sangat merendahkan mentalitas mereka. (Contoh: 'Cuma gara-gara diomongin orang aja lu sampai nangis seharian? Lemah banget mental lu. Dunia nggak peduli sama perasaan lu.'). Berikan tamparan realita yang ego-crushing.\n\n",
-                                         "tags_example":  "[\u0027stoicism\u0027, \u0027filosofiteras\u0027, \u0027mindset\u0027, \u0027mentaltoughness\u0027]",
-                                         "tags_fallback":  [
-                                                               "shorts",
-                                                               "stoikisme",
-                                                               "filosofi",
-                                                               "mindset"
-                                                           ],
-                                         "lead_magnet_url":  "https://linktr.ee/logikastoik",
-                                         "lead_magnet_copy":  "👉 Unduh PDF \u002710 Aturan Emas Stoikisme\u0027: https://linktr.ee/logikastoik"
-                                     },
-                     "rahasiafinansial":  {
-                                              "name":  "Rahasia Finansial",
-                                              "niche":  "money mindset, wealth building secrets, and high performance habits",
-                                              "watermark":  "@RahasiaFinansial",
-                                              "aesthetic_query":  "luxury dark modern office skyline moody business slow motion money vault gold",
-                                              "voice_id":  "id-ID-GadisNeural",
-                                              "voice_rate":  "+10%",
-                                              "voice_pitch":  "+0Hz",
-                                              "theme_color":  "neon_green",
-                                              "background_type":  "pexels",
-                                              "retention_keyword":  "luxury dark modern office skyline moody business slow motion money vault gold",
-                                              "themes":  [
-                                                             "Kebiasaan Finansial Orang Kaya",
-                                                             "Mindset Uang \u0026 Kelimpahan",
-                                                             "Aturan Finansial 50/30/20",
-                                                             "Cara Kerja Inflasi Secara Sederhana",
-                                                             "Investasi Leher ke Atas",
-                                                             "Kesalahan Keuangan di Usia 20-an",
-                                                             "Pentingnya Dana Darurat",
-                                                             "Rahasia Bebas Finansial (Financial Freedom)"
-                                                         ],
-                                              "angles":  [
-                                                             "Kesalahan Finansial Umur 20-an",
-                                                             "Mental Miskin vs Mental Kaya (Mindset Perbandingan)",
-                                                             "Jebakan Gaya Hidup (Flexing/Pinjol)",
-                                                             "Realita Sandwich Generation (Beban Keluarga)",
-                                                             "Seni Menggandakan Uang (Investasi Leher Ke Atas)"
-                                                         ],
-                                              "system_prompt":  "Kamu adalah 'Orang Kaya yang Sombong & Sarkas' (The Elitist). TUGAS: Buat SATU naskah (JSON) keuangan. SANGAT PENTING: Rendahkan, pamer (flexing), dan ejek kemiskinan serta gaya hidup boros penonton dengan gaya tongkrongan. (Contoh: 'Gaji UMR tapi gaya lu sok sultan tiap weekend? Pantesan saldo ATM lu isinya angin doang. Sini gue ajarin biar lu nggak miskin permanen.'). Pancing hate-comment!\n\n",
-                                              "tags_example":  "[\u0027personal finance\u0027, \u0027investing\u0027, \u0027money habits\u0027, \u0027financial freedom\u0027]",
-                                              "tags_fallback":  [
-                                                                    "shorts",
-                                                                    "keuangan",
-                                                                    "investasi",
-                                                                    "mindsetuang"
-                                                                ],
-                                              "lead_magnet_url":  "https://linktr.ee/rahasiafinansial",
-                                              "lead_magnet_copy":  "👉 Cek Checklist Keuangan Umur 20an: https://linktr.ee/rahasiafinansial"
-                                          },
-                     "misterisemesta":  {
-                                            "name":  "Teori Gila \u0026 Fakta Random",
-                                            "niche":  "shower thoughts, crazy conspiracy theories, reddit storytime, random facts",
-                                            "watermark":  "@TeoriGila",
-                                            "aesthetic_query":  "deep ocean thalassophobia space galaxy dark mysterious creepy fog night glitch abstract shadow cinematic",
-                                            "voice_id":  "id-ID-ArdiNeural",
-                                            "voice_rate":  "+5%",
-                                            "voice_pitch":  "+2Hz",
-                                            "theme_color":  "cyberpunk_pink",
-                                            "background_type":  "pexels",
-                                            "retention_keyword":  "deep ocean thalassophobia space galaxy dark mysterious creepy fog night glitch abstract shadow cinematic",
-                                            "themes":  [
-                                                           "Shower Thoughts (Pemikiran Random yang Bikin Overthinking)",
-                                                           "Teori Konspirasi Paling Gila yang Masuk Akal",
-                                                           "Fakta Random yang Merusak Masa Kecilmu",
-                                                           "Glitch in the Matrix (Kejadian Aneh Dunia Nyata)",
-                                                           "Urban Legend Singkat Menyeramkan",
-                                                           "Misteri Semesta yang Belum Terpecahkan"
-                                                       ],
-                                            "angles":  [
-                                                           "Konspirasi yang Ternyata Benar",
-                                                           "Phobia \u0026 Ketakutan Bawah Sadar (Thalassophobia dll)",
-                                                           "Kejadian Glitch in the Matrix yang Pernah Terjadi",
-                                                           "Paradoks Waktu \u0026 Eksistensi",
-                                                           "Sisi Gelap Teknologi/AI Masa Depan"
-                                                       ],
-                                            "system_prompt":  "Kamu adalah 'Si Paranoid / Pembocor Rahasia' (The Whistleblower). TUGAS: Buat SATU naskah fakta gila (JSON). SANGAT PENTING: Bicaralah dengan tergesa-gesa, ketakutan, seolah sedang dikejar-kejar karena membocorkan rahasia besar. (Contoh: 'Sumpah, lu harus save video ini sekarang sebelum dihapus! Kita semua selama ini dibohongin mentah-mentah sama pemerintah...'). Ciptakan efek FOMO dan paranoia maksimal!\n\n",
-                                            "tags_example":  "[\u0027crazy facts\u0027, \u0027shower thoughts\u0027, \u0027teorikonspirasi\u0027, \u0027faktarandom\u0027]",
-                                            "tags_fallback":  [
-                                                                  "shorts",
-                                                                  "faktarandom",
-                                                                  "teorigila",
-                                                                  "misteri"
-                                                              ],
-                                            "lead_magnet_url":  "https://linktr.ee/teorigila",
-                                            "lead_magnet_copy":  "👉 Gabung Komunitas Konspirasi Rahasia: https://linktr.ee/teorigila"
-                                        },
-                     "poladisiplin":  {
-                                          "name":  "Pola Disiplin",
-                                          "niche":  "grit, self-discipline, breaking laziness, and building habits",
-                                          "watermark":  "@PolaDisiplin",
-                                          "aesthetic_query":  "minimalist aesthetic clean focus athletic workout monochrome cinematic storm waves intense",
-                                          "voice_id":  "id-ID-ArdiNeural",
-                                          "voice_rate":  "+5%",
-                                          "voice_pitch":  "+5Hz",
-                                          "theme_color":  "cyberpunk_pink",
-                                          "background_type":  "pexels",
-                                          "retention_keyword":  "minimalist aesthetic clean focus athletic workout monochrome cinematic storm waves intense",
-                                          "themes":  [
-                                                         "Aturan 1 Persen Setiap Hari",
-                                                         "Disiplin Mengalahkan Motivasi",
-                                                         "Cara Menghancurkan Prokrastinasi (Menunda-nunda)",
-                                                         "Kekuatan Konsistensi",
-                                                         "Growth Mindset vs Fixed Mindset",
-                                                         "Pentingnya Memiliki Rutinitas Pagi",
-                                                         "Menghadapi Kegagalan \u0026 Mental Tangguh",
-                                                         "Aturan 5 Detik untuk Bertindak"
-                                                     ],
-                                          "angles":  [
-                                                         "Tamparan Keras untuk Pemalas (Harsh Reality Check)",
-                                                         "Rutinitas Toksik yang Menghancurkan Masa Depan",
-                                                         "Seni Membangun Karakter Baja (Grit \u0026 Toughness)",
-                                                         "Manajemen Waktu ala Miliarder",
-                                                         "Sakitnya Penyesalan vs Sakitnya Disiplin"
-                                                     ],
-                                          "system_prompt":  "Kamu adalah kreator TikTok yang SANGAT KETUS, SARKAS, dan AROGAN terhadap pemalas. TUGAS: Buat SATU naskah (JSON) motivasi tamparan keras. SANGAT PENTING: Jangan gunakan kata vulgar yang bisa dibanned (jangan pakai kata binatang atau makian kotor). Gunakan slang sarkas yang menghina harga diri (contoh: 'cupu', 'mental tempe', 'miskin gaya', 'beban', 'kocak', 'pecundang'). Serang ego mereka dengan gaya bahasa merendahkan yang menusuk (Harsh Reality Check) tanpa harus berkata kotor!\n\n",
-                                          "tags_example":  "[\u0027motivation\u0027, \u0027discipline\u0027, \u0027growth mindset\u0027, \u0027productivity\u0027]",
-                                          "tags_fallback":  [
-                                                                "shorts",
-                                                                "motivasi",
-                                                                "disiplin",
-                                                                "pengembangandiri"
-                                                            ],
-                                          "lead_magnet_url":  "https://linktr.ee/poladisiplin",
-                                          "lead_magnet_copy":  "👉 Template Notion \u0027Habit Tracker\u0027 Gratis: https://linktr.ee/poladisiplin"
-                                      },
-                     "komedihunter":  {
-                                          "name":  "Komedi Hunter",
-                                          "niche":  "funny moments, epic fails, prank, and reaction",
-                                          "watermark":  "@KomediHunter",
-                                          "aesthetic_query":  "",
-                                          "voice_id":  "id-ID-ArdiNeural",
-                                          "voice_rate":  "+5%",
-                                          "voice_pitch":  "+0Hz",
-                                          "theme_color":  "classic_yellow",
-                                          "background_type":  "hunter",
-                                          "trending_keywords":  [
-                                                                    "arabic prank comedy",
-                                                                    "funny middle eastern pranks",
-                                                                    "hilarious reactions middle east",
-                                                                    "prank arab lucu",
-                                                                    "extreme reaction pranks"
-                                                                ],
-                                          "drive_folder_url":  "https://drive.google.com/drive/folders/1jFVHRcXDvmKYKQV5YrOir1ETZeVG5NOg",
-                                          "hook_style":  "cause_and_effect",
-                                          "themes":  [
-                                                         "Hilarious Reactions",
-                                                         "Unexpected Twists",
-                                                         "Epic Prank Fails"
-                                                     ],
-                                          "angles":  [
-                                                         "Sarcastic Roasting",
-                                                         "Sports Commentator",
-                                                         "Confused Bystander"
-                                                     ],
-                                          "system_prompt":  "ROLE: Kamu adalah seorang komedian satir dan komentator konten viral yang ahli dalam membedah perilaku manusia.\n\nCONTEXT (Disediakan oleh sistem):\nJudul Video Asli: [HUNTER_CONTEXT]\n\nINSTRUCTIONS:\n1. Tulis naskah untuk video Shorts (durasi max 40 detik).\n2. TONE: Sarkastik, lucu, sedikit nakal, tapi tetap edukatif. Gunakan bahasa Indonesia (gaya lisan gaul/sarkas khas tongkrongan).\n3. STRUCTURE:\n   - HOOK (Detik 0-3): Harus \"menampar\". Jangan sebut judul video, tapi langsung komentari aksi konyol di layar. Contoh: \"Ada-ada aja kelakuan warga bumi, yang satu ini benar-benar raja tega!\"\n   - STORY (Detik 4-30): Komentari aksi prank-nya. Fokus pada psikologi di balik kebodohan itu. Roasting pelakunya dengan cerdas.\n   - CTA (Detik 31-40): Jangan ajak subscribe dengan cara membosankan. Gunakan CTA yang menantang. Contoh: \"Kalo temen lu kayak gini, mending di-ruqyah apa dikarungin? Komen di bawah!\"\n4. RESTRICTIONS:\n   - Jangan gunakan emoji.\n   - Gunakan kalimat pendek agar mudah dibaca sebagai subtitle.\n   - Jangan terdengar seperti robot. Gunakan bahasa lisan (misal: \"lu\", \"gue\", \"banget\", \"sih\").\n   - Jangan pernah menyebut nama channel atau brand apapun.\n\n",
-                                          "tags_example":  "[\u0027funny\u0027, \u0027prank\u0027, \u0027fail\u0027, \u0027comedy\u0027]",
-                                          "tags_fallback":  [
-                                                                "prankwars",
-                                                                "funnyreactions",
-                                                                "socialexperiment",
-                                                                "comedygold",
-                                                                "caughtoncamera",
-                                                                "prankfail"
-                                                            ],
-                                          "lead_magnet_url":  "https://linktr.ee/komedihunter",
-                                          "lead_magnet_copy":  "👉 Join our Meme Vault: https://linktr.ee/komedihunter"
-                                      }
-                 }
+    "channels": {
+        "ruangpikir": {
+            "name": "Ruang Pikir",
+            "niche": "dark psychology and human behavior secrets",
+            "watermark": "@RuangPikir",
+            "aesthetic_query": "dark cinematic cold moody tone psychological surreal hypnotic deep ocean",
+            "voice_id": "id-ID-ArdiNeural",
+            "voice_rate": "+0%",
+            "voice_pitch": "-2Hz",
+            "theme_color": "classic_yellow",
+            "background_type": "pexels",
+            "retention_keyword": "dark cinematic cold moody tone psychological surreal hypnotic deep ocean",
+            "themes": [
+                "Fakta Psikologi Menarik",
+                "Dark Psychology (Trik/Manipulasi)",
+                "Efek/Bias Psikologis dalam Kehidupan",
+                "Fakta Mind-Blowing Otak Manusia",
+                "Paradoks Psikologi & Realita",
+                "Fakta Unik Hubungan & Interaksi Sosial",
+                "Bahasa Tubuh & Rahasia Perilaku Manusia"
+            ],
+            "angles": [
+                "Sains Otak & Dopamin (Medis/Neuroscience)",
+                "Sejarah Kuno yang Kelam (Kisah Masa Lalu)",
+                "Kehidupan Asmara Gen-Z (Toxic Relationship)",
+                "Tekanan Dunia Kerja/Karir (Corporate Slave)",
+                "Analogi Hewan Liar (Predator vs Mangsa)",
+                "Kehidupan Pertemanan (Fake Friends/Circle)"
+            ],
+            "system_prompt": "Kamu adalah pakar 'Psikologi & Perilaku Manusia' yang tajam dan berwibawa di TikTok. TUGAS: Buat SATU naskah (JSON) edukasi psikologi. SANGAT PENTING: DILARANG MENGGUNAKAN KATA KASAR, MAKIAN, ATAU CELAAN HINAAN. Gunakan gaya bahasa percakapan gaul yang cerdas, berwibawa, dan membongkar rahasia pikiran manusia secara mendalam tanpa menyerang pribadi penonton.\n\n",
+            "tags_example": "['psychology facts', 'dark psychology', 'manipulasi', 'mindset']",
+            "tags_fallback": [
+                "shorts",
+                "faktapsikologi",
+                "mindset",
+                "ruangpikir"
+            ],
+            "lead_magnet_url": "https://linktr.ee/ruangpikir",
+            "lead_magnet_copy": "👉 Baca E-Book Gratis 'Seni Membaca Pikiran': https://linktr.ee/ruangpikir"
+        },
+        "logikastoik": {
+            "name": "Logika Stoik",
+            "niche": "stoicism philosophy, mental toughness, and ancient wisdom",
+            "watermark": "@LogikaStoik",
+            "aesthetic_query": "ancient greek roman statue warm dramatic lighting vintage cinematic calm nature mountain storm ocean",
+            "voice_id": "id-ID-ArdiNeural",
+            "voice_rate": "+0%",
+            "voice_pitch": "-4Hz",
+            "theme_color": "classic_yellow",
+            "background_type": "pexels",
+            "retention_keyword": "ancient greek roman statue warm dramatic lighting vintage cinematic calm nature mountain storm ocean",
+            "themes": [
+                "Stoikisme (Filosofi Teras)",
+                "Ketangguhan Mental (Mental Toughness)",
+                "Mengendalikan Emosi & Reaksi",
+                "Filsafat Marcus Aurelius",
+                "Kebijaksanaan Kuno untuk Hidup Modern",
+                "Cara Menerima Keadaan (Amor Fati)",
+                "Melepaskan Ego"
+            ],
+            "angles": [
+                "Filosofi Ksatria/Prajurit Kuno (Spartan/Gladiator)",
+                "Seni Bertahan dari Hinaan (Bullying/Netizen)",
+                "Ketenangan di Tengah Badai (Chaos Dunia Modern)",
+                "Ekspektasi vs Realita (Kekecewaan Hidup)",
+                "Paradoks Mengejar Kebahagiaan"
+            ],
+            "system_prompt": "Kamu adalah mentor 'Filosofi Stoikisme & Ketangguhan Mental' yang bijak di TikTok. TUGAS: Buat SATU naskah (JSON) Stoikisme. SANGAT PENTING: DILARANG MENGGUNAKAN KATA KASAR, CELAAN, ATAU MERENDAHKAN PENONTON. Gunakan tamparan realita yang inspiratif, tenang, dan membangun ketangguhan mental tanpa menghina atau menggunakan kata kotor.\n\n",
+            "tags_example": "['stoicism', 'filosofiteras', 'mindset', 'mentaltoughness']",
+            "tags_fallback": [
+                "shorts",
+                "stoikisme",
+                "filosofi",
+                "mindset"
+            ],
+            "lead_magnet_url": "https://linktr.ee/logikastoik",
+            "lead_magnet_copy": "👉 Unduh PDF '10 Aturan Emas Stoikisme': https://linktr.ee/logikastoik"
+        },
+        "rahasiafinansial": {
+            "name": "Rahasia Finansial",
+            "niche": "money mindset, wealth building secrets, and high performance habits",
+            "watermark": "@RahasiaFinansial",
+            "aesthetic_query": "luxury dark modern office skyline moody business slow motion money vault gold",
+            "voice_id": "id-ID-GadisNeural",
+            "voice_rate": "+5%",
+            "voice_pitch": "+0Hz",
+            "theme_color": "neon_green",
+            "background_type": "pexels",
+            "retention_keyword": "luxury dark modern office skyline moody business slow motion money vault gold",
+            "themes": [
+                "Kebiasaan Finansial Orang Kaya",
+                "Mindset Uang & Kelimpahan",
+                "Aturan Finansial 50/30/20",
+                "Cara Kerja Inflasi Secara Sederhana",
+                "Investasi Leher ke Atas",
+                "Kesalahan Keuangan di Usia 20-an",
+                "Pentingnya Dana Darurat",
+                "Rahasia Bebas Finansial (Financial Freedom)"
+            ],
+            "angles": [
+                "Kesalahan Finansial Umur 20-an",
+                "Mental Miskin vs Mental Kaya (Mindset Perbandingan)",
+                "Jebakan Gaya Hidup (Flexing/Pinjol)",
+                "Realita Sandwich Generation (Beban Keluarga)",
+                "Seni Menggandakan Uang (Investasi Leher Ke Atas)"
+            ],
+            "system_prompt": "Kamu adalah konsultan 'Finansial & Kebiasaan Uang' yang realistis di TikTok. TUGAS: Buat SATU naskah (JSON) edukasi keuangan. SANGAT PENTING: DILARANG MENGGUNAKAN KATA KASAR ATAU MENGEJEK KEMISKINAN PENONTON. Berikan fakta keuangan yang tajam, kritis terhadap gaya hidup boros, dan solusi membangun kekayaan dengan bahasa yang sopan namun menyadarkan.\n\n",
+            "tags_example": "['personal finance', 'investing', 'money habits', 'financial freedom']",
+            "tags_fallback": [
+                "shorts",
+                "keuangan",
+                "investasi",
+                "mindsetuang"
+            ],
+            "lead_magnet_url": "https://linktr.ee/rahasiafinansial",
+            "lead_magnet_copy": "👉 Cek Checklist Keuangan Umur 20an: https://linktr.ee/rahasiafinansial"
+        },
+        "misterisemesta": {
+            "name": "Teori Gila & Fakta Random",
+            "niche": "shower thoughts, crazy conspiracy theories, reddit storytime, random facts",
+            "watermark": "@TeoriGila",
+            "aesthetic_query": "deep ocean thalassophobia space galaxy dark mysterious creepy fog night glitch abstract shadow cinematic",
+            "voice_id": "id-ID-ArdiNeural",
+            "voice_rate": "+0%",
+            "voice_pitch": "+2Hz",
+            "theme_color": "cyberpunk_pink",
+            "background_type": "pexels",
+            "retention_keyword": "deep ocean thalassophobia space galaxy dark mysterious creepy fog night glitch abstract shadow cinematic",
+            "themes": [
+                "Shower Thoughts (Pemikiran Random yang Bikin Overthinking)",
+                "Teori Konspirasi Paling Gila yang Masuk Akal",
+                "Fakta Random yang Merusak Masa Kecilmu",
+                "Glitch in the Matrix (Kejadian Aneh Dunia Nyata)",
+                "Urban Legend Singkat Menyeramkan",
+                "Misteri Semesta yang Belum Terpecahkan"
+            ],
+            "angles": [
+                "Konspirasi yang Ternyata Benar",
+                "Phobia & Ketakutan Bawah Sadar (Thalassophobia dll)",
+                "Kejadian Glitch in the Matrix yang Pernah Terjadi",
+                "Paradoks Waktu & Eksistensi",
+                "Sisi Gelap Teknologi/AI Masa Depan"
+            ],
+            "system_prompt": "Kamu adalah narator 'Misteri Semesta & Teori Unik' di TikTok. TUGAS: Buat SATU naskah (JSON) fakta gila/misteri. SANGAT PENTING: DILARANG MENGGUNAKAN KATA KASAR ATAU MAKIAN. Bicaralah dengan gaya penasaran, seru, dan membuat penonton overthinking secara positif tanpa berkata kotor.\n\n",
+            "tags_example": "['crazy facts', 'shower thoughts', 'teorikonspirasi', 'faktarandom']",
+            "tags_fallback": [
+                "shorts",
+                "faktarandom",
+                "teorigila",
+                "misteri"
+            ],
+            "lead_magnet_url": "https://linktr.ee/teorigila",
+            "lead_magnet_copy": "👉 Gabung Komunitas Konspirasi Rahasia: https://linktr.ee/teorigila"
+        },
+        "poladisiplin": {
+            "name": "Pola Disiplin",
+            "niche": "grit, self-discipline, breaking laziness, and building habits",
+            "watermark": "@PolaDisiplin",
+            "aesthetic_query": "minimalist aesthetic clean focus athletic workout monochrome cinematic storm waves intense",
+            "voice_id": "id-ID-ArdiNeural",
+            "voice_rate": "+0%",
+            "voice_pitch": "+5Hz",
+            "theme_color": "cyberpunk_pink",
+            "background_type": "pexels",
+            "retention_keyword": "minimalist aesthetic clean focus athletic workout monochrome cinematic storm waves intense",
+            "themes": [
+                "Aturan 1 Persen Setiap Hari",
+                "Disiplin Mengalahkan Motivasi",
+                "Cara Menghancurkan Prokrastinasi (Menunda-nunda)",
+                "Kekuatan Konsistensi",
+                "Growth Mindset vs Fixed Mindset",
+                "Pentingnya Memiliki Rutinitas Pagi",
+                "Menghadapi Kegagalan & Mental Tangguh",
+                "Aturan 5 Detik untuk Bertindak"
+            ],
+            "angles": [
+                "Tamparan Keras untuk Pemalas (Harsh Reality Check)",
+                "Rutinitas Toksik yang Menghancurkan Masa Depan",
+                "Seni Membangun Karakter Baja (Grit & Toughness)",
+                "Manajemen Waktu ala Miliarder",
+                "Sakitnya Penyesalan vs Sakitnya Disiplin"
+            ],
+            "system_prompt": "Kamu adalah pelatih 'Pola Disiplin & Pengembangan Diri' yang tegas di TikTok. TUGAS: Buat SATU naskah (JSON) motivasi ketegangan tinggi. SANGAT PENTING: DILARANG MENGGUNAKAN KATA KASAR, CELAAN HINAAN (seperti cupu, beban, dsb), ATAU MAKIAN KOTOR. Gunakan tamparan realita yang tegas, lugas, dan mengobarkan semangat disiplin tanpa kata-kata merendahkan.\n\n",
+            "tags_example": "['motivation', 'discipline', 'growth mindset', 'productivity']",
+            "tags_fallback": [
+                "shorts",
+                "motivasi",
+                "disiplin",
+                "pengembangandiri"
+            ],
+            "lead_magnet_url": "https://linktr.ee/poladisiplin",
+            "lead_magnet_copy": "👉 Template Notion 'Habit Tracker' Gratis: https://linktr.ee/poladisiplin"
+        },
+        "komedihunter": {
+            "name": "Komedi Hunter",
+            "niche": "funny moments, epic fails, prank, and reaction",
+            "watermark": "@KomediHunter",
+            "aesthetic_query": "",
+            "voice_id": "id-ID-ArdiNeural",
+            "voice_rate": "+0%",
+            "voice_pitch": "+0Hz",
+            "theme_color": "classic_yellow",
+            "background_type": "hunter",
+            "trending_keywords": [
+                "arabic prank comedy",
+                "funny middle eastern pranks",
+                "hilarious reactions middle east",
+                "prank arab lucu",
+                "extreme reaction pranks"
+            ],
+            "drive_folder_url": "https://drive.google.com/drive/folders/1jFVHRcXDvmKYKQV5YrOir1ETZeVG5NOg",
+            "hook_style": "cause_and_effect",
+            "themes": [
+                "Hilarious Reactions",
+                "Unexpected Twists",
+                "Epic Prank Fails"
+            ],
+            "angles": [
+                "Sarcastic Roasting",
+                "Sports Commentator",
+                "Confused Bystander"
+            ],
+            "system_prompt": "ROLE: Kamu adalah seorang komedian satir dan komentator konten viral yang ahli dalam membedah perilaku manusia.\n\nCONTEXT (Disediakan oleh sistem):\nJudul Video Asli: [HUNTER_CONTEXT]\n\nINSTRUCTIONS:\n1. Tulis naskah untuk video Shorts (durasi max 40 detik).\n2. TONE: Sarkastik, lucu, tapi tetap edukatif dan sopan. Gunakan bahasa Indonesia gaul tanpa kata kotor.\n3. STRUCTURE:\n   - HOOK (Detik 0-3): Langsung komentari aksi konyol di layar. Contoh: \"Ada-ada aja kelakuan warga bumi, yang satu ini bikin penasaran!\"\n   - STORY (Detik 4-30): Komentari aksinya dengan cerdas. Fokus pada psikologi di balik kebodohan itu.\n   - CTA (Detik 31-40): Gunakan CTA yang seru. Contoh: \"Kalo temen lu kayak gini, mending diajak ngobrol apa disuruh mikir? Komen di bawah!\"\n4. RESTRICTIONS:\n   - Dilarang keras menggunakan kata kasar, celaan, atau kata kotor.\n   - Jangan gunakan emoji.\n   - Gunakan kalimat pendek agar mudah dibaca sebagai subtitle.\n   - Jangan terdengar seperti robot. Gunakan bahasa lisan (misal: \"lu\", \"gue\", \"banget\", \"sih\").\n   - Jangan pernah menyebut nama channel atau brand apapun.\n\n",
+            "tags_example": "['funny', 'prank', 'fail', 'comedy']",
+            "tags_fallback": [
+                "prankwars",
+                "funnyreactions",
+                "socialexperiment",
+                "comedygold",
+                "caughtoncamera",
+                "prankfail"
+            ],
+            "lead_magnet_url": "https://linktr.ee/komedihunter",
+            "lead_magnet_copy": "👉 Join our Meme Vault: https://linktr.ee/komedihunter"
+        }
+    }
 }
