@@ -133,12 +133,12 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
     return video_url
 
 
-async def get_youtube_stats(video_ids: list) -> dict:
+async def get_youtube_stats(video_ids: list, channel_id: str = None) -> dict:
     """Mengambil statistik views dan likes dari daftar video ID YouTube."""
     if not video_ids:
         return {}
         
-    cred_file = "youtube_credentials_ruangpikir.json"
+    cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
         print(f" {cred_file} tidak ditemukan. Melewati update statistik.")
         return {}
@@ -182,9 +182,9 @@ async def get_youtube_stats(video_ids: list) -> dict:
         return {}
 
 
-async def get_top_comments(video_id: str, max_results: int = 20) -> list:
+async def get_top_comments(video_id: str, max_results: int = 20, channel_id: str = None) -> list:
     """Mengambil komentar teratas dari video YouTube menggunakan YouTube Data API v3."""
-    cred_file = "youtube_credentials_ruangpikir.json"
+    cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
         print(f" {cred_file} tidak ditemukan. Melewati pengambilan komentar.")
         return []
@@ -227,9 +227,9 @@ async def get_top_comments(video_id: str, max_results: int = 20) -> list:
         return []
 
 
-async def reply_to_youtube_comments(video_id: str, max_replies: int = 2) -> None:
+async def reply_to_youtube_comments(video_id: str, max_replies: int = 2, channel_id: str = None) -> None:
     """Mengambil komentar teratas, meminta Gemini merancang balasan, dan memposting balasan otomatis."""
-    cred_file = "youtube_credentials_ruangpikir.json"
+    cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
         return
         

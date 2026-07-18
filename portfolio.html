@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eko Saputra - Backend & AI Automation Engineer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    html { scroll-behavior: smooth; }
+    
+    /* Animations & Transitions */
+    .fade-in { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .hover-lift { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .hover-lift:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-color: #3b82f6; }
+    .btn-click { transition: transform 0.1s ease; }
+    .btn-click:active { transform: scale(0.95); }
+    
+    /* Custom Gradients */
+    .bg-gradient-hero { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); }
+    .text-gradient { background: linear-gradient(to right, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900 selection:bg-blue-200 selection:text-blue-900">
+
+<!-- Hero Section -->
+<section class="bg-gradient-hero text-white py-24 px-6 relative overflow-hidden">
+    <!-- Abstract background decoration -->
+    <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20">
+        <div class="absolute -top-24 -left-24 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+        <div class="absolute top-0 -right-4 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+    </div>
+
+    <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-10 fade-in relative z-10">
+        <div class="relative group">
+            <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+            <img src="gambar.jpeg" alt="Eko Saputra"
+                 class="relative w-32 h-32 rounded-full border-4 border-gray-900 object-cover group-hover:scale-105 transition-transform duration-300">
+        </div>
+        <div class="text-center md:text-left">
+            <h1 class="text-5xl md:text-6xl font-bold mb-4 tracking-tight">Eko Saputra</h1>
+            <p class="text-2xl font-medium mb-6 text-gradient">Backend Developer & AI Automation Engineer</p>
+            <p class="text-xl text-gray-300 leading-relaxed max-w-3xl">
+                I build reliable web applications, interactive business systems, and fully automated AI engines that scale digital operations.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Projects -->
+<section class="py-20 px-6 bg-white">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-4 mb-12 fade-in">
+            <div class="h-1 w-12 bg-blue-600 rounded"></div>
+            <h2 class="text-3xl font-bold text-gray-900 tracking-tight">Featured Projects</h2>
+        </div>
+
+        <!-- Project 1: AI TikTok Bot -->
+        <div class="border border-gray-100 bg-white rounded-2xl p-8 hover-lift fade-in mb-10 shadow-sm relative overflow-hidden group">
+            <div class="absolute top-0 right-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold px-4 py-1 rounded-bl-lg z-10">
+                NEW & ADVANCED
+            </div>
+            <h3 class="text-2xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors">AI Faceless Video & Shorts Automation Engine</h3>
+            <p class="text-gray-600 mb-6 leading-relaxed text-lg">
+                A highly sophisticated Python engine that fully automates the creation of faceless TikTok/YouTube Shorts. It replaces an entire media production team by handling scriptwriting, voiceover, editing, and uploading autonomously.
+            </p>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 text-gray-700">
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Gemini AI for psychological script generation</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Edge-TTS & Whisper for word-level sync</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> FFmpeg native for cinematic overlay & audio ducking</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> YouTube Data API OAuth2 Auto-Uploader</li>
+            </ul>
+            <div class="flex flex-wrap gap-4">
+                <a href="https://github.com/eko190403/bot-tiktok-otomatis.git" target="_blank"
+                   class="bg-gray-900 text-white px-6 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium btn-click flex items-center gap-2">
+                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                   Source Code
+                </a>
+            </div>
+        </div>
+
+        <!-- Project 2: Media Compressor App -->
+        <div class="border border-gray-100 bg-white rounded-2xl p-8 hover-lift fade-in mb-10 shadow-sm group">
+            <h3 class="text-2xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors">Media Compression Utility App</h3>
+            <p class="text-gray-600 mb-6 leading-relaxed text-lg">
+                A high-performance web utility built to compress heavy images and videos seamlessly. It significantly reduces file sizes while maintaining visual quality, perfect for web optimization and saving storage costs.
+            </p>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 text-gray-700">
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Video & Image lossless/lossy compression</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Batch processing support</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Clean, intuitive drag-and-drop UI</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Fast background task handling</li>
+            </ul>
+            <div class="flex flex-wrap gap-4">
+                <a href="https://github.com/eko190403/media-compressor-app" target="_blank"
+                   class="bg-gray-900 text-white px-6 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium btn-click flex items-center gap-2">
+                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                   Source Code
+                </a>
+            </div>
+        </div>
+
+        <!-- Project 3: Business Web -->
+        <div class="border border-gray-100 bg-white rounded-2xl p-8 hover-lift fade-in mb-10 shadow-sm group">
+            <h3 class="text-2xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors">Business Web (Laravel)</h3>
+            <p class="text-gray-600 mb-6 leading-relaxed text-lg">
+                Laravel-based business application for service management, admin dashboard, appointment scheduling, and near real-time chat.
+            </p>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 text-gray-700">
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Role-based access control</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Appointment scheduling & approval</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> AJAX polling chat system</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Admin dashboard & reporting</li>
+            </ul>
+            <div class="flex flex-wrap gap-4">
+                <a href="LIVE_DEMO_BUSINESS" target="_blank" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium btn-click">Live Demo</a>
+                <a href="https://github.com/eko190403/eko-business-web-app-laravel.git" target="_blank"
+                   class="bg-gray-900 text-white px-6 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium btn-click flex items-center gap-2">
+                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                   Source Code
+                </a>
+            </div>
+        </div>
+
+        <!-- Project 4: Web Cafe -->
+        <div class="border border-gray-100 bg-white rounded-2xl p-8 hover-lift fade-in mb-10 shadow-sm group">
+            <h3 class="text-2xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors">Web Cafe – Online Ordering</h3>
+            <p class="text-gray-600 mb-6 leading-relaxed text-lg">
+                Laravel-based web application for cafe online menu ordering. Customers can browse menus, place orders, and admins manage orders efficiently.
+            </p>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 text-gray-700">
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Online menu browsing</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Order submission & management</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Admin dashboard for orders</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Responsive design for mobile & desktop</li>
+            </ul>
+            <div class="flex flex-wrap gap-4">
+                <a href="LIVE_DEMO_CAFE" target="_blank" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium btn-click">Live Demo</a>
+                <a href="https://github.com/eko190403/eko-business-web-app-laravel.git" target="_blank"
+                   class="bg-gray-900 text-white px-6 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium btn-click flex items-center gap-2">
+                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                   Source Code
+                </a>
+            </div>
+        </div>
+
+        <!-- Project 5: Web Chatbot -->
+        <div class="border border-gray-100 bg-white rounded-2xl p-8 hover-lift fade-in mb-12 shadow-sm group">
+            <h3 class="text-2xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors">Web Chatbot – Rule-based Fuzzy Matching</h3>
+            <p class="text-gray-600 mb-6 leading-relaxed text-lg">
+                PHP native chatbot for academic information using rule-based fuzzy string matching and live chat with WebSocket.
+            </p>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 text-gray-700">
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Rule-based fuzzy string matching</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Live chat with WebSocket</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Academic FAQ automation</li>
+                <li class="flex items-start"><svg class="w-5 h-5 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Responsive web interface</li>
+            </ul>
+            <div class="flex flex-wrap gap-4">
+                <a href="LIVE_DEMO_CHATBOT" target="_blank" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium btn-click">Live Demo</a>
+                <a href="https://github.com/eko190403/chatbot-fuzzy-php.git" target="_blank"
+                   class="bg-gray-900 text-white px-6 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium btn-click flex items-center gap-2">
+                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                   Source Code
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- Tech Stack -->
+<section class="py-20 px-6 bg-slate-50 border-t border-gray-100">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center justify-center gap-4 mb-12 fade-in">
+            <h2 class="text-3xl font-bold text-gray-900 tracking-tight">Technical Arsenal</h2>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 fade-in">
+            <!-- Backend & Core -->
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer font-medium text-gray-800">Laravel / PHP</div>
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer font-medium text-gray-800">Python</div>
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer font-medium text-gray-800">MySQL / Firebase</div>
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer font-medium text-gray-800">REST API</div>
+            
+            <!-- AI & Automation -->
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-300 transition-all cursor-pointer font-medium text-gray-800">Generative AI (Gemini)</div>
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-300 transition-all cursor-pointer font-medium text-gray-800">FFmpeg / Video Eng.</div>
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-300 transition-all cursor-pointer font-medium text-gray-800">Automation Bots</div>
+            <div class="bg-white p-5 rounded-xl text-center border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer font-medium text-gray-800">WebSocket / IoT</div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="py-20 px-6 bg-gradient-to-b from-gray-900 to-black text-white">
+    <div class="max-w-3xl mx-auto text-center fade-in">
+        <h2 class="text-4xl font-bold mb-6 tracking-tight">Let's Build Something Extraordinary</h2>
+        <p class="text-xl text-gray-400 mb-10 leading-relaxed">
+            Whether you need a rock-solid business backend or a fully autonomous AI content engine, I'm ready to bring your vision to life.
+        </p>
+        <a href="https://www.upwork.com/freelancers/~01b88735ce4085a21a" target="_blank"
+           class="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-xl hover:bg-blue-500 transition-colors font-bold text-lg btn-click shadow-[0_0_20px_rgba(37,99,235,0.3)]">
+            Hire Me on Upwork
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-black text-gray-500 py-10 px-6 border-t border-gray-800">
+    <div class="max-w-4xl mx-auto text-center font-medium">
+        <p>&copy; 2026 Eko Saputra. All rights reserved.</p>
+    </div>
+</footer>
+
+<script>
+// Scroll Animation Observer
+const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { 
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible'); 
+        }
+    });
+}, observerOptions);
+
+document.addEventListener('DOMContentLoaded', () => {
+    const fadeElements = document.querySelectorAll('.fade-in');
+    fadeElements.forEach(el => observer.observe(el));
+});
+</script>
+
+</body>
+</html>

@@ -190,7 +190,7 @@ async def main():
             yt_video_map = firebase_connector.get_active_youtube_video_ids(limit=50)
             if yt_video_map:
                 print(f" Menemukan {len(yt_video_map)} video YouTube untuk diperiksa statistiknya...")
-                stats = await get_youtube_stats(list(yt_video_map.values()))
+                stats = await get_youtube_stats(list(yt_video_map.values()), channel_id=channel_id)
                 for draft_id, yt_id in yt_video_map.items():
                     if yt_id in stats:
                         prev_views = firebase_connector.get_previous_views(draft_id)
@@ -226,10 +226,10 @@ async def main():
                 from video_builder import analyze_comments_with_gemini
                 for draft_id, yt_id in viral_map.items():
                     # 1. Jalankan Balasan Otomatis menggunakan Gemini
-                    await reply_to_youtube_comments(yt_id, max_replies=2)
+                    await reply_to_youtube_comments(yt_id, max_replies=2, channel_id=channel_id)
                     
                     # 2. Ambil komentar untuk analisis insight naskah
-                    comments = await get_top_comments(yt_id, max_results=20)
+                    comments = await get_top_comments(yt_id, max_results=20, channel_id=channel_id)
                     
                     # --- NLP Filter Sederhana ---
                     def sanitize_comments_nlp(raw_comments):
