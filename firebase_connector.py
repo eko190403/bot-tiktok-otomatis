@@ -113,6 +113,29 @@ def get_video_draft(video_id: str) -> dict:
         return {}
 
 
+def get_latest_retention_insight() -> str:
+    """Mengambil drop_off_second dari video terbaru yang memiliki data analitik > 0."""
+    if not _require_firestore("get_latest_retention_insight"):
+        return ""
+    try:
+        docs = (
+            db.collection("drafts")
+            .where("drop_off_second", ">", 0)
+            .order_by("drop_off_second", direction=firestore.Query.DESCENDING)
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .limit(1)
+            .stream()
+        )
+        for d in docs:
+            drop_off = d.to_dict().get("drop_off_second", 0)
+            if drop_off > 0:
+                return f"PERHATIAN: Di video sebelumnya, mayoritas penonton kabur (drop off) di detik ke-{drop_off}. Buat Hook atau bagian Story pada detik ke-{drop_off} yang memiliki 'Pattern Interrupt' sangat kuat agar penonton tetap bertahan!"
+        return ""
+    except Exception as e:
+        logger.error(f" Gagal membaca retention insight dari Firestore: {e}")
+        return ""
+
+
 def cleanup_old_drafts(days: int = 7) -> None:
     """Menghapus draf dari Firestore yang usianya melebihi `days` hari."""
     if not _require_firestore("cleanup_old_drafts"):

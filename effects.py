@@ -82,6 +82,24 @@ def apply_flashbang(clip, duration: float = 0.15):
     
     return CompositeVideoClip([clip, white_flash])
 
+def apply_film_grain(clip, intensity: float = 0.08):
+    """Menambahkan lapisan Film Grain statis tipis untuk membuat stock video terasa lebih sinematik dan premium."""
+    import numpy as np
+    from PIL import Image, ImageEnhance
+    
+    w, h = clip.size
+    # Generate static noise frame ONCE to save CPU (animating per frame is too slow in python)
+    noise_array = np.random.randint(0, 256, (h, w, 3), dtype=np.uint8)
+    
+    def add_grain(get_frame, t):
+        frame = get_frame(t)
+        # Blend frame with noise
+        # opacity of noise is `intensity`
+        blended = cv2.addWeighted(frame, 1.0 - intensity, noise_array, intensity, 0) if 'cv2' in globals() else (frame * (1.0 - intensity) + noise_array * intensity).astype(np.uint8)
+        return blended
+        
+    return clip.transform(add_grain, keep_duration=True)
+
 def find_smart_crop_offset(clip, target_w: int) -> int:
     """Menemukan x_offset terbaik secara otomatis dengan memindai daerah detail kontras tertinggi."""
     try:
@@ -190,5 +208,8 @@ def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     zoom_dir = random.choice([True, False])
     base_zoom = random.uniform(1.05, 1.10)
     final_clip = apply_slow_zoom(resized_clip, speed=0.04, zoom_in=zoom_dir, base_zoom=base_zoom)
+    
+    # 8. Terapkan Film Grain untuk visual premium (Retensi)
+    final_clip = apply_film_grain(final_clip, intensity=random.uniform(0.06, 0.12))
     
     return final_clip

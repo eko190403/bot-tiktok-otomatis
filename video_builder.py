@@ -311,8 +311,14 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
                 f"Sesuaikan topik atau sudut pandang naskah agar menjawab/merefleksikan insight di atas."
             )
             logger.info(" Level 5 Advanced: Menyuntikkan insight komentar penonton.")
+            
+        retention_insight = firebase_connector.get_latest_retention_insight()
+        if retention_insight:
+            comment_insight_prompt += f"\n\n{retention_insight}"
+            logger.info(" Level 5 Advanced: Menyuntikkan Data Retensi Penonton (Drop-off).")
+            
     except Exception as e:
-        logger.warning(" Gagal mengambil insight komentar: %s", e)
+        logger.warning(" Gagal mengambil insight komentar/retensi: %s", e)
 
     #  LEVEL 5 A/B TESTING: Periksa apakah ada hook kandidat B dari percobaan sebelumnya
     hook_candidate = ""
