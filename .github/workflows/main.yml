@@ -9,6 +9,7 @@ on:
       - telegram_trigger
       - webhook_trigger
       - telegram_publish
+      - run-analytics
 
   schedule:
     # Mengkompensasi delay GitHub Actions (1-2 jam molor dari antrean server):
@@ -114,7 +115,7 @@ jobs:
           fi
 
       - name: Jalankan Bot
-        if: github.event.action != 'telegram_publish'
+        if: github.event.action != 'telegram_publish' && github.event.action != 'run-analytics'
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
@@ -176,6 +177,14 @@ jobs:
             --video_id "${{ github.event.client_payload.video_id }}" \
             --platform "${{ github.event.client_payload.platform }}" \
             --chat_id "${{ github.event.client_payload.chat_id }}"
+
+      - name: Jalankan Analytics Sync (Tarik Data dari YouTube)
+        if: github.event.action == 'run-analytics'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          echo "🚀 Memulai sinkronisasi metrik dari YouTube ke Firebase..."
+          python analytics_sync.py
 
       - name: Lihat Hasil Output
         if: always()
