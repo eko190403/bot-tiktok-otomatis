@@ -61,6 +61,28 @@ EV_RENDER_TIMEOUT     = "VP401"
 EV_RENDER_FAIL        = "VP402"
 EV_PIPELINE_SUCCESS   = "VP500"
 
+def clear_old_cache(directory: str, days: int = 7):
+    """Membersihkan file cache di direktori tertentu yang lebih tua dari X hari untuk mencegah disk penuh."""
+    import time
+    if not os.path.exists(directory): return
+    now = time.time()
+    cutoff = now - (days * 86400)
+    count = 0
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        if os.path.isfile(filepath):
+            try:
+                if os.path.getmtime(filepath) < cutoff:
+                    os.remove(filepath)
+                    count += 1
+            except Exception as e:
+                logger.warning(" Gagal menghapus cache %s: %s", filepath, e)
+    if count > 0:
+        logger.info(" Membersihkan %d file cache kadaluarsa di %s", count, directory)
+
+# Cache regex & NLP Models
+_TEXT_CLEANUP_REGEX = re.compile(r'[^a-zA-Z0-9\s.,?!-]')
+
 RETRY_ERRORS = ["429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "INTERNAL", "DEADLINE_EXCEEDED", "TIMEOUT", "CONNECTION"]
 
 class GeminiClientPool:
@@ -166,16 +188,21 @@ async def call_gemini_with_retry(prompt: str, is_json: bool = True, temperature:
     for attempt in range(max_attempts):
         client, idx = await client_pool.get_client_and_rotate()
         try:
-            # BUGFIX: Pemanggilan generate_content ini aslinya synchronous.
-            # Menggunakan asyncio.to_thread agar tidak membekukan Event Loop Python
-            # saat menunggu respon server Google (terutama ketika memproses banyak channel paralel).
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model='gemini-2.5-flash',
-                contents=prompt,
-                config=config
+            # Timeout Shield: Bungkus pemanggilan dengan asyncio.wait_for maksimal 30 detik
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.generate_content,
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                    config=config
+                ),
+                timeout=30.0
             )
             return response.text.strip()
+        except asyncio.TimeoutError:
+            logger.warning("[%s] Gemini Timeout (Attempt %d). Mengulang...", EV_GEMINI_CRASH, attempt + 1)
+            await asyncio.sleep(2 * (attempt + 1))
+            continue
         except Exception as e:
             last_err = e
             err_msg = str(e)
@@ -648,6 +675,11 @@ async def create_video(channel_id: str = "ruangpikir") -> bool:
     
     try:
         os.makedirs(DIR_TEMP, exist_ok=True)
+        
+        # Eksekusi Pembersihan Cache Sampah secara Asinkron
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(None, clear_old_cache, os.path.join("assets", "video_pool"), 14)
+        loop.run_in_executor(None, clear_old_cache, os.path.join("assets", "music"), 30)
         
         bg_type = channel_cfg.get("background_type", "pexels")
         
