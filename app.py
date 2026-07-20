@@ -453,6 +453,8 @@ async def main():
                                 "tags": tags,
                                 "category_id": category_id,
                                 "interactive_comment": interactive_comment,
+                                "hook": hook,
+                                "drop_off_second": 0,
                                 "theme": theme,
                                 "platform": "youtube",
                                 "platform_video_id": yt_video_id,
@@ -521,6 +523,8 @@ async def main():
                         "tags": tags,
                         "category_id": category_id,
                         "interactive_comment": interactive_comment,
+                        "hook": hook,
+                        "drop_off_second": 0,
                         "theme": theme,
                         "niche": niche,
                         "channel_id": channel_id
