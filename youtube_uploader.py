@@ -142,7 +142,9 @@ async def get_youtube_stats(video_ids: list, channel_id: str = None) -> dict:
     api_key = os.getenv("YOUTUBE_API_KEY")
     
     youtube = None
-    if os.path.exists(cred_file):
+    if api_key:
+        youtube = build("youtube", "v3", developerKey=api_key)
+    elif os.path.exists(cred_file):
         try:
             with open(cred_file, "r") as f:
                 cred_data = json.load(f)
@@ -156,9 +158,7 @@ async def get_youtube_stats(video_ids: list, channel_id: str = None) -> dict:
             youtube = build("youtube", "v3", credentials=credentials)
         except Exception as e:
             print(f" Gagal memuat {cred_file}: {e}")
-    elif api_key:
-        youtube = build("youtube", "v3", developerKey=api_key)
-        
+            
     if not youtube:
         print(f" {cred_file} dan YOUTUBE_API_KEY tidak ditemukan. Melewati update statistik.")
         return {}
@@ -195,7 +195,9 @@ async def get_top_comments(video_id: str, max_results: int = 20, channel_id: str
     api_key = os.getenv("YOUTUBE_API_KEY")
     
     youtube = None
-    if os.path.exists(cred_file):
+    if api_key:
+        youtube = build("youtube", "v3", developerKey=api_key)
+    elif os.path.exists(cred_file):
         try:
             with open(cred_file, "r") as f:
                 cred_data = json.load(f)
@@ -209,9 +211,7 @@ async def get_top_comments(video_id: str, max_results: int = 20, channel_id: str
             youtube = build("youtube", "v3", credentials=credentials)
         except Exception as e:
             print(f" Gagal memuat {cred_file}: {e}")
-    elif api_key:
-        youtube = build("youtube", "v3", developerKey=api_key)
-        
+            
     if not youtube:
         print(f" {cred_file} dan YOUTUBE_API_KEY tidak ditemukan. Melewati pengambilan komentar.")
         return []
