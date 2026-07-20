@@ -362,11 +362,11 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     ab_test_instruction = ""
     if trigger_ab_test and not hook_candidate:
         ab_test_instruction = (
-            "\n8. 'hook_b': Hasilkan SATU variasi hook alternatif (versi B) yang berbeda gaya/pendekatan dengan 'hook' utama, tapi membahas subjek yang sama. Format teks harus KAPITAL, maks 10 kata. Contoh: 'JANGAN SAMPAI TANDUK KEPALA KAMU DIATUR ORANG LAIN'\n"
+            "\n8. 'hook_b': Hasilkan SATU variasi hook alternatif (versi B) yang berbeda gaya/pendekatan dengan 'hook' utama, tapi membahas subjek yang sama. Format teks harus KAPITAL, maks 10 kata. Contoh: 'PERNAH MERASA BERJUANG SENDIRIAN PADAHAL PUNYA PASANGAN?'\n"
         )
         logger.info(" A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang PROVOKATIF, MEMIKIRKAN, dan MEMBUAT PENASARAN (Pattern Interrupt) di 3 detik pertama. Maks 10 kata. STRATEGI WAJIB: DILARANG KERAS menggunakan kata kasar, celaan, atau makian kotor. Buat hook cerdas yang menyengat rasa ingin tahu (Contoh: '93% OTAK MANUSIA TERNYATA BISA DIMANIPULASI TANPA SADAR'). WAJIB pecah menggunakan tanda baca (, atau ?) agar ada jeda napas natural. JANGAN buat kalimat kaku atau repetitif ('Tahukah kamu').\n"
+    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang SANGAT RELATABLE, PERSONAL, dan MENYENTUH EMOSI/PENGALAMAN PENONTON (Pattern Interrupt) di 3 detik pertama. Maks 10 kata. STRATEGI WAJIB: DILARANG KERAS pakai pola membosankan seperti 'Tahukah kamu' atau 'X% orang ternyata'. Buat hook seolah Anda membaca pikiran/pengalaman rahasia mereka! (Contoh: 'PERNAH NGERASA MAKIN KERAS USAHA TAPI MAKIN HANCUR?', 'LO SERING DIBIKIN MERASA BERSALAH SAMA ORANG TERDEKAT?'). WAJIB pecah menggunakan tanda baca (, atau ?) agar ada jeda napas natural.\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
