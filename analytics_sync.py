@@ -14,18 +14,17 @@ import youtube_uploader
 # Import Gemini wrapper
 from video_builder import call_gemini_with_retry
 
-async def analyze_comments_for_retention(comments: list, hook_text: str) -> int:
-    """Menggunakan Gemini untuk menganalisis sentimen komentar dan menebak drop-off second."""
-    if not comments:
-        return 0
-        
-    comments_text = "\n- ".join(comments[:15])
+async def analyze_retention_heuristic(hook_text: str, views: int, likes: int, comments: list) -> int:
+    """Menggunakan Gemini untuk menebak drop-off second berdasarkan hook, view, like, dan komentar."""
+    comments_text = "\n- ".join(comments[:15]) if comments else "(Tidak ada komentar)"
     prompt = (
-        f"You are an expert YouTube retention analyst. Analyze these top viewer comments for a short video.\n"
-        f"Initial Hook of the video: '{hook_text}'\n\n"
-        f"Comments:\n- {comments_text}\n\n"
-        "Based on the tone, engagement, and typical short-form video behavior, estimate the average 'drop_off_second' (at what second do most people stop watching). "
-        "If comments are highly engaged and debating the hook, return a higher number (e.g., 20-35). If comments are generic or bored, return a lower number (e.g., 3-10).\n"
+        f"You are an expert YouTube retention analyst. Analyze this short video's stats.\n"
+        f"Initial Hook: '{hook_text}'\n"
+        f"Views: {views}\n"
+        f"Likes: {likes}\n"
+        f"Comments:\n{comments_text}\n\n"
+        "Based on the hook text, the view-to-like ratio, and comments (if any), estimate the average 'drop_off_second' (at what second do most people stop watching, typically between 3 and 35 seconds). "
+        "If the view-to-like ratio is very poor or there are no comments, return a lower number (e.g., 3-10). If the stats are good, return higher (15-35).\n"
         "Return ONLY a pure JSON object in this exact format: {\"drop_off_second\": 15}"
     )
     
@@ -98,11 +97,9 @@ async def sync_youtube_analytics():
                 doc_info = doc_refs[vid_id]
                 hook_text = doc_info["data"].get("hook", "")
                 
-                # Analisis Drop-off menggunakan Gemini
-                drop_off = 0
-                if comments:
-                    drop_off = await analyze_comments_for_retention(comments, hook_text)
-                    logger.info(f"[{vid_id}] Estimasi Drop-off: {drop_off}s dari {len(comments)} komentar")
+                # Analisis Drop-off menggunakan Gemini (Selalu jalan meskipun 0 komentar)
+                drop_off = await analyze_retention_heuristic(hook_text, views, likes, comments)
+                logger.info(f"[{vid_id}] Estimasi Drop-off: {drop_off}s (berdasarkan {views} views, {likes} likes, {len(comments)} komentar)")
                 
                 # Update ke Firestore
                 try:
