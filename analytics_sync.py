@@ -30,7 +30,7 @@ async def analyze_comments_for_retention(comments: list, hook_text: str) -> int:
     )
     
     try:
-        res = await call_gemini_with_retry(prompt, is_json=True, temperature=0.3, retries=2)
+        res = await call_gemini_with_retry(prompt, is_json=True, temperature=0.3)
         import re
         match = re.search(r'\{.*\}', res, re.DOTALL)
         if match:
