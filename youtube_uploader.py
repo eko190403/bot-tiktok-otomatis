@@ -139,24 +139,31 @@ async def get_youtube_stats(video_ids: list, channel_id: str = None) -> dict:
         return {}
         
     cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
-    if not os.path.exists(cred_file):
-        print(f" {cred_file} tidak ditemukan. Melewati update statistik.")
+    api_key = os.getenv("YOUTUBE_API_KEY")
+    
+    youtube = None
+    if os.path.exists(cred_file):
+        try:
+            with open(cred_file, "r") as f:
+                cred_data = json.load(f)
+            credentials = Credentials(
+                token=cred_data.get("token"),
+                refresh_token=cred_data.get("refresh_token"),
+                token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+                client_id=cred_data.get("client_id"),
+                client_secret=cred_data.get("client_secret")
+            )
+            youtube = build("youtube", "v3", credentials=credentials)
+        except Exception as e:
+            print(f" Gagal memuat {cred_file}: {e}")
+    elif api_key:
+        youtube = build("youtube", "v3", developerKey=api_key)
+        
+    if not youtube:
+        print(f" {cred_file} dan YOUTUBE_API_KEY tidak ditemukan. Melewati update statistik.")
         return {}
         
     try:
-        with open(cred_file, "r") as f:
-            cred_data = json.load(f)
-            
-        credentials = Credentials(
-            token=cred_data.get("token"),
-            refresh_token=cred_data.get("refresh_token"),
-            token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
-            client_id=cred_data.get("client_id"),
-            client_secret=cred_data.get("client_secret")
-        )
-        
-        youtube = build("youtube", "v3", credentials=credentials)
-        
         # Gabungkan video_ids dengan koma
         ids_str = ",".join(video_ids)
         request = youtube.videos().list(
@@ -185,23 +192,31 @@ async def get_youtube_stats(video_ids: list, channel_id: str = None) -> dict:
 async def get_top_comments(video_id: str, max_results: int = 20, channel_id: str = None) -> list:
     """Mengambil komentar teratas dari video YouTube menggunakan YouTube Data API v3."""
     cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
-    if not os.path.exists(cred_file):
-        print(f" {cred_file} tidak ditemukan. Melewati pengambilan komentar.")
+    api_key = os.getenv("YOUTUBE_API_KEY")
+    
+    youtube = None
+    if os.path.exists(cred_file):
+        try:
+            with open(cred_file, "r") as f:
+                cred_data = json.load(f)
+            credentials = Credentials(
+                token=cred_data.get("token"),
+                refresh_token=cred_data.get("refresh_token"),
+                token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+                client_id=cred_data.get("client_id"),
+                client_secret=cred_data.get("client_secret")
+            )
+            youtube = build("youtube", "v3", credentials=credentials)
+        except Exception as e:
+            print(f" Gagal memuat {cred_file}: {e}")
+    elif api_key:
+        youtube = build("youtube", "v3", developerKey=api_key)
+        
+    if not youtube:
+        print(f" {cred_file} dan YOUTUBE_API_KEY tidak ditemukan. Melewati pengambilan komentar.")
         return []
         
     try:
-        with open(cred_file, "r") as f:
-            cred_data = json.load(f)
-            
-        credentials = Credentials(
-            token=cred_data.get("token"),
-            refresh_token=cred_data.get("refresh_token"),
-            token_uri=cred_data.get("token_uri", "https://oauth2.googleapis.com/token"),
-            client_id=cred_data.get("client_id"),
-            client_secret=cred_data.get("client_secret")
-        )
-        
-        youtube = build("youtube", "v3", credentials=credentials)
         request = youtube.commentThreads().list(
             part="snippet",
             videoId=video_id,
