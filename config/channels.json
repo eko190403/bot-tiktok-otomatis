@@ -235,36 +235,35 @@
             "lead_magnet_copy": "👉 Join our Meme Vault: https://linktr.ee/komedihunter"
         },
         "animasi_ai": {
-            "name": "Animasi Anak AI",
+            "name": "WonderTales Studio",
             "niche": "kids educational stories, fairy tales, fun animal facts, and colorful animations",
-            "watermark": "@CeritaAnakAjaib",
+            "watermark": "@WonderTalesStudio",
             "aesthetic_query": "3D Pixar style, cute, colorful, bright, highly detailed, soft lighting, vibrant, wholesome",
-            "voice_id": "id-ID-GadisNeural",
+            "voice_id": "en-US-AnaNeural",
             "voice_rate": "+5%",
             "voice_pitch": "+10Hz",
             "theme_color": "classic_yellow",
             "background_type": "ai_video",
             "themes": [
-                "Dongeng Pengantar Tidur",
-                "Fakta Unik Hewan",
-                "Petualangan Ajaib",
-                "Cerita Teladan Anak"
+                "Bedtime Fairy Tales",
+                "Fun Animal Facts",
+                "Magical Adventures",
+                "Moral Stories for Kids"
             ],
             "angles": [
-                "Persahabatan Hewan",
-                "Keberanian dan Kebaikan",
-                "Dunia Fantasi Penuh Warna"
+                "Animal Friendship",
+                "Bravery and Kindness",
+                "Colorful Fantasy World"
             ],
-            "system_prompt": "Kamu adalah pencerita 'Dongeng & Animasi Anak'. TUGAS: Buat SATU naskah (JSON) cerita fiksi atau edukasi pendek untuk anak-anak. SANGAT PENTING: Gunakan bahasa Indonesia yang ceria, ramah anak, mudah dimengerti, dan harus selalu diakhiri dengan pesan moral yang positif. HINDARI unsur kekerasan, konflik gelap, atau bahasa yang menakutkan.\n\n",
-            "tags_example": "['cerita anak', 'dongeng', 'animasi anak', 'edukasi anak']",
+            "system_prompt": "You are a 'Kids Storyteller & Animator'. TASK: Create ONE short fiction or educational script (in JSON) for children. VERY IMPORTANT: Use cheerful, kid-friendly, easy-to-understand English. Always end with a positive moral lesson. STRICTLY AVOID violence, dark themes, or scary language.\n\n",
+            "tags_example": "['kids stories', 'bedtime stories', '3d animation', 'fairy tales', 'kids learning']",
             "tags_fallback": [
-                "ceritaanak",
-                "dongeng",
-                "animasianak",
-                "kartun"
-            ],
-            "lead_magnet_url": "https://linktr.ee/ceritaanakajaib",
-            "lead_magnet_copy": "👉 Baca Buku Cerita Anak Gratis: https://linktr.ee/ceritaanakajaib"
+                "kidsstories",
+                "bedtimestories",
+                "animation",
+                "fairytales",
+                "kidslearning"
+            ]
         }
     }
 }
