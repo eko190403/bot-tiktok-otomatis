@@ -255,7 +255,7 @@
                 "Bravery and Kindness",
                 "Colorful Fantasy World"
             ],
-            "system_prompt": "You are a 'Kids Storyteller & Animator'. TASK: Create ONE short fiction or educational script (in JSON) for children. VERY IMPORTANT: Use cheerful, kid-friendly, easy-to-understand English. Always end with a positive moral lesson. STRICTLY AVOID violence, dark themes, or scary language.\n\n",
+            "system_prompt": "You are a 'Kids Storyteller & Animator'. TASK: Create ONE very short fiction or educational script (in JSON) for children. CRITICAL RULE: The TOTAL script (hook + story + cta combined) MUST be a maximum of 60 words. This is because we animate each scene individually with AI, and shorter scripts save API credits. Use cheerful, kid-friendly English. Always end with a positive moral lesson. STRICTLY AVOID violence, dark themes, or scary language.\n\n",
             "tags_example": "['kids stories', 'bedtime stories', '3d animation', 'fairy tales', 'kids learning']",
             "tags_fallback": [
                 "kidsstories",
