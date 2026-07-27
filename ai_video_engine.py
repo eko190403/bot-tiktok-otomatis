@@ -72,22 +72,12 @@ async def generate_image_pollinations(prompt: str, width: int = 576, height: int
 
 async def generate_image_huggingface(prompt: str, width: int = 576, height: int = 1024) -> str:
     """
-    Generate gambar via Hugging Face Inference API — gratis dengan token.
+    Generate gambar via Hugging Face Inference API — gratis dengan rotasi 8 token.
     Model: black-forest-labs/FLUX.1-schnell
-    Secret yang diperlukan: HF_API_KEY
+    Secrets yang diperlukan: HF_API_KEY_1 sampai HF_API_KEY_8
     """
     loop = asyncio.get_running_loop()
-
-    hf_key = os.getenv("HF_API_KEY")
-    if not hf_key:
-        logger.warning(" [T2I HuggingFace] HF_API_KEY tidak dikonfigurasi. Skip.")
-        return None
-
     url = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
-    headers = {
-        "Authorization": f"Bearer {hf_key}",
-        "Content-Type": "application/json"
-    }
     payload = {
         "inputs": prompt[:500],
         "parameters": {
@@ -98,40 +88,62 @@ async def generate_image_huggingface(prompt: str, width: int = 576, height: int 
         }
     }
 
-    try:
-        logger.info(f" [T2I HuggingFace] Requesting FLUX.1-schnell...")
-        response = await loop.run_in_executor(
-            None, lambda: requests.post(url, json=payload, headers=headers, timeout=90)
-        )
-        if response.status_code == 200:
-            content_type = response.headers.get("Content-Type", "")
-            if "image" in content_type:
-                img_path = f"/tmp/hf_{int(time.time())}.jpg"
-                with open(img_path, "wb") as f:
-                    f.write(response.content)
-                file_size = os.path.getsize(img_path)
-                if file_size > 5000:
-                    logger.info(f" [T2I HuggingFace] Berhasil! {file_size // 1024}KB -> {img_path}")
-                    return img_path
-        elif response.status_code == 503:
-            logger.warning(" [T2I HuggingFace] Model sedang loading. Coba lagi setelah 10 detik...")
-            await asyncio.sleep(10)
-            # Retry sekali
-            response = await loop.run_in_executor(
-                None, lambda: requests.post(url, json=payload, headers=headers, timeout=90)
-            )
-            if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
-                img_path = f"/tmp/hf_retry_{int(time.time())}.jpg"
-                with open(img_path, "wb") as f:
-                    f.write(response.content)
-                if os.path.getsize(img_path) > 5000:
-                    logger.info(f" [T2I HuggingFace] Retry berhasil -> {img_path}")
-                    return img_path
-        else:
-            logger.warning(f" [T2I HuggingFace] Error {response.status_code}: {response.text[:150]}")
-    except Exception as e:
-        logger.warning(f" [T2I HuggingFace] Error: {e}")
+    for attempt in range(1, 9):
+        hf_key = os.getenv(f"HF_API_KEY_{attempt}")
+        if not hf_key:
+            continue
 
+        headers = {
+            "Authorization": f"Bearer {hf_key}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            logger.info(f" [T2I HuggingFace] Mencoba Key {attempt} (FLUX.1-schnell)...")
+            response = await loop.run_in_executor(
+                None, lambda h=headers: requests.post(url, json=payload, headers=h, timeout=90)
+            )
+
+            if response.status_code == 200:
+                content_type = response.headers.get("Content-Type", "")
+                if "image" in content_type:
+                    img_path = f"/tmp/hf_{attempt}_{int(time.time())}.jpg"
+                    with open(img_path, "wb") as f:
+                        f.write(response.content)
+                    file_size = os.path.getsize(img_path)
+                    if file_size > 5000:
+                        logger.info(f" [T2I HuggingFace] Key {attempt} berhasil! {file_size // 1024}KB -> {img_path}")
+                        return img_path
+
+            elif response.status_code == 429:
+                logger.warning(f" [T2I HuggingFace] Key {attempt} rate limited. Coba key berikutnya.")
+                continue
+
+            elif response.status_code == 503:
+                logger.warning(f" [T2I HuggingFace] Key {attempt}: Model loading (503). Tunggu 10 detik...")
+                await asyncio.sleep(10)
+                # Retry sekali dengan key yang sama
+                response2 = await loop.run_in_executor(
+                    None, lambda h=headers: requests.post(url, json=payload, headers=h, timeout=90)
+                )
+                if response2.status_code == 200 and "image" in response2.headers.get("Content-Type", ""):
+                    img_path = f"/tmp/hf_{attempt}_retry_{int(time.time())}.jpg"
+                    with open(img_path, "wb") as f:
+                        f.write(response2.content)
+                    if os.path.getsize(img_path) > 5000:
+                        logger.info(f" [T2I HuggingFace] Key {attempt} retry berhasil -> {img_path}")
+                        return img_path
+                continue
+
+            else:
+                logger.warning(f" [T2I HuggingFace] Key {attempt} error {response.status_code}: {response.text[:150]}")
+                continue
+
+        except Exception as e:
+            logger.warning(f" [T2I HuggingFace] Key {attempt} exception: {e}")
+            continue
+
+    logger.warning(" [T2I HuggingFace] Semua HF key (1-8) gagal/rate limited.")
     return None
 
 
