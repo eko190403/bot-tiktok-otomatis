@@ -101,6 +101,8 @@ jobs:
 
       - name: Jalankan Bot Alur Cerita Film
         env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
           GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
@@ -110,30 +112,7 @@ jobs:
           GEMINI_API_KEY_6: ${{ secrets.GEMINI_API_KEY_6 }}
           GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
           GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
-          HF_API_KEY_1: ${{ secrets.HF_API_KEY_1 }}
-          HF_API_KEY_2: ${{ secrets.HF_API_KEY_2 }}
-          HF_API_KEY_3: ${{ secrets.HF_API_KEY_3 }}
-          HF_API_KEY_4: ${{ secrets.HF_API_KEY_4 }}
-          HF_API_KEY_5: ${{ secrets.HF_API_KEY_5 }}
-          HF_API_KEY_6: ${{ secrets.HF_API_KEY_6 }}
-          HF_API_KEY_7: ${{ secrets.HF_API_KEY_7 }}
-          HF_API_KEY_8: ${{ secrets.HF_API_KEY_8 }}
-          FAL_API_KEY_1: ${{ secrets.FAL_API_KEY_1 }}
-          FAL_API_KEY_2: ${{ secrets.FAL_API_KEY_2 }}
-          FAL_API_KEY_3: ${{ secrets.FAL_API_KEY_3 }}
-          FAL_API_KEY_4: ${{ secrets.FAL_API_KEY_4 }}
-          FAL_API_KEY_5: ${{ secrets.FAL_API_KEY_5 }}
-          FAL_API_KEY_6: ${{ secrets.FAL_API_KEY_6 }}
-          FAL_API_KEY_7: ${{ secrets.FAL_API_KEY_7 }}
-          FAL_API_KEY_8: ${{ secrets.FAL_API_KEY_8 }}
-          KLING_API_KEY_1: ${{ secrets.KLING_API_KEY_1 }}
-          KLING_API_KEY_2: ${{ secrets.KLING_API_KEY_2 }}
-          KLING_API_KEY_3: ${{ secrets.KLING_API_KEY_3 }}
-          KLING_API_KEY_4: ${{ secrets.KLING_API_KEY_4 }}
-          KLING_API_KEY_5: ${{ secrets.KLING_API_KEY_5 }}
-          KLING_API_KEY_6: ${{ secrets.KLING_API_KEY_6 }}
-          KLING_API_KEY_7: ${{ secrets.KLING_API_KEY_7 }}
-          KLING_API_KEY_8: ${{ secrets.KLING_API_KEY_8 }}
+
           ENABLE_TIKTOK_UPLOAD: "false"
           ENABLE_YOUTUBE_UPLOAD: "false"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
