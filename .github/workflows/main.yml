@@ -129,22 +129,7 @@ jobs:
           GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
           GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          FAL_API_KEY_1: ${{ secrets.FAL_API_KEY_1 }}
-          FAL_API_KEY_2: ${{ secrets.FAL_API_KEY_2 }}
-          FAL_API_KEY_3: ${{ secrets.FAL_API_KEY_3 }}
-          FAL_API_KEY_4: ${{ secrets.FAL_API_KEY_4 }}
-          FAL_API_KEY_5: ${{ secrets.FAL_API_KEY_5 }}
-          FAL_API_KEY_6: ${{ secrets.FAL_API_KEY_6 }}
-          FAL_API_KEY_7: ${{ secrets.FAL_API_KEY_7 }}
-          FAL_API_KEY_8: ${{ secrets.FAL_API_KEY_8 }}
-          KLING_API_KEY_1: ${{ secrets.KLING_API_KEY_1 }}
-          KLING_API_KEY_2: ${{ secrets.KLING_API_KEY_2 }}
-          KLING_API_KEY_3: ${{ secrets.KLING_API_KEY_3 }}
-          KLING_API_KEY_4: ${{ secrets.KLING_API_KEY_4 }}
-          KLING_API_KEY_5: ${{ secrets.KLING_API_KEY_5 }}
-          KLING_API_KEY_6: ${{ secrets.KLING_API_KEY_6 }}
-          KLING_API_KEY_7: ${{ secrets.KLING_API_KEY_7 }}
-          KLING_API_KEY_8: ${{ secrets.KLING_API_KEY_8 }}
+
           ENABLE_TIKTOK_UPLOAD: "true"
           ENABLE_YOUTUBE_UPLOAD: "true"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
