@@ -11,14 +11,6 @@ import urllib.parse
 logger = logging.getLogger("ai_video_engine")
 
 
-def get_daily_video_provider() -> str:
-    """Merotasi penyedia Image-to-Video secara harian berdasarkan tanggal."""
-    providers = ["kling", "fal"]
-    day_of_year = datetime.datetime.now().timetuple().tm_yday
-    selected = providers[day_of_year % len(providers)]
-    logger.info(f" Penyedia AI Video hari ini (Day {day_of_year}): {selected.upper()}")
-    return selected
-
 
 # ============================================================
 #  TEXT-TO-IMAGE: Tier 1 — Pollinations.ai (GRATIS, tanpa key)
@@ -148,285 +140,22 @@ async def generate_image_huggingface(prompt: str, width: int = 576, height: int 
 
 
 # ============================================================
-#  TEXT-TO-IMAGE: Tier 3 — Fal.ai flux/schnell (last resort)
-# ============================================================
 
-async def generate_image_fal(prompt: str, width: int = 576, height: int = 1024) -> str:
-    """
-    Generate gambar via Fal.ai (flux/schnell) — last resort, berbayar.
-    Hanya dipanggil jika Pollinations & HuggingFace keduanya gagal.
-    """
-    loop = asyncio.get_running_loop()
-    url = "https://fal.run/fal-ai/flux/schnell"
-
-    for attempt in range(1, 9):
-        api_key = os.getenv(f"FAL_API_KEY_{attempt}")
-        if not api_key:
-            continue
-
-        headers = {"Authorization": f"Key {api_key}", "Content-Type": "application/json"}
-        payload = {
-            "prompt": prompt,
-            "image_size": "portrait_9_16",
-            "num_inference_steps": 4,
-            "num_images": 1,
-            "enable_safety_checker": True
-        }
-
-        try:
-            response = await loop.run_in_executor(
-                None, lambda h=headers, p=payload: requests.post(url, json=p, headers=h, timeout=60)
-            )
-            if response.status_code == 200:
-                res_json = response.json()
-                images = res_json.get("images", [])
-                if images:
-                    image_url = images[0].get("url")
-                    if image_url:
-                        logger.info(f" [T2I Fal] Berhasil via Key {attempt}: {image_url[:60]}...")
-                        return image_url  # URL eksternal (OK untuk Kling/Fal I2V)
-            else:
-                body = response.text[:200]
-                if "Exhausted balance" in body or "locked" in body:
-                    logger.warning(f" Fal Key {attempt} kredit habis.")
-                else:
-                    logger.warning(f" Fal Key {attempt} error {response.status_code}: {body}")
-        except Exception as e:
-            logger.warning(f" Fal Key {attempt} exception: {e}")
-
-    logger.error(" [T2I Fal] Semua key habis kredit.")
-    return None
 
 
 # ============================================================
-#  HELPER: Upload lokal image ke Pollinations (get public URL)
-# ============================================================
-
-async def _get_public_image_url(local_path: str, prompt_hint: str, seed: int) -> str:
-    """
-    Untuk I2V API (Kling/Fal), kita butuh URL publik.
-    Jika gambar dari Pollinations/HF disimpan lokal,
-    kita kembalikan URL Pollinations aslinya lewat re-request dengan seed yang sama.
-    Atau, upload ke tmpfiles.org / file.io sebagai alternatif sederhana.
-    """
-    # Coba upload ke file.io (gratis, 14 hari)
-    loop = asyncio.get_running_loop()
-    try:
-        def upload():
-            with open(local_path, "rb") as f:
-                resp = requests.post(
-                    "https://file.io/?expires=1d",
-                    files={"file": f},
-                    timeout=30
-                )
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("success"):
-                    return data.get("link")
-            return None
-
-        url = await loop.run_in_executor(None, upload)
-        if url:
-            logger.info(f" Gambar terupload ke file.io: {url}")
-            return url
-    except Exception as e:
-        logger.warning(f" Gagal upload ke file.io: {e}")
-
-    # Fallback: gunakan URL Pollinations langsung
-    clean_prompt = re.sub(r'[^\w\s,.\-!?()]', '', prompt_hint)[:300]
-    encoded = urllib.parse.quote(clean_prompt)
-    return f"https://image.pollinations.ai/prompt/{encoded}?width=576&height=1024&seed={seed}&model=flux&nologo=true"
-
 
 # ============================================================
-#  IMAGE-TO-VIDEO: Kling AI (API resmi)
 # ============================================================
-
-async def animate_kling(image_url: str, prompt: str, output_path: str) -> str:
-    """Animasi gambar ke video 5 detik via Kling AI I2V."""
-    loop = asyncio.get_running_loop()
-
-    for attempt in range(1, 9):
-        api_key = os.getenv(f"KLING_API_KEY_{attempt}")
-        if not api_key:
-            continue
-
-        logger.info(f" [I2V Kling] Mencoba Key {attempt}...")
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        payload = {
-            "model_name": "kling-v1",
-            "image": image_url,
-            "prompt": prompt,
-            "negative_prompt": "ugly, distorted, blurry, low quality, scary, violent",
-            "cfg_scale": 0.5,
-            "mode": "std",
-            "duration": "5"
-        }
-
-        try:
-            submit_resp = await loop.run_in_executor(
-                None, lambda h=headers, p=payload: requests.post(
-                    "https://api.klingai.com/v1/videos/image2video",
-                    json=p, headers=h, timeout=30
-                )
-            )
-
-            if submit_resp.status_code not in [200, 201]:
-                body = submit_resp.text[:200]
-                if any(kw in body.lower() for kw in ["insufficient", "balance", "credit", "quota"]):
-                    logger.warning(f" Kling Key {attempt} kredit habis. Coba key berikutnya.")
-                    continue
-                logger.warning(f" Kling Key {attempt} submit error {submit_resp.status_code}: {body}")
-                continue
-
-            task_id = submit_resp.json().get("data", {}).get("task_id")
-            if not task_id:
-                logger.warning(f" Kling Key {attempt}: task_id tidak ditemukan.")
-                continue
-
-            logger.info(f" Kling task_id={task_id}. Polling...")
-            poll_url = f"https://api.klingai.com/v1/videos/image2video/{task_id}"
-
-            for _ in range(36):  # max 3 menit
-                await asyncio.sleep(5)
-                poll_resp = await loop.run_in_executor(
-                    None, lambda h=headers: requests.get(poll_url, headers=h, timeout=20)
-                )
-                if poll_resp.status_code != 200:
-                    continue
-
-                poll_data = poll_resp.json().get("data", {})
-                status = poll_data.get("task_status", "")
-                logger.info(f" Kling status: {status}")
-
-                if status == "succeed":
-                    videos = poll_data.get("task_result", {}).get("videos", [])
-                    if videos:
-                        video_url = videos[0].get("url")
-                        if video_url:
-                            return await _download_and_save_video(video_url, output_path)
-                    break
-                elif status in ["failed", "error"]:
-                    logger.warning(f" Kling task gagal (Key {attempt}).")
-                    break
-
-        except Exception as e:
-            logger.warning(f" Kling Key {attempt} exception: {e}")
-
-    logger.error(" Semua KLING key gagal untuk I2V.")
-    return None
-
-
-# ============================================================
-#  IMAGE-TO-VIDEO: Fal.ai (minimax/video-01)
-# ============================================================
-
-async def animate_fal(image_url: str, prompt: str, output_path: str) -> str:
-    """Animasi gambar ke video via Fal.ai minimax/video-01."""
-    loop = asyncio.get_running_loop()
-
-    for attempt in range(1, 9):
-        api_key = os.getenv(f"FAL_API_KEY_{attempt}")
-        if not api_key:
-            continue
-
-        logger.info(f" [I2V Fal] Mencoba Key {attempt} (minimax/video-01)...")
-        headers = {"Authorization": f"Key {api_key}", "Content-Type": "application/json"}
-        payload = {"prompt": prompt, "image_url": image_url}
-
-        try:
-            submit_resp = await loop.run_in_executor(
-                None, lambda h=headers, p=payload: requests.post(
-                    "https://queue.fal.run/fal-ai/minimax/video-01",
-                    json=p, headers=h, timeout=30
-                )
-            )
-
-            if submit_resp.status_code not in [200, 201]:
-                body = submit_resp.text[:200]
-                if "Exhausted balance" in body or "locked" in body:
-                    logger.warning(f" Fal I2V Key {attempt} kredit habis.")
-                    continue
-                logger.warning(f" Fal I2V Key {attempt} error {submit_resp.status_code}: {body}")
-                continue
-
-            submit_json = submit_resp.json()
-            request_id = submit_json.get("request_id")
-            status_url = submit_json.get("status_url")
-            response_url = submit_json.get("response_url")
-            if not request_id:
-                continue
-
-            logger.info(f" Fal I2V request_id={request_id}. Polling...")
-
-            for _ in range(36):
-                await asyncio.sleep(5)
-                poll_url = status_url or f"https://queue.fal.run/fal-ai/minimax/video-01/requests/{request_id}/status"
-                poll_resp = await loop.run_in_executor(
-                    None, lambda h=headers: requests.get(poll_url, headers=h, timeout=20)
-                )
-                if poll_resp.status_code != 200:
-                    continue
-
-                status = poll_resp.json().get("status", "")
-                logger.info(f" Fal I2V status: {status}")
-
-                if status == "COMPLETED":
-                    res_url = response_url or f"https://queue.fal.run/fal-ai/minimax/video-01/requests/{request_id}"
-                    result_resp = await loop.run_in_executor(
-                        None, lambda h=headers: requests.get(res_url, headers=h, timeout=20)
-                    )
-                    if result_resp.status_code == 200:
-                        video_url = (result_resp.json().get("video") or {}).get("url")
-                        if video_url:
-                            return await _download_and_save_video(video_url, output_path)
-                    break
-                elif status in ["FAILED", "ERROR"]:
-                    logger.warning(f" Fal I2V task gagal (Key {attempt}).")
-                    break
-
-        except Exception as e:
-            logger.warning(f" Fal I2V Key {attempt} exception: {e}")
-
-    logger.error(" Semua FAL key gagal untuk I2V.")
-    return None
-
-
-# ============================================================
-#  DOWNLOAD HELPER
-# ============================================================
-
-async def _download_and_save_video(url: str, output_path: str) -> str:
-    loop = asyncio.get_running_loop()
-    try:
-        def download():
-            r = requests.get(url, stream=True, timeout=120)
-            if r.status_code == 200:
-                with open(output_path, "wb") as f:
-                    for chunk in r.iter_content(1024 * 1024):
-                        if chunk:
-                            f.write(chunk)
-                return True
-            return False
-
-        if await loop.run_in_executor(None, download):
-            logger.info(f" Video diunduh ke {output_path}")
-            return output_path
-    except Exception as e:
-        logger.error(f" Error download video: {e}")
-    return None
-
-
-# ============================================================
-#  IMAGE-TO-VIDEO: Local FFmpeg (100% GRATIS - Last Resort)
+#  IMAGE-TO-VIDEO: Local FFmpeg (100% GRATIS)
 # ============================================================
 
 import subprocess
 
-async def animate_local_ffmpeg(image_path: str, output_path: str, duration: int = 5) -> str:
+async def animate_local_ffmpeg(image_path: str, output_path: str, duration: int = 6) -> str:
     """
-    Fallback 100% gratis: Menganimasikan gambar statis dengan efek zoom (Ken Burns) via FFmpeg lokal.
-    Digunakan jika semua kredit Kling & Fal benar-benar habis.
+    100% gratis: Menganimasikan gambar statis dengan efek zoom (Ken Burns) via FFmpeg lokal.
+    Durasi default 6 detik (cukup untuk dicut di video_builder.py).
     """
     loop = asyncio.get_running_loop()
     
@@ -435,8 +164,8 @@ async def animate_local_ffmpeg(image_path: str, output_path: str, duration: int 
         return None
         
     logger.info(" [I2V Local] Membuat animasi zoom-in lokal (FFmpeg)...")
-    # Efek Ken Burns (Zoom in halus)
-    filter_complex = f"zoompan=z='min(zoom+0.0015,1.5)':d=25*{duration}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',framerate=25"
+    # Efek Ken Burns presisi tinggi vertikal
+    filter_complex = f"scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,zoompan=z='min(zoom+0.0015,1.5)':d=25*{duration}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=720x1280,framerate=25"
     
     cmd = [
         "ffmpeg", "-y", "-loop", "1", "-i", image_path,
@@ -462,100 +191,61 @@ async def animate_local_ffmpeg(image_path: str, output_path: str, duration: int 
 
 
 # ============================================================
-#  ORCHESTRATOR UTAMA — Hybrid Strategy
+#  ORCHESTRATOR UTAMA — 100% Free Local Strategy
 # ============================================================
 
 async def run_ai_video_workflow(image_prompts: list, target_count: int, output_dir: str = "assets/fallback") -> list:
     """
-    Pipeline Hybrid AI Video:
+    Pipeline AI Video 100% Gratis:
     === T2I (Gambar): ===
       Tier 1: Pollinations.ai (GRATIS 100%, tanpa key)
       Tier 2: Hugging Face Inference API (gratis dengan token)
-      Tier 3: Fal.ai flux/schnell (last resort, berbayar)
-
+      
     === I2V (Animasi): ===
-      Primary : Kling AI / Fal.ai (rotasi harian)
-      Fallback: Provider sebaliknya jika primary gagal
-      Last Resort: FFmpeg Local Ken Burns (100% GRATIS)
+      Lokal FFmpeg Ken Burns Effect (100% GRATIS)
     """
     os.makedirs(output_dir, exist_ok=True)
-    provider = get_daily_video_provider()
 
     generated_videos = []
     prompts_to_process = image_prompts[:target_count]
-    default_prompt = "cute animated character in a colorful magical forest, 3D Pixar style, vibrant, wholesome, soft lighting"
+    default_prompt = "beautiful landscape, highly detailed, vivid colors, 4k"
     while len(prompts_to_process) < target_count:
         prompts_to_process.append(default_prompt)
-
-    # Prompt animasi berurutan → koneksi antar scene
-    anim_prompts = [
-        "gentle camera zoom in, warm golden sunlight, soft smooth animation, colorful and vibrant, Pixar style",
-        "slow dolly forward, magical sparkles appear, dreamy floating atmosphere, cheerful mood",
-        "smooth pan right revealing new area, friendly character smiling, lush colorful environment",
-        "gentle zoom out revealing full landscape, joyful moment, pastel rainbow colors, happy ending",
-        "soft push in, warm cozy light, character looking at camera, heartwarming expression",
-    ]
 
     for i, raw_prompt in enumerate(prompts_to_process):
         logger.info(f" ===== Scene {i+1}/{target_count} =====")
         seed = int(time.time()) % 99999 + i * 100
 
-        # ── STEP 1: Text-to-Image (Waterfall Free → Berbayar) ──
+        # ── STEP 1: Text-to-Image (Pollinations -> HF) ──
         logger.info(f" [Step 1] T2I untuk Scene {i+1}...")
         local_path = None
-        image_url = None
 
         # Tier 1: Pollinations (gratis)
-        local_path = await generate_image_pollinations(raw_prompt, width=576, height=1024, seed=seed)
+        local_path = await generate_image_pollinations(raw_prompt, width=720, height=1280, seed=seed)
         if local_path:
             logger.info(f" Scene {i+1}: Gambar dari Pollinations.ai ✓")
         else:
             # Tier 2: HuggingFace (gratis dengan token)
             logger.info(f" Scene {i+1}: Pollinations gagal, coba HuggingFace...")
-            local_path = await generate_image_huggingface(raw_prompt, width=576, height=1024)
+            local_path = await generate_image_huggingface(raw_prompt, width=720, height=1280)
             if local_path:
                 logger.info(f" Scene {i+1}: Gambar dari HuggingFace ✓")
 
-        if local_path and os.path.exists(local_path):
-            # Upload ke file.io untuk dapat URL publik (dibutuhkan oleh Kling/Fal I2V)
-            image_url = await _get_public_image_url(local_path, raw_prompt, seed)
-        else:
-            # Tier 3: Fal.ai (last resort, berbayar)
-            logger.info(f" Scene {i+1}: Free tier habis, coba Fal.ai (berbayar)...")
-            image_url = await generate_image_fal(raw_prompt, width=576, height=1024)
-
-        if not image_url and not local_path:
+        if not local_path or not os.path.exists(local_path):
             logger.warning(f" Scene {i+1}: Semua T2I gagal. Scene dilewati.")
             continue
 
-        # ── STEP 2: Image-to-Video ──
-        logger.info(f" [Step 2] I2V Scene {i+1} via {provider.upper()}...")
-        output_filename = os.path.join(output_dir, f"scene_{i+1}_{provider}_{int(time.time())}.mp4")
-        anim_prompt = anim_prompts[i % len(anim_prompts)]
+        # ── STEP 2: Image-to-Video (FFmpeg Lokal) ──
+        logger.info(f" [Step 2] I2V Scene {i+1} via FFmpeg Lokal...")
+        output_filename = os.path.join(output_dir, f"scene_{i+1}_ffmpeg_{int(time.time())}.mp4")
 
-        video_path = None
-        # Coba Kling / Fal
-        if provider == "kling":
-            if image_url: video_path = await animate_kling(image_url, anim_prompt, output_filename)
-            if not video_path and image_url:
-                logger.info(f" Scene {i+1}: Kling gagal → fallback Fal I2V...")
-                video_path = await animate_fal(image_url, anim_prompt, output_filename)
-        else:
-            if image_url: video_path = await animate_fal(image_url, anim_prompt, output_filename)
-            if not video_path and image_url:
-                logger.info(f" Scene {i+1}: Fal I2V gagal → fallback Kling...")
-                video_path = await animate_kling(image_url, anim_prompt, output_filename)
-
-        # ── LAST RESORT: LOCAL FFMPEG 100% GRATIS ──
-        if not video_path and local_path:
-            logger.info(f" Scene {i+1}: API berbayar habis kredit. Fallback ke animasi lokal (FFmpeg)...")
-            video_path = await animate_local_ffmpeg(local_path, output_filename, duration=5)
+        video_path = await animate_local_ffmpeg(local_path, output_filename, duration=6)
 
         if video_path and os.path.exists(video_path):
             logger.info(f" Scene {i+1}: Animasi berhasil → {video_path}")
             generated_videos.append(video_path)
         else:
-            logger.warning(f" Scene {i+1}: I2V semua provider gagal. Scene dilewati.")
+            logger.warning(f" Scene {i+1}: FFmpeg I2V gagal. Scene dilewati.")
 
     logger.info(f" Pipeline selesai: {len(generated_videos)}/{target_count} scene berhasil.")
     return generated_videos
