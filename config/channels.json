@@ -264,6 +264,36 @@
                 "fairytales",
                 "kidslearning"
             ]
+        },
+        "alur_film": {
+            "name": "Alur Cerita Film",
+            "niche": "movie recap, plot summary, thriller story explanation",
+            "watermark": "@BioskopRahasia",
+            "aesthetic_query": "cinematic dramatic movie thriller action suspense 4k",
+            "voice_id": "id-ID-ArdiNeural",
+            "voice_rate": "+10%",
+            "voice_pitch": "-5Hz",
+            "theme_color": "classic_yellow",
+            "background_type": "pexels",
+            "themes": [
+                "Film Thriller Misteri",
+                "Film Survival Bertahan Hidup",
+                "Plot Twist Tergila",
+                "Kisah Balas Dendam"
+            ],
+            "angles": [
+                "Ketegangan Psikologis",
+                "Keputusan Putus Asa",
+                "Pengkhianatan Sahabat"
+            ],
+            "system_prompt": "Kamu adalah narator 'Alur Cerita Film' yang handal. TUGAS: Buat SATU naskah (JSON) ringkasan alur cerita dari sebuah film terkenal (fokus pada genre Thriller, Survival, atau Misteri). SANGAT PENTING: Gunakan gaya bahasa yang sangat menegangkan, tempo cepat, dan membuat penasaran. Jangan sebutkan judul filmnya di awal! Biarkan penonton menebak, lalu ungkap judulnya di bagian CTA (Call to Action) akhir.\n\n",
+            "tags_example": "['alurceritafilm', 'reviewfilm', 'rekomendasifilm', 'filmmisteri']",
+            "tags_fallback": [
+                "alurcerita",
+                "alurceritafilm",
+                "reviewfilm",
+                "rekomendasifilm"
+            ]
         }
     }
 }
