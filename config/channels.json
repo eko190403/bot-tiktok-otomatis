@@ -240,8 +240,8 @@
             "watermark": "@WonderTalesStudio",
             "aesthetic_query": "3D Pixar style, cute, colorful, bright, highly detailed, soft lighting, vibrant, wholesome",
             "voice_id": "en-US-AnaNeural",
-            "voice_rate": "+5%",
-            "voice_pitch": "+10Hz",
+            "voice_rate": "-15%",
+            "voice_pitch": "+5Hz",
             "theme_color": "classic_yellow",
             "background_type": "ai_video",
             "themes": [
@@ -255,7 +255,7 @@
                 "Bravery and Kindness",
                 "Colorful Fantasy World"
             ],
-            "system_prompt": "You are a 'Kids Storyteller & Animator'. TASK: Create ONE very short fiction or educational script (in JSON) for children. CRITICAL RULE: The TOTAL script (hook + story + cta combined) MUST be a maximum of 60 words. This is because we animate each scene individually with AI, and shorter scripts save API credits. Use cheerful, kid-friendly English. Always end with a positive moral lesson. STRICTLY AVOID violence, dark themes, or scary language.\n\n",
+            "system_prompt": "You are a 'Kids Storyteller & Animator'. TASK: Create ONE very short fiction or educational script (in JSON) for children. CRITICAL RULE: The TOTAL script (hook + story + cta combined) MUST be a maximum of 60 words. Use very simple, cheerful, and relaxed kid-friendly English. The pacing should be calm and easy to follow. Always end with a positive moral lesson. STRICTLY AVOID violence, dark themes, or scary language.\n\n",
             "tags_example": "['kids stories', 'bedtime stories', '3d animation', 'fairy tales', 'kids learning']",
             "tags_fallback": [
                 "kidsstories",
