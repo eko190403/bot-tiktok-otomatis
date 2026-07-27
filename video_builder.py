@@ -795,6 +795,15 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
         total_words = len(hook.split()) + len(story.split()) + len(cta.split())
         estimated_duration = max(10, total_words / 2.2) # Asumsi kecepatan berbicara 2.2 kata per detik
         needed_clips = max(4, int(estimated_duration / 4.0) + 1)
+        
+        # --- HEMAT KREDIT AI ---
+        # Mode ai_video menggunakan API berbayar dengan kredit terbatas (free tier ~66/key).
+        # Batasi hanya 4 gambar per video. Setiap gambar akan di-extend/loop via FFmpeg
+        # untuk mengisi durasi penuh video tanpa memboroskan kredit API.
+        if bg_type == "ai_video":
+            needed_clips = min(needed_clips, 4)
+            logger.info(" Mode AI Video: Membatasi jumlah gambar ke %d (hemat kredit API)", needed_clips)
+        
         logger.info(" Menghitung target background clip: estimasi %.1fs -> %d clip (4s/clip)", estimated_duration, needed_clips)
         
         loop = asyncio.get_running_loop()
