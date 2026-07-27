@@ -467,18 +467,30 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
 
     return parsed_json
 
-async def extract_keywords_from_script(script_text: str, aesthetic_style: str = "dark cinematic") -> list:
-    prompt = (
-        "You are a professional video director. Analyze the following vertical short video script and generate exactly 6 highly relevant English search terms for Pexels videos.\n\n"
-        "CRITICAL GUIDELINES:\n"
-        f"1. AESTHETIC TONE: Keep the vibe matching '{aesthetic_style}', but do not let it override physical reality.\n"
-        "2. EXTREMELY LITERAL OBJECTS (MOST IMPORTANT): If the script talks about a specific physical object or subject (e.g., 'sword', 'money', 'coffee', 'laptop', 'running', 'crying'), YOU MUST include that exact object/action as a primary search term! DO NOT just return abstract terms. Show the actual physical item being discussed.\n"
-        "3. PEXELS FRIENDLY: Keep terms to 1-3 words maximum. Use highly searchable tangible nouns (e.g., 'coffee cup', 'gold coins', 'reading book', 'raining window'). Avoid complex abstract phrases.\n\n"
-        f"SCRIPT:\n\"{script_text}\"\n\n"
-        "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 6 search terms.\n"
-        "Example: [\"coffee cup\", \"typing laptop\", \"gold coins\", \"sad person\", \"dark abstract\", \"reading book\"].\n"
-        "No additional text outside the JSON."
-    )
+async def extract_keywords_from_script(script_text: str, aesthetic_style: str = "dark cinematic", is_ai_video: bool = False) -> list:
+    if is_ai_video:
+        prompt = (
+            "You are a professional AI Video prompt engineer. Analyze the following vertical short video script and generate exactly 6 highly descriptive English text-to-image prompts.\n\n"
+            "CRITICAL GUIDELINES:\n"
+            f"1. AESTHETIC TONE: Ensure every prompt includes the style: '{aesthetic_style}'.\n"
+            "2. CINEMATIC DESCRIPTIONS: Describe the scene visually, including lighting, subject, and atmosphere. Keep it under 20 words per prompt.\n\n"
+            f"SCRIPT:\n\"{script_text}\"\n\n"
+            "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 6 image prompts.\n"
+            "Example: [\"A lone figure standing in a cyberpunk city street, neon lights reflecting on wet pavement, dark cinematic\", ...]\n"
+            "No additional text outside the JSON."
+        )
+    else:
+        prompt = (
+            "You are a professional video director. Analyze the following vertical short video script and generate exactly 6 highly relevant English search terms for Pexels videos.\n\n"
+            "CRITICAL GUIDELINES:\n"
+            f"1. AESTHETIC TONE: Keep the vibe matching '{aesthetic_style}', but do not let it override physical reality.\n"
+            "2. EXTREMELY LITERAL OBJECTS (MOST IMPORTANT): If the script talks about a specific physical object or subject (e.g., 'sword', 'money', 'coffee', 'laptop', 'running', 'crying'), YOU MUST include that exact object/action as a primary search term! DO NOT just return abstract terms. Show the actual physical item being discussed.\n"
+            "3. PEXELS FRIENDLY: Keep terms to 1-3 words maximum. Use highly searchable tangible nouns (e.g., 'coffee cup', 'gold coins', 'reading book', 'raining window'). Avoid complex abstract phrases.\n\n"
+            f"SCRIPT:\n\"{script_text}\"\n\n"
+            "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 6 search terms.\n"
+            "Example: [\"coffee cup\", \"typing laptop\", \"gold coins\", \"sad person\", \"dark abstract\", \"reading book\"].\n"
+            "No additional text outside the JSON."
+        )
     try:
         res = await call_gemini_with_retry(prompt, is_json=True)
         res_data = clean_and_parse_json(res)
@@ -745,7 +757,7 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
         cta = script_data.get("cta", "Follow untuk info lainnya").strip()
         caption = script_data.get("caption", "Fakta Menarik Hari Ini... #faktapsikologi #ruangpikir #fyp").strip()
         
-        keywords = await extract_keywords_from_script(story, aesthetic_style)
+        keywords = await extract_keywords_from_script(story, aesthetic_style, is_ai_video=(bg_type == "ai_video"))
         
         # Memilih tema visual secara acak untuk A/B testing
         from subtitle_engine.styles import SubtitleStyles
@@ -829,6 +841,12 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 else:
                     results = video_files
                     is_fallback = False
+            elif bg_type == "ai_video":
+                from ai_video_engine import run_ai_video_workflow
+                results = await run_ai_video_workflow(keywords, needed_clips)
+                if not results:
+                    bg_type = "pexels"
+                    results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
             else:
                 results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
                 
@@ -848,6 +866,15 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     # Sudah didownload di awal
                     async def mock_hunter_download(): return video_files, False, None
                     download_task = mock_hunter_download()
+            elif bg_type == "ai_video":
+                from ai_video_engine import run_ai_video_workflow
+                async def ai_workflow_task():
+                    res = await run_ai_video_workflow(keywords, needed_clips)
+                    if not res:
+                        logger.warning(" AI Video failed, falling back to Pexels")
+                        return await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3), True
+                    return res, False
+                download_task = ai_workflow_task()
             else:
                 download_task = run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
                 
@@ -863,7 +890,7 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     video_files, is_fallback, _ = results[0]
                     if is_fallback:
                         bg_type = "pexels"
-                elif bg_type == "retention":
+                elif bg_type in ["retention", "ai_video"]:
                     video_files, is_fallback = results[0]
                     if is_fallback:
                         bg_type = "pexels"
