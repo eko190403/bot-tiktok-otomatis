@@ -418,6 +418,50 @@ async def _download_and_save_video(url: str, output_path: str) -> str:
 
 
 # ============================================================
+#  IMAGE-TO-VIDEO: Local FFmpeg (100% GRATIS - Last Resort)
+# ============================================================
+
+import subprocess
+
+async def animate_local_ffmpeg(image_path: str, output_path: str, duration: int = 5) -> str:
+    """
+    Fallback 100% gratis: Menganimasikan gambar statis dengan efek zoom (Ken Burns) via FFmpeg lokal.
+    Digunakan jika semua kredit Kling & Fal benar-benar habis.
+    """
+    loop = asyncio.get_running_loop()
+    
+    if not image_path or not os.path.exists(image_path):
+        logger.warning(" [I2V Local] Gambar sumber tidak ditemukan.")
+        return None
+        
+    logger.info(" [I2V Local] Membuat animasi zoom-in lokal (FFmpeg)...")
+    # Efek Ken Burns (Zoom in halus)
+    filter_complex = f"zoompan=z='min(zoom+0.0015,1.5)':d=25*{duration}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',framerate=25"
+    
+    cmd = [
+        "ffmpeg", "-y", "-loop", "1", "-i", image_path,
+        "-vf", filter_complex,
+        "-c:v", "libx264", "-t", str(duration), "-pix_fmt", "yuv420p",
+        output_path
+    ]
+    
+    try:
+        process = await loop.run_in_executor(
+            None, lambda: subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        )
+        if process.returncode == 0 and os.path.exists(output_path):
+            logger.info(f" [I2V Local] Berhasil membuat animasi Ken Burns: {output_path}")
+            return output_path
+        else:
+            err = process.stderr.decode('utf-8') if process.stderr else "Unknown error"
+            logger.warning(f" [I2V Local] FFmpeg gagal: {err[:200]}")
+    except Exception as e:
+        logger.warning(f" [I2V Local] Error jalankan FFmpeg: {e}")
+        
+    return None
+
+
+# ============================================================
 #  ORCHESTRATOR UTAMA — Hybrid Strategy
 # ============================================================
 
@@ -432,10 +476,7 @@ async def run_ai_video_workflow(image_prompts: list, target_count: int, output_d
     === I2V (Animasi): ===
       Primary : Kling AI / Fal.ai (rotasi harian)
       Fallback: Provider sebaliknya jika primary gagal
-
-    === Continuity: ===
-      - Setiap scene memakai anim_prompt berbeda yang berurutan
-      - Gambar disimpan lokal → upload ke file.io → URL publik untuk I2V API
+      Last Resort: FFmpeg Local Ken Burns (100% GRATIS)
     """
     os.makedirs(output_dir, exist_ok=True)
     provider = get_daily_video_provider()
@@ -483,7 +524,7 @@ async def run_ai_video_workflow(image_prompts: list, target_count: int, output_d
             logger.info(f" Scene {i+1}: Free tier habis, coba Fal.ai (berbayar)...")
             image_url = await generate_image_fal(raw_prompt, width=576, height=1024)
 
-        if not image_url:
+        if not image_url and not local_path:
             logger.warning(f" Scene {i+1}: Semua T2I gagal. Scene dilewati.")
             continue
 
@@ -493,16 +534,22 @@ async def run_ai_video_workflow(image_prompts: list, target_count: int, output_d
         anim_prompt = anim_prompts[i % len(anim_prompts)]
 
         video_path = None
+        # Coba Kling / Fal
         if provider == "kling":
-            video_path = await animate_kling(image_url, anim_prompt, output_filename)
-            if not video_path:
+            if image_url: video_path = await animate_kling(image_url, anim_prompt, output_filename)
+            if not video_path and image_url:
                 logger.info(f" Scene {i+1}: Kling gagal → fallback Fal I2V...")
                 video_path = await animate_fal(image_url, anim_prompt, output_filename)
         else:
-            video_path = await animate_fal(image_url, anim_prompt, output_filename)
-            if not video_path:
+            if image_url: video_path = await animate_fal(image_url, anim_prompt, output_filename)
+            if not video_path and image_url:
                 logger.info(f" Scene {i+1}: Fal I2V gagal → fallback Kling...")
                 video_path = await animate_kling(image_url, anim_prompt, output_filename)
+
+        # ── LAST RESORT: LOCAL FFMPEG 100% GRATIS ──
+        if not video_path and local_path:
+            logger.info(f" Scene {i+1}: API berbayar habis kredit. Fallback ke animasi lokal (FFmpeg)...")
+            video_path = await animate_local_ffmpeg(local_path, output_filename, duration=5)
 
         if video_path and os.path.exists(video_path):
             logger.info(f" Scene {i+1}: Animasi berhasil → {video_path}")
