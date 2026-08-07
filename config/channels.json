@@ -270,34 +270,37 @@
             "lead_magnet_copy": "👉 Join our Meme Vault: https://linktr.ee/komedihunter"
         },
         "animasi_ai": {
-            "name": "WonderTales Studio",
-            "niche": "kids educational stories, fairy tales, fun animal facts, and colorful animations",
-            "watermark": "@WonderTalesStudio",
-            "aesthetic_query": "3D Pixar style, cute, colorful, bright, highly detailed, soft lighting, vibrant, wholesome",
-            "voice_id": "en-US-AnaNeural",
-            "voice_rate": "-15%",
-            "voice_pitch": "+5Hz",
-            "theme_color": "classic_yellow",
-            "background_type": "ai_video",
+            "name": "Tes Visual AI",
+            "niche": "interactive optical illusion quizzes, personality image tests, visual psychology, and brain teasers",
+            "watermark": "@TesVisualAI",
+            "aesthetic_query": "3d render, surreal illusion, optical illusion, vibrant color, sharp focus, cinematic 8k",
+            "voice_id": "id-ID-ArdiNeural",
+            "voice_rate": "+5%",
+            "voice_pitch": "+0Hz",
+            "theme_color": "cyberpunk_pink",
+            "background_type": "quiz_ai",
+            "cta_visual_title": "KETIK A ATAU B DI KOMENTAR!",
+            "cta_visual_desc": "Lihat berapa banyak yang sama kaya lu",
             "themes": [
-                "Bedtime Fairy Tales",
-                "Fun Animal Facts",
-                "Magical Adventures",
-                "Moral Stories for Kids"
+                "Tes Kepribadian Gambar",
+                "Kuis Ilusi Optik",
+                "Tebak Bayangan AI",
+                "Tes Fokus & Otak Kanan",
+                "Tes Sifat Tersembunyi"
             ],
             "angles": [
-                "Animal Friendship",
-                "Bravery and Kindness",
-                "Colorful Fantasy World"
+                "Tes Karakter Rahasia",
+                "Deteksi Kepribadian Gen-Z",
+                "Tebak Teka-Teki Visual",
+                "Uji Ketelitian Mata"
             ],
-            "system_prompt": "You are a 'Kids Storyteller & Animator'. TASK: Create ONE very short fiction or educational script (in JSON) for children. CRITICAL RULE: The TOTAL script (hook + story + cta combined) MUST be a maximum of 60 words. Use very simple, cheerful, and relaxed kid-friendly English. The pacing should be calm and easy to follow. Always end with a positive moral lesson. STRICTLY AVOID violence, dark themes, or scary language.\n\n",
-            "tags_example": "['kids stories', 'bedtime stories', '3d animation', 'fairy tales', 'kids learning']",
+            "system_prompt": "Kamu adalah pembuat 'Tes Visual & Kuis Gambar AI' yang seru di TikTok. TUGAS: Buat SATU naskah (JSON) kuis gambar interaktif. SANGAT PENTING: DILARANG MENGGUNAKAN KATA KASAR ATAU MAKIAN. Gunakan gaya bahasa percakapan Gen-Z yang santai, seru, dan memancing orang memilih Opsi A atau Opsi B.\n\n",
+            "tags_example": "['tespsikologi', 'tesvisual', 'kuisgambar', 'ilusioptik']",
             "tags_fallback": [
-                "kidsstories",
-                "bedtimestories",
-                "animation",
-                "fairytales",
-                "kidslearning"
+                "shorts",
+                "tesvisual",
+                "kuisgambar",
+                "tespsikologi"
             ]
         },
         "alur_film": {

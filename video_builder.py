@@ -409,7 +409,29 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         else:
             system_prompt += f"\nKONTEKS VIDEO (SANGAT PENTING): {hunter_context}\nBuat naskah yang merespon, mengomentari, atau me-roasting kejadian dalam video tersebut secara spesifik!\n\n"
     bg_type = config.get("background_type", "pexels")
-    if bg_type == "hunter":
+    if bg_type == "quiz_ai":
+        prompt = (
+            "Kamu adalah pembuat 'Tes Visual & Kuis Gambar AI' yang sangat menarik dan viral di TikTok & Shorts.\n"
+            f"TEMA KUIS: {chosen_theme} (Sudut Pandang: '{chosen_angle}')\n\n"
+            "TUGAS: Buat SATU naskah kuis gambar interaktif 2 pilihan (Opsi A vs Opsi B) beserta deskripsi gambar AI untuk masing-masing opsi.\n"
+            "STRUKTUR JSON YANG DIHARAPKAN:\n"
+            "1. 'hook': Pertanyaan utama yang memancing rasa penasaran di 3 detik pertama (misal: 'MANA GAMBAR YANG PERTAMA KALI LU LIHAT?'). KAPITAL, Maks 10 kata.\n"
+            "2. 'option_a_prompt': English text-to-image prompt untuk Gambar A (misal: 'A mysterious dark forest with glowing neon trees, 3d render, surreal aesthetic, 8k').\n"
+            "3. 'option_b_prompt': English text-to-image prompt untuk Gambar B (misal: 'A silhouette face of a majestic wolf in dark shadows, 3d render, surreal aesthetic, 8k').\n"
+            "4. 'option_a_label': Label singkat Opsi A (misal: 'A: POHON GLOWING'). Maks 4 kata.\n"
+            "5. 'option_b_label': Label singkat Opsi B (misal: 'B: SERIGALA'). Maks 4 kata.\n"
+            "6. 'story': Penjelasan narasi singkat saat penonton melihat gambar + countdown + penjelasan hasil psikologis Opsi A dan Opsi B secara singkat. WAJIB gunakan elipsis (...) di saat countdown (misal: 'Pilih gambar A atau B dalam 5 detik... Tiga... dua... satu...'). MAKSIMAL 90 kata.\n"
+            "7. 'cta': Ajakan berkomentar singkat (misal: 'Ketik A atau B di komentar! Penasaran berapa banyak yang sama kaya lu').\n"
+            "8. 'caption': Judul TikTok FYP + 4 hashtag (contoh: #tespsikologi #tesvisual #kuis #fyp). Maks 150 karakter.\n"
+            f"9. 'tags': Array 8-10 kata kunci SEO (contoh: {config.get('tags_example', ['tesvisual', 'kuisgambar'])}).\n"
+            "10. 'category_id': '27'.\n"
+            "11. 'interactive_comment': Kalimat pancingan di komentar (misal: 'Lu pilih A atau B? Tulis di bawah!').\n"
+            "12. 'yt_title': Judul YouTube Shorts High CTR. Maks 90 karakter.\n"
+            "13. 'yt_description': Deskripsi YouTube SEO. Maks 300 karakter.\n\n"
+            "GAYA BAHASA: Percakapan Gen-Z yang santai, seru, dan memancing partisipasi. DILARANG KERAS menggunakan kata kasar/makian.\n"
+            f"OUTPUT: Hanya JSON murni. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}"
+        )
+    elif bg_type == "hunter":
         prompt = (
             "Kamu adalah teman yang menonton video ini bersama penonton. Tugasmu bukan menjelaskan visual, tapi memberikan reaksi dan opini.\n\n"
             f"KONTEKS VIDEO: [{hunter_context}]\n\n"
@@ -914,6 +936,19 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     # Sudah didownload di awal
                     async def mock_hunter_download(): return video_files, False, None
                     download_task = mock_hunter_download()
+            elif bg_type == "quiz_ai":
+                from ai_video_engine import run_quiz_ai_workflow
+                prompt_a = script_data.get("option_a_prompt", "a mysterious forest 3d render, surreal, sharp focus")
+                prompt_b = script_data.get("option_b_prompt", "a majestic wolf 3d render, surreal, sharp focus")
+                label_a = script_data.get("option_a_label", "A: OPTION 1")
+                label_b = script_data.get("option_b_label", "B: OPTION 2")
+                async def quiz_workflow_task():
+                    res = await run_quiz_ai_workflow(prompt_a, prompt_b, label_a, label_b)
+                    if not res:
+                        logger.warning(" Quiz AI Video failed, falling back to Pexels")
+                        return await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3), True
+                    return res, False
+                download_task = quiz_workflow_task()
             elif bg_type == "ai_video":
                 from ai_video_engine import run_ai_video_workflow
                 async def ai_workflow_task():
@@ -1087,8 +1122,8 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
         if bg_type not in ["retention", "hunter"]:
             logger.info(" Mode Dynamic Cut-Rate: Dihasilkan %d potongan video yang tidak rata.", len(segment_durations))
 
-        if bg_type in ["retention", "hunter"] and video_files:
-            # Mode Layar Penuh (ASMR/Gameplay)
+        if bg_type in ["retention", "hunter", "quiz_ai"] and video_files:
+            # Mode Layar Penuh (ASMR/Gameplay/Quiz AI)
             import random
             from moviepy import VideoFileClip
             from moviepy.video.fx import MultiplyColor
@@ -1096,7 +1131,7 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
             file = video_files[0]
             try:
                 raw_clip = VideoFileClip(file)
-                if bg_type == "hunter":
+                if bg_type in ["hunter", "quiz_ai"]:
                     retention_clip = raw_clip
                 else:
                     retention_clip = raw_clip.with_audio(None)
@@ -1106,10 +1141,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     from moviepy import concatenate_videoclips
                     loops = int(total_duration / retention_clip.duration) + 1
                     retention_clip = concatenate_videoclips([retention_clip] * loops)
-                    logger.info(" Video retention terlalu pendek. Dilakukan looping otomatis menjadi %.1fs", retention_clip.duration)
+                    logger.info(" Video retention/quiz terlalu pendek. Dilakukan looping otomatis menjadi %.1fs", retention_clip.duration)
 
                 max_start = max(0, retention_clip.duration - total_duration)
-                start_time = random.uniform(0, max_start)
+                start_time = random.uniform(0, max_start) if max_start > 0 else 0.0
                 
                 # Potong klip
                 sliced_clip = retention_clip.subclipped(start_time, start_time + total_duration)
@@ -1134,10 +1169,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     
                 cropped = sliced_clip.cropped(x1=x1, y1=y1, x2=x2, y2=y2).resized((WIDTH, HEIGHT))
                 
-                # Gelapkan (dark overlay) sebesar 30% agar teks terbaca jelas (KECUALI mode hunter)
-                if bg_type == "hunter":
+                # Gelapkan (dark overlay) sebesar 30% agar teks terbaca jelas (KECUALI mode hunter & quiz_ai)
+                if bg_type in ["hunter", "quiz_ai"]:
                     final_bg = cropped
-                    logger.info(" Menggunakan Full-Screen Hunter Background (Tanpa Penggelapan, Start: %.1fs)", start_time)
+                    logger.info(" Menggunakan Full-Screen Quiz AI / Hunter Background (Tanpa Penggelapan, Start: %.1fs)", start_time)
                 else:
                     final_bg = cropped.with_effects([MultiplyColor(0.7)])
                     logger.info(" Menggunakan Full-Screen Retention Background (Start: %.1fs)", start_time)

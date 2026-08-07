@@ -249,3 +249,55 @@ async def run_ai_video_workflow(image_prompts: list, target_count: int, output_d
 
     logger.info(f" Pipeline selesai: {len(generated_videos)}/{target_count} scene berhasil.")
     return generated_videos
+
+
+async def run_quiz_ai_workflow(prompt_a: str, prompt_b: str, label_a: str = "A: PILIHAN 1", label_b: str = "B: PILIHAN 2", output_dir: str = "output") -> list:
+    """
+    Workflow khusus Kuis Visual AI:
+    Generate Gambar A & Gambar B (Pollinations -> Hugging Face), susun canvas side-by-side,
+    dan ubah menjadi video clip portrait.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = int(time.time())
+    logger.info(" [Quiz AI Workflow] Memulai pembuatan gambar kuis A dan B...")
+    
+    # Step 1: Generate Gambar A
+    seed_a = timestamp % 99999
+    path_a = await generate_image_pollinations(prompt_a, width=768, height=768, seed=seed_a)
+    if not path_a:
+        path_a = await generate_image_huggingface(prompt_a, width=768, height=768)
+        
+    # Step 2: Generate Gambar B
+    seed_b = (timestamp + 50) % 99999
+    path_b = await generate_image_pollinations(prompt_b, width=768, height=768, seed=seed_b)
+    if not path_b:
+        path_b = await generate_image_huggingface(prompt_b, width=768, height=768)
+        
+    if not path_a and not path_b:
+        logger.error(" Gagal menghasilkan kedua gambar kuis A dan B.")
+        return []
+        
+    # Step 3: Komposisi Canvas Quiz
+    from quiz_renderer import compose_quiz_canvas
+    canvas_path = os.path.join(output_dir, f"quiz_canvas_{timestamp}.jpg")
+    success = compose_quiz_canvas(
+        image_a_path=path_a or "",
+        image_b_path=path_b or "",
+        label_a=label_a,
+        label_b=label_b,
+        output_path=canvas_path
+    )
+    
+    if not success or not os.path.exists(canvas_path):
+        logger.error(" Gagal merender canvas visual kuis.")
+        return []
+        
+    # Step 4: Animasi FFmpeg lokal menjadi video clip (durasi 50s)
+    output_filename = os.path.join(output_dir, f"quiz_video_{timestamp}.mp4")
+    video_path = await animate_local_ffmpeg(canvas_path, output_filename, duration=50)
+    
+    if video_path and os.path.exists(video_path):
+        logger.info(f" Quiz AI Video Clip berhasil dibuat: {video_path}")
+        return [video_path]
+        
+    return []
