@@ -63,6 +63,9 @@ async function sendRequest(event_type){
    if(response.status===204){
      statusDiv.style.color="#22c55e";
      statusDiv.innerHTML=`✅ Workflow <b>${event_type}</b> berhasil dipicu. Buka tab Actions di GitHub untuk melihat progres.`;
+   }else if(response.status===401){
+     statusDiv.style.color="#ef4444";
+     statusDiv.innerHTML=`❌ <b>Error 401 (Bad Credentials):</b> Token GitHub kamu sudah kedaluwarsa atau salah.<br><br>💡 <b>Solusi:</b> Hapus token lama di bawah dan buat Token baru di GitHub: <b>Settings → Developer Settings → Personal Access Tokens (Classic)</b> (centang opsi <code>repo</code> & <code>workflow</code>).<br><br><button onclick="resetToken()" style="background:#dc2626;padding:8px 12px;font-size:13px;width:auto;">🗑️ Hapus Token Simpanan</button>`;
    }else{
      statusDiv.style.color="#ef4444";
      statusDiv.innerHTML="❌ Error "+response.status+"<br>"+await response.text();
@@ -73,6 +76,16 @@ async function sendRequest(event_type){
  }
  runBtn.disabled=false;
  animasiBtn.disabled=false;
+ alurFilmBtn.disabled=false;
+ analyticsBtn.disabled=false;
+}
+
+function resetToken(){
+ localStorage.removeItem("ghp_token");
+ tokenInput.value="";
+ statusDiv.style.color="#f59e0b";
+ statusDiv.innerHTML="🔑 Token lama berhasil dihapus. Silakan tempel Token GitHub PAT yang baru.";
+}
  analyticsBtn.disabled=false;
 }
 
