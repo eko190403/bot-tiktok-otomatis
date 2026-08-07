@@ -101,8 +101,17 @@ async def sync_youtube_analytics():
                 drop_off = await analyze_retention_heuristic(hook_text, views, likes, comments)
                 logger.info(f"[{vid_id}] Estimasi Drop-off: {drop_off}s (berdasarkan {views} views, {likes} likes, {len(comments)} komentar)")
                 
-                # Update ke Firestore
+                # Update ke Firestore & Cadangan Lokal
+                caption_text = doc_info["data"].get("caption", hook_text)
                 try:
+                    # Simpan data ke cadangan analitik lokal
+                    firebase_connector.save_local_performance_data(
+                        video_id=vid_id,
+                        caption=caption_text,
+                        views=views,
+                        likes=likes
+                    )
+                    
                     # Gunakan fungsi bawaan untuk views dan likes (karena ada logic A/B test aggregation)
                     firebase_connector.update_draft_stats(doc_info["ref"].id, views, likes)
                     
@@ -118,7 +127,7 @@ async def sync_youtube_analytics():
                         doc_info["ref"].update(update_data)
                         
                 except Exception as update_err:
-                    logger.error(f"Gagal memperbarui Firestore untuk {vid_id}: {update_err}")
+                    logger.error(f"Gagal memperbarui analitik untuk {vid_id}: {update_err}")
 
     logger.info("✅ Sinkronisasi Analitik YouTube Selesai!")
 

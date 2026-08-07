@@ -75,8 +75,12 @@ def apply_text_watermark(video_clip, channel_name: str = "@RuangPikir"):
         )
         return video_clip
 
-def create_visual_cta_frame(video_width: int, video_height: int) -> np.ndarray:
+def create_visual_cta_frame(video_width: int, video_height: int, title_text: str = None, desc_text: str = None, outline_color: tuple = (255, 204, 0, 255)) -> np.ndarray:
     """Membuat frame visual CTA premium (tombol & info share/save) di tengah bawah."""
+    if title_text is None:
+        title_text = "SIMPAN & BAGIKAN VIDEO INI!"
+    if desc_text is None:
+        desc_text = "Tap 2x jika info ini berguna"
     img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
@@ -93,7 +97,7 @@ def create_visual_cta_frame(video_width: int, video_height: int) -> np.ndarray:
         [start_x, start_y, start_x + box_w, start_y + box_h],
         radius=25,
         fill=(0, 0, 0, 215),
-        outline=(255, 204, 0, 255),
+        outline=outline_color,
         width=4
     )
     
@@ -122,17 +126,13 @@ def create_visual_cta_frame(video_width: int, video_height: int) -> np.ndarray:
             continue
     if font_desc is None:
         font_desc = ImageFont.load_default()
-        
-    # 3. Tulis teks CTA (singkat) — jangan tutupi area interaksi platform
-    title_text = "SIMPAN & BAGIKAN VIDEO INI!"
-    desc_text = "Tap 2x jika info ini berguna"
     
     try:
         t_bbox = draw.textbbox((0, 0), title_text, font=font_title)
         t_w = t_bbox[2] - t_bbox[0]
         tx = start_x + (box_w - t_w) // 2
         ty = start_y + 45
-        draw.text((tx, ty), title_text, font=font_title, fill=(255, 204, 0, 255))
+        draw.text((tx, ty), title_text, font=font_title, fill=outline_color)
         
         d_bbox = draw.textbbox((0, 0), desc_text, font=font_desc)
         d_w = d_bbox[2] - d_bbox[0]
@@ -145,7 +145,7 @@ def create_visual_cta_frame(video_width: int, video_height: int) -> np.ndarray:
         
     return np.array(img)
 
-def apply_visual_cta(video_clip):
+def apply_visual_cta(video_clip, cta_title: str = None, cta_desc: str = None, outline_color: tuple = (255, 204, 0, 255)):
     """Menampilkan overlay CTA visual di 3 detik terakhir video."""
     try:
         from moviepy import ImageClip, CompositeVideoClip
@@ -160,7 +160,7 @@ def apply_visual_cta(video_clip):
             
         start_time = duration - cta_duration
         
-        cta_frame = create_visual_cta_frame(w, h)
+        cta_frame = create_visual_cta_frame(w, h, title_text=cta_title, desc_text=cta_desc, outline_color=outline_color)
         cta_clip = (
             ImageClip(cta_frame)
             .with_start(start_time)

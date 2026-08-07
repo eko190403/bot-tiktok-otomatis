@@ -319,14 +319,19 @@ async def main():
             video_files = glob.glob("output/*.mp4")
             latest_video = max(video_files, key=os.path.getctime) if video_files else None
 
-            # Pembuatan Thumbnail: ambil frame bersih dari detik ke-2 video
+            # Pembuatan Thumbnail High-CTR V2: ekstrak frame + overlay badge & teks
             thumbnail_path = "output/thumbnail.jpg"
+            raw_frame_path = "temp/raw_frame.jpg"
             has_thumbnail = False
             if latest_video:
-                print(" Memulai proses pembuatan auto-thumbnail...")
+                print(" Memulai proses pembuatan auto-thumbnail High-CTR V2...")
                 try:
                     import subprocess
                     import asyncio
+                    from thumbnail_generator import generate_thumbnail
+                    
+                    os.makedirs("temp", exist_ok=True)
+                    # 1. Ekstrak frame mentah dari detik ke-2 video
                     result = await asyncio.to_thread(
                         subprocess.run,
                         [
@@ -335,23 +340,35 @@ async def main():
                             "-i", latest_video,
                             "-vframes", "1",
                             "-q:v", "2",
-                            thumbnail_path
+                            raw_frame_path
                         ],
                         capture_output=True, text=True
                     )
-                    if os.path.exists(thumbnail_path):
-                        has_thumbnail = True
-                        print(f" Thumbnail berhasil dibuat: {thumbnail_path}")
+                    
+                    # 2. Hasilkan Thumbnail V2 dengan Overlay Teks & Badge
+                    if os.path.exists(raw_frame_path):
+                        brand_title = channel_cfg.get("name", channel_id)
+                        theme_c = channel_cfg.get("theme_color", "classic_yellow")
+                        success = generate_thumbnail(
+                            hook_text=hook,
+                            background_path=raw_frame_path,
+                            output_path=thumbnail_path,
+                            brand_name=brand_title,
+                            theme_color=theme_c
+                        )
+                        if success and os.path.exists(thumbnail_path):
+                            has_thumbnail = True
+                            print(f" Thumbnail High-CTR V2 berhasil dibuat: {thumbnail_path}")
                     else:
-                        print(f" FFmpeg gagal membuat thumbnail: {result.stderr[-200:]}")
+                        print(f" FFmpeg gagal membuat raw frame thumbnail: {result.stderr[-200:]}")
                 except Exception as thumb_err:
-                    print(f" Gagal membuat thumbnail: {thumb_err}")
+                    print(f" Gagal membuat thumbnail High-CTR V2: {thumb_err}")
 
             # Poin 9: Integrasi Upload Otomatis ke TikTok
             enable_upload = os.getenv("ENABLE_TIKTOK_UPLOAD", "false").lower() == "true"
             any_upload_success = False
             
-            if enable_upload and channel_id == "ruangpikir":
+            if enable_upload:
                 if latest_video:
                     print(" Memicu pengunggahan otomatis ke TikTok...")
                     from uploader import upload_to_tiktok

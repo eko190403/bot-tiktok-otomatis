@@ -25,7 +25,14 @@ def extract_frame_from_video(video_path: str, output_image_path: str, timestamp_
         logger.error(f" Gagal mengekstrak frame dari video: {e}")
         return False
 
-def generate_thumbnail(hook_text: str, background_path: str, output_path: str = "output/thumbnail.jpg", brand_name: str = "Ruang Pikir") -> bool:
+# Peta warna tema ke RGB untuk thumbnail
+THUMBNAIL_THEME_COLORS = {
+    "classic_yellow": (255, 204, 0),
+    "neon_green": (52, 199, 89),
+    "cyberpunk_pink": (255, 45, 85)
+}
+
+def generate_thumbnail(hook_text: str, background_path: str, output_path: str = "output/thumbnail.jpg", brand_name: str = "Ruang Pikir", theme_color: str = "classic_yellow") -> bool:
     """
     Menghasilkan gambar thumbnail 1280x720 (16:9) dengan overlay teks hook.
     """
@@ -60,8 +67,13 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
             
         img_resized = img_cropped.resize((target_w, target_h), Image.Resampling.LANCZOS)
         
-        # 2. Buat draw layer & overlay gelap transparan (meningkatkan keterbacaan teks)
-        overlay = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 140)) # 55% opacity black
+        # 2. Buat draw layer & overlay gradien gelap (meningkatkan keterbacaan teks)
+        overlay = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        # Gradient dari atas (transparan) ke bawah (gelap) untuk efek premium
+        for y_pos in range(target_h):
+            opacity = int(60 + (180 * (y_pos / target_h)))  # 60 di atas, 240 di bawah
+            overlay_draw.line([(0, y_pos), (target_w, y_pos)], fill=(0, 0, 0, opacity))
         img_resized = img_resized.convert("RGBA")
         img_combined = Image.alpha_composite(img_resized, overlay).convert("RGB")
         
@@ -122,11 +134,34 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
         # Batasi maksimal 3 baris
         lines = lines[:3]
         
-        # 5. Gambar teks hook di tengah vertikal dan horizontal
-        line_height = 80
-        total_text_height = len(lines) * line_height
-        start_y = (target_h - total_text_height) // 2
+        # 5. Gambar Badge High-CTR di pojok kiri atas
+        badges = ["🔥 VIRAL", "🧠 RAHASIA", "💡 FAKTA GELAP", "⚡ MUST WATCH", "👁️ TAHUKAH KAMU"]
+        import random
+        badge_text = random.choice(badges)
         
+        try:
+            badge_font = ImageFont.truetype("arialbd.ttf", 30)
+        except Exception:
+            badge_font = font
+            
+        try:
+            bw = draw.textlength(badge_text, font=badge_font)
+        except AttributeError:
+            bw = draw.textsize(badge_text, font=badge_font)[0]
+            
+        # Draw pill box untuk badge
+        bx1, by1 = 40, 40
+        bx2, by2 = int(bx1 + bw + 40), by1 + 55
+        badge_color = THUMBNAIL_THEME_COLORS.get(theme_color, (255, 204, 0))
+        draw.rounded_rectangle([bx1, by1, bx2, by2], radius=15, fill=badge_color)
+        draw.text((bx1 + 20, by1 + 10), badge_text, fill=(0, 0, 0), font=badge_font)
+
+        # 6. Gambar teks hook di tengah vertikal dan horizontal dengan drop shadow ganda
+        line_height = 85
+        total_text_height = len(lines) * line_height
+        start_y = (target_h - total_text_height) // 2 + 20
+        
+        text_color = THUMBNAIL_THEME_COLORS.get(theme_color, (255, 204, 0))
         for i, line in enumerate(lines):
             try:
                 line_w = draw.textlength(line, font=font)
@@ -136,13 +171,15 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
             x = (target_w - line_w) // 2
             y = start_y + (i * line_height)
             
-          
-            draw.text((x + 4, y + 4), line, fill=(0, 0, 0), font=font)
+            # Shadow tebal multi-layer untuk kontras tinggi di latar apapun
+            for off_x, off_y in [(-3,-3), (3,-3), (-3,3), (3,3), (0,4), (4,0), (-4,0), (0,-4)]:
+                draw.text((x + off_x, y + off_y), line, fill=(0, 0, 0), font=font)
 
-            draw.text((x, y), line, fill=(255, 204, 0), font=font)
+            draw.text((x, y), line, fill=text_color, font=font)
 
+        # 7. Brand watermark di bawah
         try:
-            brand_font = ImageFont.truetype("arial.ttf", 28)
+            brand_font = ImageFont.truetype("arialbd.ttf", 28)
         except Exception:
             brand_font = font
             
@@ -155,14 +192,14 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
         brand_x = (target_w - brand_w) // 2
         brand_y = target_h - 60
         
-        draw.text((brand_x + 2, brand_y + 2), brand_text, fill=(0, 0, 0), font=brand_font)
-        draw.text((brand_x, brand_y), brand_text, fill=(200, 200, 200), font=brand_font)
+        # Background box kecil brand
+        draw.rounded_rectangle([brand_x - 15, brand_y - 5, brand_x + brand_w + 15, brand_y + 35], radius=8, fill=(0, 0, 0, 180))
+        draw.text((brand_x, brand_y), brand_text, fill=(255, 255, 255), font=brand_font)
         
-        # 7. Simpan hasil akhir
-        img_combined.save(output_path, "JPEG", quality=95)
-        logger.info(f" Thumbnail berhasil dibuat: {output_path}")
+        img_combined.save(output_path, quality=95)
+        logger.info(f" Thumbnail High-CTR V2 berhasil dibuat: {output_path}")
         return True
         
     except Exception as e:
-        logger.error(f" Gagal menghasilkan thumbnail: {e}")
+        logger.error(f" Gagal membuat thumbnail: {e}")
         return False

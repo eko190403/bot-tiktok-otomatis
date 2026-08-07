@@ -227,29 +227,85 @@ def update_draft_stats(video_id: str, views: int, likes: int) -> None:
 # STATISTIK & ANALITIK
 # ─────────────────────────────────────────────
 
-def get_top_performing_scripts(limit: int = 3) -> list:
-    """Mengambil naskah dengan views tertinggi dari Firestore."""
-    if not _require_firestore("get_top_performing_scripts"):
+def _get_local_top_performing_scripts(limit: int = 3) -> list:
+    """Fallback lokal untuk mengambil naskah berkinerja tinggi dari file local_analytics.json."""
+    analytics_file = "local_analytics.json"
+    if not os.path.exists(analytics_file):
         return []
     try:
-        docs = (
-            db.collection("drafts")
-            .where("views", ">", 0)
-            .order_by("views", direction=firestore.Query.DESCENDING)
-            .limit(limit)
-            .stream()
-        )
-        return [
-            {
-                "caption": d.to_dict().get("caption", ""),
-                "views": d.to_dict().get("views", 0),
-                "likes": d.to_dict().get("likes", 0),
-            }
-            for d in docs
-        ]
+        with open(analytics_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            scripts = data.get("top_scripts", [])
+            scripts.sort(key=lambda x: x.get("views", 0), reverse=True)
+            return scripts[:limit]
     except Exception as e:
-        logger.warning(f" Gagal mengambil naskah populer dari Firestore: {e}")
+        logger.warning(f" Gagal membaca naskah populer dari local_analytics.json: {e}")
         return []
+
+def save_local_performance_data(video_id: str, caption: str, views: int, likes: int, comment_insight: str = "") -> None:
+    """Menyimpan data analitik ke file lokal local_analytics.json sebagai cadangan Firestore."""
+    analytics_file = "local_analytics.json"
+    data = {"top_scripts": [], "insights": [], "updated_at": int(time.time())}
+    if os.path.exists(analytics_file):
+        try:
+            with open(analytics_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+    
+    # Update atau tambah script baru
+    top_scripts = data.get("top_scripts", [])
+    found = False
+    for item in top_scripts:
+        if item.get("video_id") == video_id or item.get("caption") == caption:
+            item["views"] = max(item.get("views", 0), views)
+            item["likes"] = max(item.get("likes", 0), likes)
+            found = True
+            break
+    if not found and caption:
+        top_scripts.append({"video_id": video_id, "caption": caption, "views": views, "likes": likes})
+    
+    # Simpan insight jika ada
+    if comment_insight:
+        insights = data.get("insights", [])
+        if comment_insight not in insights:
+            insights.insert(0, comment_insight)
+            data["insights"] = insights[:10]
+            
+    data["top_scripts"] = sorted(top_scripts, key=lambda x: x.get("views", 0), reverse=True)[:20]
+    try:
+        with open(analytics_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        logger.info(f" Data performa lokal disimpan ke {analytics_file}")
+    except Exception as e:
+        logger.warning(f" Gagal menyimpan local_analytics.json: {e}")
+
+def get_top_performing_scripts(limit: int = 3) -> list:
+    """Mengambil naskah dengan views tertinggi dari Firestore atau fallback lokal."""
+    if is_firebase_enabled and db is not None:
+        try:
+            docs = (
+                db.collection("drafts")
+                .where("views", ">", 0)
+                .order_by("views", direction=firestore.Query.DESCENDING)
+                .limit(limit)
+                .stream()
+            )
+            res = [
+                {
+                    "caption": d.to_dict().get("caption", ""),
+                    "views": d.to_dict().get("views", 0),
+                    "likes": d.to_dict().get("likes", 0),
+                }
+                for d in docs
+            ]
+            if res:
+                return res
+        except Exception as e:
+            logger.warning(f" Gagal mengambil naskah populer dari Firestore: {e}")
+    
+    # Fallback ke analitik lokal jika Firestore kosong/off
+    return _get_local_top_performing_scripts(limit=limit)
 
 
 def get_active_youtube_video_ids(limit: int = 50) -> dict:

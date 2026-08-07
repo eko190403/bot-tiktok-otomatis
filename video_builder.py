@@ -289,7 +289,22 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     config = channel_cfg
     chosen_theme = random.choice(config["themes"])
     chosen_angle = random.choice(config.get("angles", ["Umum / Bebas"]))
+    
+    # Pilih gaya hook secara acak dari config channel (mencegah hook repetitif)
+    default_hook_styles = [
+        "Pertanyaan retoris yang sangat personal (Contoh: 'PERNAH NGERASA CAPEK TAPI NGGAK TAU CAPEK KENAPA?')",
+        "Fakta mengejutkan yang kontra-intuitif (Contoh: 'ORANG PALING SABAR TERNYATA YANG PALING BERBAHAYA')",
+        "Skenario imajinatif yang relatable (Contoh: 'BAYANGIN LU BANGUN TIDUR DAN SEMUA ORANG LUPA SIAPA LU')",
+        "Perbandingan absurd yang bikin mikir (Contoh: 'BEDANYA ORANG SUKSES DAN GAGAL CUMA 1 KEBIASAAN INI')",
+        "Cerita mini 1 kalimat yang bikin penasaran (Contoh: 'GUE PERNAH KEHILANGAN SAHABAT GARA-GARA 1 KATA INI')",
+        "Konfrontasi langsung ke penonton (Contoh: 'LU YANG SCROLL INI PASTI LAGI NGALAMIN HAL YANG SAMA')",
+        "Pengungkapan rahasia yang jarang diketahui (Contoh: 'INI YANG NGGAK PERNAH DICERITAIN GURU LU DI SEKOLAH')"
+    ]
+    hook_styles = config.get("hook_styles", default_hook_styles)
+    chosen_hook_style = random.choice(hook_styles)
+    
     logger.info(" Tema terpilih: %s (Angle: %s)", chosen_theme, chosen_angle)
+    logger.info(" Gaya hook terpilih: %s", chosen_hook_style[:60])
     
     # Baca riwayat naskah untuk mencegah repetisi ide (lewat Firebase / cadangan Lokal)
     exclude_prompt = ""
@@ -366,7 +381,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         )
         logger.info(" A/B Testing: Menginstruksikan Gemini untuk membuat Hook B alternatif.")
 
-    hook_rule = "1. 'hook': Kalimat pembuka KAPITAL yang SANGAT RELATABLE, PERSONAL, dan MENYENTUH EMOSI/PENGALAMAN PENONTON (Pattern Interrupt) di 3 detik pertama. Maks 10 kata. STRATEGI WAJIB: DILARANG KERAS pakai pola membosankan seperti 'Tahukah kamu' atau 'X% orang ternyata'. Buat hook seolah Anda membaca pikiran/pengalaman rahasia mereka! (Contoh: 'PERNAH NGERASA MAKIN KERAS USAHA TAPI MAKIN HANCUR?', 'LO SERING DIBIKIN MERASA BERSALAH SAMA ORANG TERDEKAT?'). WAJIB pecah menggunakan tanda baca (, atau ?) agar ada jeda napas natural.\n"
+    hook_rule = f"1. 'hook': Kalimat pembuka KAPITAL yang SANGAT RELATABLE dan MENYENTUH EMOSI PENONTON di 3 detik pertama. Maks 10 kata. GAYA HOOK KALI INI: {chosen_hook_style}. DILARANG KERAS pakai pola klise seperti 'Tahukah kamu', 'X% orang ternyata', 'JANGAN...', atau 'HATI-HATI...'. WAJIB pecah menggunakan tanda baca (, atau ?) agar ada jeda napas natural.\n"
     if hook_candidate:
         hook_rule = f"1. 'hook': Teks hook harus sama persis dengan teks ini: '{hook_candidate}' (Jangan diubah satu kata pun!)\n"
 
@@ -420,8 +435,31 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         )
     else:
         guardrail = "GUARDRAIL IDENTITAS CHANNEL (SANGAT PENTING): Meskipun Anda menerima masukan dari tren atau komentar, Anda TIDAK BOLEH mengorbankan kedalaman faktual dan akademis/literatur dari niche channel ini. Jangan pernah berubah menjadi konten pop-psychology murahan, meme receh, atau kutipan zodiak. Pertahankan bobot intelektualitas tinggi dalam setiap naskah dan diksi.\n\n"
-        story_rule = "2. 'story': Penjelasan mendalam yang emosional. WAJIB memberikan 1 contoh skenario nyata di kehidupan sehari-hari agar materi mudah dipahami dan tidak terlalu teoritis. MINIMAL 5 kalimat, MAKSIMAL 8 kalimat. Pastikan total kata naskah (hook + story + cta) MAKSIMAL 150 kata. Gunakan elipsis (...) untuk jeda dramatis, dan gunakan tanda baca koma (,) dan titik (.) secara natural agar AI membaca dengan tempo yang berwibawa.\n"
-        cta_rule = "3. 'cta': Ajakan bertindak (Maks 15 kata). SANGAT PENTING: CTA HARUS berupa 1 pertanyaan KONTROVERSIAL atau memecah belah opini penonton untuk memaksa mereka berdebat di kolom komentar (Engagement Farm)! (Contoh: 'Kamu tim setuju atau nolak keras soal ini?'). Syarat mutlak: Ujung akhir CTA harus menjadi awalan yang logis saat bersambung kembali ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n"
+                # VARIASI STRUKTUR NARASI & DURASI — mencegah video terasa template-an dan membosankan
+        import random
+        duration_profiles = [
+            {"format": "snackable_fast", "desc": "FORMAT SNACKABLE KILAT (20-30 detik): Naskah padat, cepat, dan punchy! 3-4 kalimat utama. Total kata naskah (hook + story + cta) MAKSIMAL 70 kata. Cocok untuk watch-rate 100%.\n"},
+            {"format": "standard_medium", "desc": "FORMAT STANDAR MEDIUM (35-50 detik): Penjelasan mendalam dengan 1 contoh nyata. 5-7 kalimat. Total kata naskah (hook + story + cta) MAKSIMAL 120 kata.\n"},
+            {"format": "deep_extended", "desc": "FORMAT DEEP RETENTION (60-75 detik): Pembahasan komprehensif, bertahap, dan dramatis. 7-10 kalimat. Total kata naskah (hook + story + cta) MAKSIMAL 165 kata.\n"}
+        ]
+        chosen_profile = random.choice(duration_profiles)
+        
+        story_styles = [
+            f"2. 'story': {chosen_profile['desc']} WAJIB memberikan 1 contoh skenario nyata di kehidupan sehari-hari agar materi mudah dipahami dan tidak terlalu teoritis. Gunakan elipsis (...) untuk jeda dramatis.\n",
+            f"2. 'story': {chosen_profile['desc']} Gunakan format MINI STORYTELLING: Ceritakan 1 kisah singkat tentang seseorang yang mengalami tema ini dari masalah → klimaks → pelajaran. Gunakan elipsis (...) di momen klimaks.\n",
+            f"2. 'story': {chosen_profile['desc']} Gunakan format LISTICLE KILAT: Berikan 3 poin singkat yang saling terhubung. Setiap poin memberi 'aha moment'. Gunakan elipsis (...) antar poin.\n",
+            f"2. 'story': {chosen_profile['desc']} Gunakan format PERBANDINGAN KONTRAS: Bandingkan 2 sisi berlawanan dengan kontras tajam. Gunakan elipsis (...) di momen twist.\n"
+        ]
+        story_rule = random.choice(story_styles)
+        
+        cta_styles = [
+            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA HARUS berupa 1 pertanyaan KONTROVERSIAL yang memecah belah opini penonton untuk memaksa mereka berdebat di komentar! Syarat: ujung CTA harus nyambung logis ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n",
+            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA berupa TANTANGAN LANGSUNG ke penonton (misal: 'Coba buktiin kalo lu beda dari 90% orang!'). Syarat: ujung CTA harus nyambung logis ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n",
+            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA berupa KLAIM BERANI yang memancing sanggahan (misal: 'Dan ini yang nggak mau diterima kebanyakan orang'). Syarat: ujung CTA harus nyambung logis ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n"
+        ]
+        cta_rule = random.choice(cta_styles)
+        
+        logger.info(" Variasi narasi & durasi: profile=%s, story=%s", chosen_profile["format"], story_rule[15:55])
         
         prompt = (
             f"{system_prompt}"
@@ -759,12 +797,13 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
         
         keywords = await extract_keywords_from_script(story, aesthetic_style, is_ai_video=(bg_type == "ai_video"))
         
-        # Memilih tema visual secara acak untuk A/B testing
+        # Menggunakan tema visual dari konfigurasi channel (konsistensi brand)
         from subtitle_engine.styles import SubtitleStyles
-        import random
-        chosen_visual_theme = random.choice(list(SubtitleStyles.THEMES.keys()))
+        chosen_visual_theme = channel_cfg.get("theme_color", "classic_yellow")
+        if chosen_visual_theme not in SubtitleStyles.THEMES:
+            chosen_visual_theme = "classic_yellow"
         SubtitleStyles.CHOSEN_THEME = chosen_visual_theme
-        logger.info(" A/B Testing: Tema visual terpilih untuk video ini: %s", chosen_visual_theme)
+        logger.info(" Tema visual channel: %s (dari config channel)", chosen_visual_theme)
 
         # Simpan metadata dinamis untuk dibaca uploader di app.py
         tags = script_data.get("tags", ["faktapsikologi", "mindset", "stoikisme", "ruangpikir"])
@@ -1260,18 +1299,43 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
         
         if bg_type != "hunter":
             if not music_files:
-                logger.info(" Folder assets/music/ kosong. Mengunduh backsound gratis bebas hak cipta secara otomatis...")
+                logger.info(" Folder assets/music/ kosong. Mengunduh backsound gratis sesuai niche channel...")
                 import urllib.request
             import random
             
-            # List lagu dark/cinematic stoic dari Incompetech (Kevin MacLeod)
-            free_tracks = [
+            # Koleksi musik bebas royalti per niche channel (Kevin MacLeod - Incompetech)
+            niche_tracks = {
+                "ruangpikir": [
+                    ("Dark_Times.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Times.mp3"),
+                    ("Anxiety.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Anxiety.mp3"),
+                    ("Crypto.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Crypto.mp3"),
+                ],
+                "logikastoik": [
+                    ("Echoes_of_Time.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Echoes%20of%20Time.mp3"),
+                    ("Ever_Mindful.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ever%20Mindful.mp3"),
+                    ("Meditation_Impromptu.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Meditation%20Impromptu.mp3"),
+                ],
+                "rahasiafinansial": [
+                    ("Backed_Vibes_Clean.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Backed%20Vibes%20Clean.mp3"),
+                    ("Shiny_Tech.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Shiny%20Tech.mp3"),
+                    ("Inspired.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Inspired.mp3"),
+                ],
+                "misterisemesta": [
+                    ("Dark_Fog.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Fog.mp3"),
+                    ("Distant_Tension.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Distant%20Tension.mp3"),
+                    ("Crypto.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Crypto.mp3"),
+                ],
+                "poladisiplin": [
+                    ("Achaidh_Cheide.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Achaidh%20Cheide.mp3"),
+                    ("Punch_Deck_Catharsis.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Crusade.mp3"),
+                    ("Heroic_Age.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Heroic%20Age.mp3"),
+                ],
+            }
+            # Ambil pool musik sesuai channel, fallback ke pool generic
+            free_tracks = niche_tracks.get(channel_id, [
                 ("Dark_Times.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Times.mp3"),
-                ("Dark_Fog.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Fog.mp3"),
-                ("Echoes_of_Time.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Echoes%20of%20Time.mp3"),
                 ("Anxiety.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Anxiety.mp3"),
-                ("Distant_Tension.mp3", "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Distant%20Tension.mp3")
-            ]
+            ])
             chosen_track_name, chosen_track_url = random.choice(free_tracks)
             download_dest = os.path.join(music_dir, chosen_track_name)
             try:
@@ -1307,10 +1371,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     frame = get_frame(t)
                     is_array = isinstance(t, np.ndarray)
                     t_val = t if is_array else np.array([t])
-                    vol = np.full_like(t_val, 0.08, dtype=float)
+                    vol = np.full_like(t_val, 0.15, dtype=float)
                     for (s_start, s_end) in swells:
                         mask = (t_val >= s_start) & (t_val <= s_end)
-                        vol[mask] = 0.35
+                        vol[mask] = 0.50
                     
                     # PROACTIVE AUDIT: Anti-click fadeout di ujung video (0.2s)
                     fade_duration = 0.2
@@ -1344,8 +1408,9 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 data = np.vstack((data, data)).T
             return AudioArrayClip(data, fps=fps)
 
-        # 1. Soft Swish / Glitch untuk transisi visual
-        trans_path = os.path.join(music_dir, "glitch.wav" if channel_id == "ruangpikir" else "soft_swish.wav")
+        # 1. Soft Swish / Glitch untuk transisi visual (glitch untuk channel gelap/misterius)
+        glitch_channels = ["ruangpikir", "misterisemesta"]
+        trans_path = os.path.join(music_dir, "glitch.wav" if channel_id in glitch_channels else "soft_swish.wav")
         if os.path.exists(trans_path):
             try:
                 trans_base = load_sfx(trans_path)
@@ -1382,9 +1447,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
             except Exception as e:
                 logger.warning(" Gagal memuat Sub Drop: %s", e)
 
-        # 3. Heartbeat (Hanya untuk channel psikologi/stoik)
+        # 3. Heartbeat (Untuk channel psikologi, stoik, dan misteri — menambah tensi emosional)
         heartbeat_path = os.path.join(music_dir, "heartbeat.wav")
-        if os.path.exists(heartbeat_path) and channel_id == "ruangpikir":
+        heartbeat_channels = ["ruangpikir", "logikastoik", "misterisemesta"]
+        if os.path.exists(heartbeat_path) and channel_id in heartbeat_channels:
             try:
                 hb_base = load_sfx(heartbeat_path)
                 moviepy_resources["hb_base"] = hb_base
@@ -1500,7 +1566,22 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
 
             # Hanya tampilkan visual CTA jika diizinkan oleh konfigurasi
             if getattr(_config, "ENABLE_VISUAL_CTA", True):
-                moviepy_resources["final_video"] = apply_visual_cta(moviepy_resources["final_video"])
+                # Ambil teks CTA dan warna dari config channel
+                _cta_title = channel_cfg.get("cta_visual_title", None)
+                _cta_desc = channel_cfg.get("cta_visual_desc", None)
+                # Konversi theme_color ke outline_color tuple untuk CTA visual
+                _theme_color_map = {
+                    "classic_yellow": (255, 204, 0, 255),
+                    "neon_green": (52, 199, 89, 255),
+                    "cyberpunk_pink": (255, 45, 85, 255)
+                }
+                _outline_color = _theme_color_map.get(channel_cfg.get("theme_color", "classic_yellow"), (255, 204, 0, 255))
+                moviepy_resources["final_video"] = apply_visual_cta(
+                    moviepy_resources["final_video"],
+                    cta_title=_cta_title,
+                    cta_desc=_cta_desc,
+                    outline_color=_outline_color
+                )
                 logger.info(" Visual CTA berhasil ditambahkan di 3 detik terakhir video.")
             else:
                 logger.info(" Visual CTA dinonaktifkan oleh konfigurasi.")
