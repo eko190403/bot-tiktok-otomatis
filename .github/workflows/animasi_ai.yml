@@ -1,4 +1,4 @@
-name: Bot TikTok Animasi AI
+name: Bot TikTok Tes Visual AI (Kuis Gambar)
 
 on:
   workflow_dispatch:
@@ -6,6 +6,9 @@ on:
   repository_dispatch:
     types:
       - run-animasi
+      - run-quiz
+      - run-tesvisual
+      - run-quiz-ai
 
   schedule:
     # Sedikit digeser 1 jam dari channel utama agar tidak bentrok
@@ -25,7 +28,7 @@ jobs:
     permissions:
       contents: write
     env:
-      ENABLE_VISUAL_CTA: "false"
+      ENABLE_VISUAL_CTA: "true"
 
     steps:
       - name: Checkout Repository
@@ -68,7 +71,7 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "text=Perintah diterima! Bot Animasi AI mulai memproses. Mohon tunggu..."
+            -d "text=Perintah diterima! Bot Tes Visual AI (Kuis Gambar) mulai memproses. Mohon tunggu..."
 
       - name: Siapkan Cookies TikTok dari Secret
         env:
@@ -174,7 +177,7 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo" \
                 -F "chat_id=${TELEGRAM_CHAT_ID}" \
                 -F "video=@$file" \
-                -F "caption=🚀 Test Generasi Animasi AI Selesai!"
+                -F "caption=🚀 Generasi Kuis Tes Visual AI Selesai!"
             fi
           done
 
