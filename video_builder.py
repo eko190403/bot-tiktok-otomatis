@@ -428,7 +428,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
             "11. 'interactive_comment': Kalimat pancingan di komentar (misal: 'Lu pilih A atau B? Tulis di bawah!').\n"
             "12. 'yt_title': Judul YouTube Shorts High CTR. Maks 90 karakter.\n"
             "13. 'yt_description': Deskripsi YouTube SEO. Maks 300 karakter.\n\n"
-            "GAYA BAHASA: Percakapan Gen-Z yang santai, seru, dan memancing partisipasi. DILARANG KERAS menggunakan kata kasar/makian.\n"
+            "GAYA BAHASA: Gunakan bahasa santai Gen-Z Indonesia yang akrab dan seru (seperti 'Lu tim A atau B?', 'gue', 'lu', 'relate', 'overthinking'). Memancing orang berdebat dan mengetik komentar. DILARANG KERAS menggunakan kata kasar/makian.\n"
             f"OUTPUT: Hanya JSON murni. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}"
         )
     elif bg_type == "hunter":
