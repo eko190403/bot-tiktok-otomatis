@@ -41,8 +41,9 @@ async def generate_image_pollinations(prompt: str, width: int = 576, height: int
             None, lambda: requests.get(url, timeout=60, stream=True)
         )
         if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
-            # Simpan gambar lokal lalu kembalikan path
-            img_path = f"/tmp/pollinations_{seed}.jpg"
+            # Simpan gambar lokal di folder temp
+            os.makedirs("temp", exist_ok=True)
+            img_path = os.path.join("temp", f"pollinations_{seed}.jpg")
             with open(img_path, "wb") as f:
                 for chunk in response.iter_content(1024 * 64):
                     if chunk:
@@ -80,6 +81,7 @@ async def generate_image_huggingface(prompt: str, width: int = 576, height: int 
         }
     }
 
+    os.makedirs("temp", exist_ok=True)
     for attempt in range(1, 9):
         hf_key = os.getenv(f"HF_API_KEY_{attempt}")
         if not hf_key:
@@ -99,7 +101,7 @@ async def generate_image_huggingface(prompt: str, width: int = 576, height: int 
             if response.status_code == 200:
                 content_type = response.headers.get("Content-Type", "")
                 if "image" in content_type:
-                    img_path = f"/tmp/hf_{attempt}_{int(time.time())}.jpg"
+                    img_path = os.path.join("temp", f"hf_{attempt}_{int(time.time())}.jpg")
                     with open(img_path, "wb") as f:
                         f.write(response.content)
                     file_size = os.path.getsize(img_path)

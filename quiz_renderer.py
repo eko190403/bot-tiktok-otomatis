@@ -21,29 +21,45 @@ def compose_quiz_canvas(image_a_path: str, image_b_path: str, label_a: str = "A:
         box_w = width - 80 # 1000px
         
         # Helper crop & resize
-        def fit_image(img_path, target_w, target_h):
-            if not os.path.exists(img_path):
-                # Buat placeholder jika file tidak ada
-                img = Image.new("RGB", (target_w, target_h), (40, 40, 50))
+        def fit_image(img_path, target_w, target_h, option_name="PILIHAN"):
+            if not img_path or not os.path.exists(img_path):
+                # Buat gradient canvas menarik jika file AI image sedang lambat/gagal
+                img = Image.new("RGB", (target_w, target_h), (30, 35, 45))
                 draw = ImageDraw.Draw(img)
-                draw.text((target_w // 4, target_h // 2), "GAMBAR AI", fill=(200, 200, 200))
+                # Gradient lines
+                for y in range(target_h):
+                    r = int(30 + (40 * (y / target_h)))
+                    g = int(35 + (30 * (y / target_h)))
+                    b = int(60 + (80 * (y / target_h)))
+                    draw.line([(0, y), (target_w, y)], fill=(r, g, b))
+                try:
+                    f = ImageFont.truetype("arialbd.ttf", 36)
+                except Exception:
+                    f = ImageFont.load_default()
+                txt = f"[ {option_name} ]"
+                draw.text((target_w // 3, target_h // 2 - 20), txt, fill=(255, 255, 255), font=f)
                 return img
-            img = Image.open(img_path)
-            w, h = img.size
-            aspect = w / h
-            target_aspect = target_w / target_h
-            if aspect > target_aspect:
-                new_w = int(h * target_aspect)
-                offset = (w - new_w) // 2
-                img = img.crop((offset, 0, offset + new_w, h))
-            else:
-                new_h = int(w / target_aspect)
-                offset = (h - new_h) // 2
-                img = img.crop((0, offset, w, offset + new_h))
-            return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            try:
+                img = Image.open(img_path)
+                w, h = img.size
+                aspect = w / h
+                target_aspect = target_w / target_h
+                if aspect > target_aspect:
+                    new_w = int(h * target_aspect)
+                    offset = (w - new_w) // 2
+                    img = img.crop((offset, 0, offset + new_w, h))
+                else:
+                    new_h = int(w / target_aspect)
+                    offset = (h - new_h) // 2
+                    img = img.crop((0, offset, w, offset + new_h))
+                return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            except Exception as e:
+                logger.warning(f" Gagal membuka gambar {img_path}: {e}")
+                img = Image.new("RGB", (target_w, target_h), (40, 40, 60))
+                return img
         
-        img_a = fit_image(image_a_path, box_w, box_h)
-        img_b = fit_image(image_b_path, box_w, box_h)
+        img_a = fit_image(image_a_path, box_w, box_h, option_name=label_a)
+        img_b = fit_image(image_b_path, box_w, box_h, option_name=label_b)
         
         # Paste gambar ke canvas
         x_pos = 40
