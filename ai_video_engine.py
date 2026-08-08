@@ -251,11 +251,11 @@ async def run_ai_video_workflow(image_prompts: list, target_count: int, output_d
     return generated_videos
 
 
-async def run_quiz_ai_workflow(prompt_a: str, prompt_b: str, label_a: str = "A: PILIHAN 1", label_b: str = "B: PILIHAN 2", output_dir: str = "output") -> list:
+async def run_quiz_ai_workflow(prompt_a: str, prompt_b: str, label_a: str = "A: PILIHAN 1", label_b: str = "B: PILIHAN 2", output_dir: str = "temp") -> list:
     """
     Workflow khusus Kuis Visual AI:
     Generate Gambar A & Gambar B (Pollinations -> Hugging Face), susun canvas side-by-side,
-    dan ubah menjadi video clip portrait.
+    dan ubah menjadi video clip portrait di folder temp.
     """
     os.makedirs(output_dir, exist_ok=True)
     timestamp = int(time.time())

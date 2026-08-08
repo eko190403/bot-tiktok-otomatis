@@ -911,6 +911,16 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 else:
                     results = video_files
                     is_fallback = False
+            elif bg_type == "quiz_ai":
+                from ai_video_engine import run_quiz_ai_workflow
+                prompt_a = script_data.get("option_a_prompt", "a mysterious forest 3d render, surreal, sharp focus")
+                prompt_b = script_data.get("option_b_prompt", "a majestic wolf 3d render, surreal, sharp focus")
+                label_a = script_data.get("option_a_label", "A: OPTION 1")
+                label_b = script_data.get("option_b_label", "B: OPTION 2")
+                results = await run_quiz_ai_workflow(prompt_a, prompt_b, label_a, label_b, output_dir="temp")
+                if not results:
+                    bg_type = "pexels"
+                    results = await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3)
             elif bg_type == "ai_video":
                 from ai_video_engine import run_ai_video_workflow
                 results = await run_ai_video_workflow(keywords, needed_clips)
@@ -943,7 +953,7 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 label_a = script_data.get("option_a_label", "A: OPTION 1")
                 label_b = script_data.get("option_b_label", "B: OPTION 2")
                 async def quiz_workflow_task():
-                    res = await run_quiz_ai_workflow(prompt_a, prompt_b, label_a, label_b)
+                    res = await run_quiz_ai_workflow(prompt_a, prompt_b, label_a, label_b, output_dir="temp")
                     if not res:
                         logger.warning(" Quiz AI Video failed, falling back to Pexels")
                         return await run_download_with_retry(loop, keywords, target_count=needed_clips, aesthetic_style=aesthetic_style, max_retry=3), True
