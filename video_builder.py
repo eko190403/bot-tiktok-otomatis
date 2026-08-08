@@ -1280,24 +1280,27 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
         
         # Batasi maksimal 4 emoji per video agar tidak norak
         emojis_added = 0
-        for w in valid_words:
-            if emojis_added >= 4:
-                break
-            clean_w = w["display"].lower().strip(".,!?:;\"'")
-            if clean_w in NER_ICONS:
-                icon_name = NER_ICONS[clean_w]
-                img_path = os.path.join(icons_dir, f"{icon_name}_white.png")
-                # Unduh ikon dari Icons8 (ios-filled, 512px, warna putih #FFFFFF)
-                if not os.path.exists(img_path):
-                    url = f"https://img.icons8.com/ios-filled/512/FFFFFF/{icon_name}.png"
-                    try:
-                        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                        with urllib.request.urlopen(req, timeout=10) as response:
-                            with open(img_path, "wb") as f:
-                                f.write(response.read())
-                    except Exception as err:
-                        logger.warning(" Gagal mengunduh emoji NER %s: %s", clean_w, err)
-                        continue
+        if bg_type == "quiz_ai":
+            logger.info(" Mode Quiz AI: Menutup overlay NER emoji agar tampilan kuis tetap bersih dan fokus.")
+        else:
+            for w in valid_words:
+                if emojis_added >= 4:
+                    break
+                clean_w = w["display"].lower().strip(".,!?:;\"'")
+                if clean_w in NER_ICONS:
+                    icon_name = NER_ICONS[clean_w]
+                    img_path = os.path.join(icons_dir, f"{icon_name}_white.png")
+                    # Unduh ikon dari Icons8 (ios-filled, 512px, warna putih #FFFFFF)
+                    if not os.path.exists(img_path):
+                        url = f"https://img.icons8.com/ios-filled/512/FFFFFF/{icon_name}.png"
+                        try:
+                            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                            with urllib.request.urlopen(req, timeout=10) as response:
+                                with open(img_path, "wb") as f:
+                                    f.write(response.read())
+                        except Exception as err:
+                            logger.warning(" Gagal mengunduh emoji NER %s: %s", clean_w, err)
+                            continue
                 
                 # Render emoji clip
                 if os.path.exists(img_path):
@@ -1549,8 +1552,8 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 logger.warning(" Gagal memuat Rain Ambience: %s", e)
                 
         # Gabungkan audio TTS + musik latar + SFX
-        if bg_type == "hunter":
-            sfx_clips = [] # Bersihkan semua efek suara buatan khusus untuk mode reaksi/hunter
+        if bg_type in ["hunter", "quiz_ai"]:
+            sfx_clips = [] # Bersihkan semua efek suara buatan berlebihan untuk mode kuis/hunter
             
         audio_sources = [moviepy_resources["audio_clip"]]
         
