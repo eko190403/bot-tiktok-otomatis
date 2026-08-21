@@ -12,7 +12,6 @@ h1{text-align:center;color:#38bdf8;margin-bottom:10px}
 p{text-align:center;color:#94a3b8;margin-bottom:25px;line-height:1.5}
 input{width:100%;padding:14px;border:none;outline:none;border-radius:10px;background:#0f172a;border:1px solid #334155;color:#fff;margin-bottom:15px}
 button{width:100%;padding:14px;border:none;border-radius:10px;background:#0284c7;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;}
-button.btn-animasi{background:#8b5cf6;}
 button.btn-analytics{background:#10b981;}
 button:disabled{opacity:.6}
 #status{margin-top:18px;text-align:center;word-break:break-word}
@@ -24,7 +23,6 @@ button:disabled{opacity:.6}
 <p>Tekan tombol di bawah untuk menjalankan GitHub Actions dan membuat video TikTok secara otomatis.</p>
 <input type="password" id="patToken" placeholder="Masukkan GitHub Personal Access Token">
 <button id="runBtn" onclick="triggerPipeline()">🚀 GENERATE 5 CHANNEL AI</button>
-<button id="animasiBtn" class="btn-animasi" onclick="triggerAnimasi()">🧠 GENERATE TES VISUAL & KUIS AI</button>
 <button id="btn-alur-film" style="background: linear-gradient(135deg, #e50914, #8b0000); box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4); margin-bottom: 10px;" onclick="runAlurFilm()">🎬 GENERATE ALUR CERITA FILM</button>
 <button id="analyticsBtn" class="btn-analytics" onclick="triggerAnalytics()">📊 UPDATE ANALISIS PENONTON</button>
 <div id="status"></div>
@@ -35,7 +33,6 @@ const REPO="bot-tiktok-otomatis";
 const tokenInput=document.getElementById("patToken");
 const statusDiv=document.getElementById("status");
 const runBtn=document.getElementById("runBtn");
-const animasiBtn=document.getElementById("animasiBtn");
 const alurFilmBtn=document.getElementById("btn-alur-film");
 const analyticsBtn=document.getElementById("analyticsBtn");
 tokenInput.value=localStorage.getItem("ghp_token")||"";
@@ -45,7 +42,6 @@ async function sendRequest(event_type){
  if(!token){statusDiv.style.color="#ef4444";statusDiv.innerHTML="❌ Masukkan GitHub Personal Access Token.";return;}
  localStorage.setItem("ghp_token",token);
  runBtn.disabled=true;
- animasiBtn.disabled=true;
  alurFilmBtn.disabled=true;
  analyticsBtn.disabled=true;
  statusDiv.style.color="#38bdf8";
@@ -75,7 +71,6 @@ async function sendRequest(event_type){
    statusDiv.innerHTML="❌ "+e.message;
  }
  runBtn.disabled=false;
- animasiBtn.disabled=false;
  alurFilmBtn.disabled=false;
  analyticsBtn.disabled=false;
 }
@@ -91,10 +86,6 @@ function resetToken(){
 
 function triggerPipeline() {
   sendRequest("run-bot");
-}
-
-function triggerAnimasi() {
-  sendRequest("run-animasi");
 }
 
 function triggerAnalytics() {
