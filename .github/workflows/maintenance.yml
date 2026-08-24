@@ -23,11 +23,12 @@ jobs:
           pip install -r requirements.txt || true
 
       - name: Prepare Firebase service account
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase_service_account.json
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "$FIREBASE_SERVICE_ACCOUNT" > firebase_service_account.json
+          fi
 
       - name: Run prune used_clips
         env:
