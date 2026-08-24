@@ -1302,28 +1302,28 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                             logger.warning(" Gagal mengunduh emoji NER %s: %s", clean_w, err)
                             continue
                 
-                # Render emoji clip
-                if os.path.exists(img_path):
-                    try:
-                        # Durasi emoji muncul di layar = durasi kata + 0.8s
-                        e_dur = min(1.5, w["duration"] + 0.8)
-                        if w["start"] + e_dur > total_duration:
-                            e_dur = total_duration - w["start"]
-                            
-                        # Posisi: Di bagian atas (25% dari layar) agar tidak menutupi subtitle yang ada di tengah
-                        pos_y = int(HEIGHT * 0.25)
-                        e_clip = (
-                            ImageClip(img_path)
-                            .with_start(w["start"])
-                            .with_duration(e_dur)
-                            .resized(height=250)
-                            .with_position(("center", pos_y))
-                        )
-                        ner_clips.append(e_clip)
-                        emojis_added += 1
-                        logger.info(" NER Sync: Menambahkan ikon '%s' pada %.2fs", clean_w, w["start"])
-                    except Exception as c_err:
-                        logger.warning(" Gagal memproses klip emoji NER: %s", c_err)
+                    # Render emoji clip
+                    if os.path.exists(img_path):
+                        try:
+                            # Durasi emoji muncul di layar = durasi kata + 0.8s
+                            e_dur = min(1.5, w["duration"] + 0.8)
+                            if w["start"] + e_dur > total_duration:
+                                e_dur = total_duration - w["start"]
+                                
+                            # Posisi: Di bagian atas (25% dari layar) agar tidak menutupi subtitle yang ada di tengah
+                            pos_y = int(HEIGHT * 0.25)
+                            e_clip = (
+                                ImageClip(img_path)
+                                .with_start(w["start"])
+                                .with_duration(e_dur)
+                                .resized(height=250)
+                                .with_position(("center", pos_y))
+                            )
+                            ner_clips.append(e_clip)
+                            emojis_added += 1
+                            logger.info(" NER Sync: Menambahkan ikon '%s' pada %.2fs", clean_w, w["start"])
+                        except Exception as c_err:
+                            logger.warning(" Gagal memproses klip emoji NER: %s", c_err)
 
         moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips + ner_clips, use_bgclip=True)
 
