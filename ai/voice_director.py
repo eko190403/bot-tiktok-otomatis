@@ -213,60 +213,85 @@ def build_full_tts_text(voice_instructions: list) -> str:
     return " ".join(parts)
 
 
+
 async def generate_emotional_voiceover(
     script,
     voice_id: str = "id-ID-ArdiNeural",
     output_dir: str = "temp",
+    voice_rate: str = "+0%",
+    voice_pitch: str = "+0Hz",
 ) -> Optional[str]:
     """
     Generate voiceover dengan kontrol emosional penuh menggunakan edge-tts.
+    Wrapper di atas generate_voiceover_resilient yang menambahkan pre-processing
+    emosional (rate, pitch, emphasis) dari Voice Director sebelum TTS.
 
-    Ini adalah wrapper tipis di atas audio.py yang menambahkan
-    pre-processing emosional sebelum mengirim ke TTS.
+    NOTE: Fungsi ini adalah helper opsional. Pipeline utama (video_builder.py)
+    menggunakan generate_voiceover_resilient secara langsung dengan rate/pitch
+    dari channel config. Gunakan fungsi ini hanya jika ingin mengoverride
+    dengan parameter emosional dari script.
 
     Args:
-        script: DirectedScript dari script_director
-        voice_id: ID suara edge-tts (dari config channel)
-        output_dir: Folder output audio
+        script:      DirectedScript dari script_director
+        voice_id:    ID suara edge-tts (dari config channel)
+        output_dir:  Folder output audio
+        voice_rate:  Rate override (opsional, default dari emotion preset)
+        voice_pitch: Pitch override (opsional, default dari emotion preset)
 
     Returns:
-        Path file audio atau None jika gagal
+        Tuple (timestamps, SyncMetadata) atau (None, None) jika gagal
     """
     import os
-    import asyncio
-    from audio import generate_voiceover_with_timestamps
+    from video_builder import generate_voiceover_resilient
 
-    # Build instruksi suara
+    # Build instruksi suara per segmen
     voice_instructions = direct_voice(script)
 
-    # Bangun teks final dengan jeda emosional
+    # Pakai rate & pitch dari HOOK segment (segmen pertama) sebagai panduan
+    hook_instr = next((v for v in voice_instructions if v["segment_role"] == "HOOK"), None)
+    effective_rate  = hook_instr["rate"]  if hook_instr else voice_rate
+    effective_pitch = hook_instr["pitch"] if hook_instr else voice_pitch
+
+    # Bangun teks final
     full_text = build_full_tts_text(voice_instructions)
 
     logger.info(
-        f"[VoiceDirector] Memulai TTS | Voice: {voice_id} | "
+        f"[VoiceDirector] Memulai TTS emosional | Voice: {voice_id} | "
+        f"Rate: {effective_rate} | Pitch: {effective_pitch} | "
         f"Panjang teks: {len(full_text)} karakter"
     )
 
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"voice_{script.topic[:20].replace(' ', '_')}.mp3")
 
-    try:
-        # Gunakan generate_voiceover_with_timestamps dari audio.py yang sudah ada
-        result = await generate_voiceover_with_timestamps(
-            text=full_text,
-            voice_id=voice_id,
-            output_path=output_path,
-            rate=voice_instructions[0]["rate"] if voice_instructions else "+0%",
-        )
+    # Pisahkan full_text ke bagian hook / story / cta berdasarkan segmen
+    hook_parts  = [v["processed_text"] for v in voice_instructions if v["segment_role"] == "HOOK"]
+    cta_parts   = [v["processed_text"] for v in voice_instructions if v["segment_role"] == "CTA"]
+    story_parts = [v["processed_text"] for v in voice_instructions
+                   if v["segment_role"] not in ("HOOK", "CTA")]
 
-        if result and os.path.exists(output_path):
+    hook_text  = " ".join(hook_parts)
+    story_text = " ".join(story_parts)
+    cta_text   = " ".join(cta_parts)
+
+    try:
+        result = await generate_voiceover_resilient(
+            hook=hook_text,
+            story=story_text,
+            cta=cta_text,
+            path=output_path,
+            voice_id=voice_id,
+            voice_rate=effective_rate,
+            voice_pitch=effective_pitch,
+        )
+        timestamps, meta = result
+        if timestamps and os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             logger.info(f"[VoiceDirector] Voiceover selesai: {output_path} ({file_size // 1024}KB)")
             return output_path
         else:
             logger.error("[VoiceDirector] TTS gagal menghasilkan file audio")
             return None
-
     except Exception as e:
-        logger.error(f"[VoiceDirector] Error saat generate voiceover: {e}")
+        logger.error(f"[VoiceDirector] Error saat generate voiceover emosional: {e}")
         return None
