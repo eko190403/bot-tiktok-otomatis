@@ -147,7 +147,36 @@ async def sync_youtube_analytics():
         # Integrasi: Jalankan learning loop untuk channel ini setelah semua data disinkronkan
         channel_niche = doc_info["data"].get("niche", "dark psychology") if vid_list else "dark psychology"
         logger.info(f"Menjalankan learning loop untuk channel {channel}...")
-        await run_learning_loop(channel_id=channel, channel_niche=channel_niche)
+        report = await run_learning_loop(channel_id=channel, channel_niche=channel_niche)
+        
+        # Kirim Laporan Harian ke Telegram
+        try:
+            from app import send_telegram_message
+            hints = report.get("performance_hints", "")
+            top_hooks = report.get("best_hooks", [])
+            topics = report.get("topic_recommendations", [])
+            
+            msg = f"📊 <b>Laporan Harian Analytics Brain</b>\n"
+            msg += f"Channel: <code>{channel}</code>\n\n"
+            
+            msg += "🧠 <b>Insight Pembelajaran (Hints):</b>\n"
+            msg += f"<i>{hints}</i>\n\n"
+            
+            if top_hooks:
+                msg += "🔥 <b>Top 3 Hook Terampuh:</b>\n"
+                for idx, h in enumerate(top_hooks[:3]):
+                    msg += f"{idx+1}. {h['hook']} (Ret: {h.get('avg_retention',0):.0%})\n"
+                msg += "\n"
+                
+            if topics:
+                msg += "💡 <b>Rekomendasi Konten Esok Hari:</b>\n"
+                for idx, t in enumerate(topics[:3]):
+                    msg += f"• {t.get('topic')}\n"
+            
+            send_telegram_message(msg)
+            logger.info("Laporan Dashboard Telegram berhasil dikirim.")
+        except Exception as e:
+            logger.error(f"Gagal mengirim laporan Telegram: {e}")
 
     logger.info("✅ Sinkronisasi Analitik YouTube Selesai!")
 
