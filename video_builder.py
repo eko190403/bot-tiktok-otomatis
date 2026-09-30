@@ -876,7 +876,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 "interactive_comment": interactive_comment,
                 "theme": chosen_visual_theme,
                 "niche": channel_id,
-                "hook": hook
+                "hook": hook,
+                "hook_b": script_data.get("hook_b", ""),  # Hook Alternatif A/B Test
+                "yt_title": script_data.get("yt_title", ""),
+                "yt_description": script_data.get("yt_description", ""),
             }, f, indent=4, ensure_ascii=False)
             
         # Simpan ke riwayat untuk mencegah duplikasi/repetisi konten (lewat Firebase / cadangan Lokal)

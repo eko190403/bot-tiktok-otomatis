@@ -39,6 +39,7 @@ class RenderPayload:
         retention_analysis,  # RetentionAnalysis
         full_narration_text: str,
         hook_text: str,
+        hook_b: str = "",
     ):
         self.topic = topic
         self.script = script
@@ -48,6 +49,7 @@ class RenderPayload:
         self.retention_analysis = retention_analysis
         self.full_narration_text = full_narration_text
         self.hook_text = hook_text
+        self.hook_b = hook_b
 
         # Shortcut ke data yang paling sering dipakai
         self.image_prompts = visual_data.get("enhanced_prompts", [])
@@ -202,6 +204,7 @@ async def run_ai_pipeline(
         retention_analysis=retention_analysis,
         full_narration_text=full_narration_text,
         hook_text=script.hook_text,
+        hook_b=getattr(script, "hook_b", ""),
     )
 
     summary = payload.to_summary()

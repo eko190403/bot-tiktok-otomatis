@@ -48,12 +48,13 @@ class DirectedScript:
     """Hasil lengkap dari Script Director."""
 
     def __init__(self, topic: str, channel_niche: str, segments: list,
-                 hook_score: dict, raw: dict):
+                 hook_score: dict, raw: dict, hook_b: str = "Tidak ada alternatif"):
         self.topic = topic
         self.channel_niche = channel_niche
         self.segments = segments
         self.hook_score = hook_score  # {curiosity, emotion, conflict, novelty, shareability}
         self.raw = raw
+        self.hook_b = hook_b
 
     @property
     def full_text(self) -> str:
@@ -190,12 +191,15 @@ async def direct_script(
         "curiosity": 0, "emotion": 0, "conflict": 0,
         "novelty": 0, "shareability": 0,
     })
+    
+    hook_b = data.get("hook_b", "Hook Alternatif tidak tersedia")
 
     script = DirectedScript(
         topic=topic,
         channel_niche=channel_niche,
         segments=segments,
         hook_score=hook_score,
+        hook_b=hook_b,
         raw=data,
     )
 

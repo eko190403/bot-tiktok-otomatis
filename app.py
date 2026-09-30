@@ -289,6 +289,7 @@ async def main():
             theme = "classic_yellow"
             niche = "psychology"
             hook = "FAKTA MENARIK"
+            hook_b = ""
             yt_title = ""
             yt_description = ""
             metadata_path = os.path.join(DIR_TEMP, "video_metadata.json")
@@ -304,6 +305,7 @@ async def main():
                         theme = meta_data.get("theme", "classic_yellow")
                         niche = meta_data.get("niche", "psychology")
                         hook = meta_data.get("hook", "FAKTA MENARIK")
+                        hook_b = meta_data.get("hook_b", "")  # Hook Alternatif A/B
                         yt_title = meta_data.get("yt_title", "")
                         yt_description = meta_data.get("yt_description", "")
                     os.remove(metadata_path) # Bersihkan setelah dibaca
@@ -512,38 +514,50 @@ async def main():
             else:
                 print(" Pengunggahan otomatis ke YouTube Shorts dinonaktifkan (ENABLE_YOUTUBE_UPLOAD=false).")
 
-            # Mode Draf Jarak Jauh (Telegram Control Panel) jika kedua upload mati
+            # Mode Draf A/B (Telegram Control Panel) jika kedua upload mati
             if not enable_upload and not enable_yt_upload and latest_video:
-                print(" Mode Draf Aktif: Mengirim video ke Telegram dengan panel tombol...")
+                print(" Mode Draf A/B Aktif: Mengirim video ke Telegram dengan dual hook...")
                 video_id = f"video_{int(time.time())}"
-                
-                # Kirim ke Telegram dan dapatkan file_id
-                tg_caption = (
-                    " <b>Draf Video Siap!</b>\n\n"
-                    f" <b>Caption:</b>\n<i>{caption}</i>\n\n"
-                    f" <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
-                )
-                file_id = await send_telegram_video_with_buttons(latest_video, caption=tg_caption, video_id=video_id)
-                
-                if file_id:
-                    # Simpan ke Firestore/Lokal
-                    draft_data = {
-                        "video_id": video_id,
-                        "file_id": file_id,
-                        "caption": caption,
-                        "tags": tags,
-                        "category_id": category_id,
-                        "interactive_comment": interactive_comment,
-                        "hook": hook,
-                        "drop_off_second": 0,
-                        "theme": theme,
-                        "niche": niche,
-                        "channel_id": channel_id
-                    }
-                    try:
-                        firebase_connector.save_video_draft(video_id, draft_data)
-                    except Exception as draft_err:
-                        print(f" Gagal mencatat draf ke database: {draft_err}")
+
+                try:
+                    from ai.ab_test_manager import send_ab_draft_to_telegram
+                    await send_ab_draft_to_telegram(
+                        video_path=latest_video,
+                        hook_a=hook,
+                        hook_b=hook_b,
+                        topic=yt_title or caption[:60],
+                        caption=caption,
+                        interactive_comment=interactive_comment,
+                        channel_id=channel_id,
+                        video_id=video_id,
+                        tags=tags,
+                        category_id=category_id,
+                        niche=niche,
+                        theme=theme,
+                        yt_title=yt_title,
+                        yt_description=yt_description,
+                    )
+                    print(" Draft A/B berhasil dikirim ke Telegram!")
+                except Exception as ab_err:
+                    print(f" Gagal kirim draft A/B, fallback ke draft biasa: {ab_err}")
+                    # Fallback ke draft biasa jika A/B gagal
+                    tg_caption = (
+                        " <b>Draf Video Siap!</b>\n\n"
+                        f" <b>Caption:</b>\n<i>{caption}</i>\n\n"
+                        f" <b>Pancingan Komentar:</b>\n<i>{interactive_comment}</i>"
+                    )
+                    file_id = await send_telegram_video_with_buttons(latest_video, caption=tg_caption, video_id=video_id)
+                    if file_id:
+                        draft_data = {
+                            "video_id": video_id, "file_id": file_id,
+                            "caption": caption, "tags": tags, "category_id": category_id,
+                            "interactive_comment": interactive_comment, "hook": hook,
+                            "drop_off_second": 0, "theme": theme, "niche": niche, "channel_id": channel_id
+                        }
+                        try:
+                            firebase_connector.save_video_draft(video_id, draft_data)
+                        except Exception as draft_err:
+                            print(f" Gagal mencatat draf ke database: {draft_err}")
             
             # 6. Commit status "Terpakai" HANYA jika upload sukses (mencegah pemborosan clip saat testing)
             if firebase_connector:
