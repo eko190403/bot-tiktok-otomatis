@@ -80,7 +80,7 @@ def send_telegram_photo(photo_path: str, caption: str = ""):
 async def send_telegram_video_with_buttons(video_path: str, caption: str, video_id: str) -> str:
     """
     Mengirim file video ke Telegram lengkap dengan tombol inline publikasi.
-    Mengmengembalikan file_id jika sukses.
+    Mengembalikan file_id jika sukses.
     """
     import requests
     import json
@@ -147,9 +147,6 @@ async def main():
         print(f" Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
         
         # Cegah double upload berdekatan khusus untuk trigger jadwal otomatis (cron schedule)
-        import os
-        import time
-        
         is_schedule = os.getenv("GITHUB_EVENT_NAME") == "schedule"
         if is_schedule and not args.force:
             last_upload = firebase_connector.get_last_upload_timestamp(channel_id)
@@ -321,6 +318,14 @@ async def main():
             thumbnail_path = "output/thumbnail.jpg"
             raw_frame_path = "temp/raw_frame.jpg"
             has_thumbnail = False
+            
+            # Ambil konfigurasi channel untuk nama brand dan tema thumbnail
+            try:
+                from config import get_channel_config
+                channel_cfg = get_channel_config(channel_id)
+            except Exception:
+                channel_cfg = {"name": channel_id, "theme_color": theme}
+            
             if latest_video:
                 print(" Memulai proses pembuatan auto-thumbnail High-CTR V2...")
                 try:
@@ -468,6 +473,7 @@ async def main():
                                 "category_id": category_id,
                                 "interactive_comment": interactive_comment,
                                 "hook": hook,
+                                "hook_b": hook_b,
                                 "drop_off_second": 0,
                                 "theme": theme,
                                 "platform": "youtube",
