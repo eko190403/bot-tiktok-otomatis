@@ -58,3 +58,26 @@ class KeywordHighlighter:
                 return color
 
         return default_color
+
+    def get_word_weight(self, word: str) -> float:
+        """
+        Mengembalikan bobot (scale multiplier) kata. 
+        Kata-kata merah (bahaya) dan kuning (fakta) akan jauh lebih besar.
+        Kata biasa = 1.0
+        """
+        clean_word = re.sub(r"[^\w]", "", word.upper()).strip()
+        if not clean_word:
+            return 1.0
+
+        for pattern, color in self._rules:
+            if pattern.search(clean_word):
+                if color == "#FF3B30": # Danger / Merah (Paling mengejutkan)
+                    return 1.40
+                elif color == "#FFCC00": # Fakta / Kuning
+                    return 1.30
+                elif color == "#34C759": # Wealth / Hijau
+                    return 1.25
+                elif color == "#FF2D55": # Social / Pink
+                    return 1.20
+                    
+        return 1.0

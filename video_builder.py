@@ -1688,20 +1688,27 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
             # -g 15 memastikan ada keyframe setiap 0.5 detik (pada 30fps)
             # CRF 20 (Kualitas Visual Sangat Tajam) + maxrate 7000k (Maksimal ukuran file ~42MB untuk 48 detik, aman dari limit 50MB Telegram)
             params = ["-crf", "20", "-maxrate", "7000k", "-bufsize", "14000k", "-pix_fmt", "yuv420p", "-g", "15"]
-            if bg_type == "pexels":
-                # Kustomisasi Filter Visual (Vignette & Noise) berdasarkan identitas channel
+            
+            # --- VISUAL POST-PROCESSING (Unsharp Mask & Color Grading) ---
+            # eq=contrast=1.1:saturation=1.15:gamma=0.95 -> Membuat warna lebih pop dan shadow sedikit lebih gelap
+            # unsharp=5:5:1.0 -> Mempertajam gambar AI agar tidak blur (premium look)
+            base_cinematic = "unsharp=5:5:1.0,eq=contrast=1.1:saturation=1.15:gamma=0.95"
+            
+            if bg_type in ["pexels", "ai_video"]:
                 if channel_id in ["ruangpikir", "misterisemesta"]:
                     # Efek sangat gelap, kotor, dan misterius
-                    params.extend(["-vf", "noise=alls=8:allf=t+u,vignette=PI/3"])
+                    params.extend(["-vf", f"{base_cinematic},noise=alls=8:allf=t+u,vignette=PI/3"])
                 elif channel_id == "poladisiplin":
                     # Efek bersih, fokus intens, tanpa noise kotor, vignette tipis di ujung
-                    params.extend(["-vf", "vignette=PI/10"])
+                    params.extend(["-vf", f"{base_cinematic},vignette=PI/10"])
                 elif channel_id in ["logikastoik", "rahasiafinansial"]:
-                    # Efek sangat bersih, tanpa noise, vignette sangat tipis untuk ruang kontemplasi (Lower Cognitive Load)
-                    params.extend(["-vf", "vignette=PI/15"])
+                    # Efek sangat bersih, tanpa noise, vignette sangat tipis untuk ruang kontemplasi
+                    params.extend(["-vf", f"{base_cinematic},vignette=PI/15"])
                 else:
                     # Default untuk channel lain
-                    params.extend(["-vf", "vignette=PI/5"])
+                    params.extend(["-vf", f"{base_cinematic},vignette=PI/5"])
+            else:
+                params.extend(["-vf", base_cinematic])
             moviepy_resources["final_video"].write_videofile(
                 target_path, fps=30, codec="libx264", preset="veryfast", # OPTIMASI: Kecepatan & kompresi seimbang
                 audio_codec="aac", bitrate="7000k", threads=cpu_threads, logger=None,

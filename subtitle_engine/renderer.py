@@ -283,7 +283,8 @@ class SubtitleRenderer:
             words_list = [{"word": "KONTEN", "display": "KONTEN"}]
 
         words_tuple  = tuple(w.get("display", w.get("word", "")) for w in words_list)
-        safe_scale   = round(min(max(scale_factor, 1.0), 1.10), 2)
+        # Buka batas maksimal hingga 1.50 untuk efek penekanan keyword yang lebih dramatis
+        safe_scale   = round(min(max(scale_factor, 1.0), 1.50), 2)
 
         font_normal  = self._get_cached_font(font_path, font_size)
         font_active  = (font_normal if safe_scale == 1.0
@@ -294,7 +295,8 @@ class SubtitleRenderer:
         if static_key in self.static_layer_cache:
             self.static_layer_cache.move_to_end(static_key)
         else:
-            font_active_max = self._get_cached_font(font_path, int(font_size * 1.10))
+            # Gunakan 1.50 agar bounding box statis dan baris memiliki ruang cukup
+            font_active_max = self._get_cached_font(font_path, int(font_size * 1.50))
             self.static_layer_cache[static_key] = self._render_static_base(
                 words_list, font_normal, font_active_max, style_type
             )

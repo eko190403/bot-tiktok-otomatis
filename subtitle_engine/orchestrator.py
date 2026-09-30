@@ -138,13 +138,17 @@ class SubtitleEngineV2:
                     if word_duration <= 0.001:
                         continue
 
+                # ── Hitung bobot kata (Subtitle Intelligence) ────────────────
+                word_text = item.get("display", item.get("word", ""))
+                word_weight = self.renderer.highlighter.get_word_weight(word_text)
+                
                 # ── Render frame subtitle (canvas mini) ──────────────────────
                 frame_img, bbox_w, bbox_h = self.renderer.create_progressive_frame(
                     words_list=phrase,
                     active_index=i,
                     font_path=FONT_PATH,
                     font_size=font_size_actual,
-                    scale_factor=1.08,
+                    scale_factor=word_weight,  # Dulu hardcoded 1.08, sekarang dinamis
                     style_type=style_type,
                 )
 
@@ -154,7 +158,8 @@ class SubtitleEngineV2:
 
                 # ── Pop animation: Time-based Transform ───────
                 fps = 30
-                pop_duration = 5 * (1.0 / fps)  # ~0.167s
+                # Base pop duration. Kata penting akan pop sedikit lebih lama/lambat.
+                pop_duration = 5 * (1.0 / fps) * (word_weight if word_weight > 1.0 else 1.0) 
 
                 # Jika durasi kata sangat singkat, sesuaikan durasi pop
                 if word_duration < pop_duration:
