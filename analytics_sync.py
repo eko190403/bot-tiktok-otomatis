@@ -13,6 +13,7 @@ import youtube_uploader
 
 # Import Gemini wrapper
 from video_builder import call_gemini_with_retry
+from ai.analytics_brain import record_video_performance, run_learning_loop
 
 async def analyze_retention_heuristic(hook_text: str, views: int, likes: int, comments: list) -> int:
     """Menggunakan Gemini untuk menebak drop-off second berdasarkan hook, view, like, dan komentar."""
@@ -126,8 +127,27 @@ async def sync_youtube_analytics():
                     if update_data:
                         doc_info["ref"].update(update_data)
                         
+                    # Integrasi: Rekam performa ke Analytics Brain
+                    topic = doc_info["data"].get("topic", caption_text[:30])
+                    record_video_performance(
+                        video_id=vid_id,
+                        hook_text=hook_text,
+                        topic=topic,
+                        channel_id=channel,
+                        views=views,
+                        likes=likes,
+                        comments=comments,
+                        drop_off_second=drop_off,
+                        hook_score=doc_info["data"].get("hook_score", {})
+                    )
+                        
                 except Exception as update_err:
                     logger.error(f"Gagal memperbarui analitik untuk {vid_id}: {update_err}")
+
+        # Integrasi: Jalankan learning loop untuk channel ini setelah semua data disinkronkan
+        channel_niche = doc_info["data"].get("niche", "dark psychology") if vid_list else "dark psychology"
+        logger.info(f"Menjalankan learning loop untuk channel {channel}...")
+        await run_learning_loop(channel_id=channel, channel_niche=channel_niche)
 
     logger.info("✅ Sinkronisasi Analitik YouTube Selesai!")
 

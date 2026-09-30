@@ -807,17 +807,54 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 logger.warning(" Gagal memuat draf naskah: %s", e)
                 
         if not script_data:
-            script_data = await generate_structured_script(channel_cfg)
+            # --- INTEGRASI AI INTELLIGENCE LAYER ---
+            from ai.pipeline import run_ai_pipeline
+            from ai.analytics_brain import synthesize_performance_hints
+            from video_builder import get_indonesia_trending_searches
+            
+            logger.info(" Memulai AI Intelligence Pipeline...")
+            hints = await synthesize_performance_hints(channel_id, niche_description)
+            trends = get_indonesia_trending_searches()
+            topic = trends[0] if trends else "Fakta Psikologi Menarik"
+            
+            payload = await run_ai_pipeline(topic=topic, channel_config=channel_cfg, performance_hints=hints)
+            
+            if payload:
+                # Format ulang agar kompatibel dengan sisa pipeline video_builder
+                script_data = {
+                    "hook": payload.hook_text,
+                    # Hapus hook dari story agar tidak diucap dua kali saat digabung
+                    "story": payload.full_narration_text.replace(payload.hook_text, "", 1).strip(),
+                    "cta": "",  # CTA sudah tergabung di full_narration_text
+                    "caption": f"{payload.topic} #{channel_id} #fyp",
+                    "tags": [channel_id, "psikologi", "fakta"],
+                    "category_id": "22",
+                    "interactive_comment": "Bagaimana pendapatmu tentang ini?"
+                }
+                keywords = payload.image_prompts # Scene Director output
+                
+                # Simpan payload meta ke file untuk debugging/referensi
+                with open(os.path.join(DIR_TEMP, "ai_payload.json"), "w", encoding="utf-8") as f:
+                    json.dump(payload.to_summary(), f, indent=4)
+                    
+            else:
+                # Fallback jika pipeline baru gagal
+                logger.warning(" AI Pipeline gagal, menggunakan fallback script lama.")
+                script_data = await generate_structured_script(channel_cfg)
+                keywords = await extract_keywords_from_script(script_data.get("story", ""), aesthetic_style, is_ai_video=(bg_type == "ai_video"))
+                
             with open(draft_script_path, "w", encoding="utf-8") as f:
                 json.dump(script_data, f, indent=4, ensure_ascii=False)
             logger.info(" Draf naskah disimpan ke cache (%s)", draft_script_path)
             
         hook = script_data.get("hook", "FAKTA MENARIK").strip()
         story = script_data.get("story", "").strip()
-        cta = script_data.get("cta", "Follow untuk info lainnya").strip()
+        cta = script_data.get("cta", "").strip()
         caption = script_data.get("caption", "Fakta Menarik Hari Ini... #faktapsikologi #ruangpikir #fyp").strip()
         
-        keywords = await extract_keywords_from_script(story, aesthetic_style, is_ai_video=(bg_type == "ai_video"))
+        # Ekstrak keywords hanya jika belum ada (saat pakai cache atau fallback)
+        if 'keywords' not in locals():
+            keywords = await extract_keywords_from_script(story, aesthetic_style, is_ai_video=(bg_type == "ai_video"))
         
         # Menggunakan tema visual dari konfigurasi channel (konsistensi brand)
         from subtitle_engine.styles import SubtitleStyles
