@@ -83,22 +83,36 @@ def apply_flashbang(clip, duration: float = 0.15):
     return CompositeVideoClip([clip, white_flash])
 
 def apply_film_grain(clip, intensity: float = 0.08):
-    """Menambahkan lapisan Film Grain statis tipis untuk membuat stock video terasa lebih sinematik dan premium."""
+    """Menambahkan lapisan Film Grain dinamis untuk membuat stock video terasa lebih sinematik."""
     import numpy as np
-    from PIL import Image, ImageEnhance
-    
-    w, h = clip.size
-    # Generate static noise frame ONCE to save CPU (animating per frame is too slow in python)
-    noise_array = np.random.randint(0, 256, (h, w, 3), dtype=np.uint8)
     
     def add_grain(get_frame, t):
         frame = get_frame(t)
-        # Blend frame with noise
-        # opacity of noise is `intensity`
-        blended = cv2.addWeighted(frame, 1.0 - intensity, noise_array, intensity, 0) if 'cv2' in globals() else (frame * (1.0 - intensity) + noise_array * intensity).astype(np.uint8)
-        return blended
+        # Generate noise acak per-frame agar realistis
+        noise = np.random.randint(-20, 20, frame.shape, dtype=np.int16)
+        return np.clip(frame.astype(np.int16) + noise * (intensity * 10), 0, 255).astype(np.uint8)
         
     return clip.transform(add_grain, keep_duration=True)
+
+def apply_vignette(clip, intensity: float = 0.5):
+    """Menambahkan efek vignette (gelap di sudut) untuk fokus ke tengah."""
+    import numpy as np
+    
+    w, h = clip.size
+    x = np.linspace(-1, 1, w)
+    y = np.linspace(-1, 1, h)
+    X, Y = np.meshgrid(x, y)
+    
+    # Buat mask elips dengan gradien dari 1 (tengah) ke 0 (tepi)
+    radius = np.sqrt(X**2 + Y**2)
+    mask = 1 - np.clip(radius, 0, 1) * intensity
+    mask = np.dstack([mask]*3)  # expand untuk RGB
+    
+    def add_vignette(get_frame, t):
+        frame = get_frame(t)
+        return np.clip(frame * mask, 0, 255).astype(np.uint8)
+        
+    return clip.transform(add_vignette, keep_duration=True)
 
 def find_smart_crop_offset(clip, target_w: int) -> int:
     """Menemukan x_offset terbaik secara otomatis dengan memindai daerah detail kontras tertinggi."""
@@ -209,7 +223,10 @@ def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
     base_zoom = random.uniform(1.05, 1.10)
     final_clip = apply_slow_zoom(resized_clip, speed=0.04, zoom_in=zoom_dir, base_zoom=base_zoom)
     
-    # 8. Terapkan Film Grain untuk visual premium (Retensi)
+    # 8. Terapkan Vignette untuk memfokuskan pandangan ke subjek
+    final_clip = apply_vignette(final_clip, intensity=random.uniform(0.3, 0.5))
+    
+    # 9. Terapkan Film Grain untuk visual premium (Retensi)
     final_clip = apply_film_grain(final_clip, intensity=random.uniform(0.06, 0.12))
     
     return final_clip

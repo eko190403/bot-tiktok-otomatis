@@ -172,8 +172,7 @@ async def get_youtube_stats(video_ids: list, channel_id: str = None) -> dict:
         )
         # Jalankan di thread pool executor karena execute() synchronous
         import asyncio
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, request.execute)
+        response = await asyncio.to_thread(request.execute)
         
         stats = {}
         for item in response.get("items", []):
@@ -225,8 +224,7 @@ async def get_top_comments(video_id: str, max_results: int = 20, channel_id: str
         )
         
         import asyncio
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, request.execute)
+        response = await asyncio.to_thread(request.execute)
         
         comments = []
         for item in response.get("items", []):
@@ -269,8 +267,7 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2, channel
         )
         
         import asyncio
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, request.execute)
+        response = await asyncio.to_thread(request.execute)
         
         from video_builder import call_gemini_with_retry
         for item in response.get("items", []):
@@ -300,8 +297,7 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2, channel
                     }
                 }
                 print(f" Memposting balasan otomatis ke komentar '{comment_text[:40]}...'")
-                await loop.run_in_executor(
-                    None, 
+                await asyncio.to_thread(
                     lambda: youtube.comments().insert(part="snippet", body=reply_body).execute()
                 )
                 print(" Balasan sukses diposting!")
@@ -346,9 +342,8 @@ async def upload_thumbnail(video_id: str, thumbnail_path: str, channel_id: str =
         )
         
         import asyncio
-        loop = asyncio.get_event_loop()
         print(f" Mengunggah custom thumbnail untuk Video ID: {video_id}...")
-        response = await loop.run_in_executor(None, request.execute)
+        response = await asyncio.to_thread(request.execute)
         print(" Sukses mengunggah custom thumbnail!")
         return True
     except Exception as e:

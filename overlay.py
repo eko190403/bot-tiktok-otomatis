@@ -90,7 +90,7 @@ def create_visual_cta_frame(video_width: int, video_height: int, title_text: str
     box_h = 180
     start_x = (video_width - box_w) // 2
     # Angkat sedikit dari bottom agar area action/platform UI tetap terlihat
-    start_y = int(video_height * 0.48)
+    start_y = int(video_height * 0.75)
     
     # 1. Background Box semi transparan
     draw.rounded_rectangle(

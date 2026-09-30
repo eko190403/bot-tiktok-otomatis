@@ -142,14 +142,13 @@ async def main():
     args, unknown = parser.parse_known_args()
     channel_id = args.channel
 
-    firebase_connector = None
+    import firebase_connector
     try:
         print(f" Memulai Pipeline Pembuatan Video Otomatis untuk Channel: {channel_id}...")
         
         # Cegah double upload berdekatan khusus untuk trigger jadwal otomatis (cron schedule)
         import os
         import time
-        import firebase_connector
         
         is_schedule = os.getenv("GITHUB_EVENT_NAME") == "schedule"
         if is_schedule and not args.force:
@@ -178,14 +177,12 @@ async def main():
         
         # Jalankan pembersihan draf lama (> 7 hari) untuk menghemat limit database
         try:
-            import firebase_connector
             firebase_connector.cleanup_old_drafts(days=7)
         except Exception as clean_err:
             print(f" Gagal menjalankan pembersihan draf otomatis: {clean_err}")
             
         # Jalankan pembaruan statistik video YouTube secara otomatis
         try:
-            import firebase_connector
             from youtube_uploader import get_youtube_stats
             yt_video_map = firebase_connector.get_active_youtube_video_ids(limit=50)
             if yt_video_map:
@@ -218,7 +215,6 @@ async def main():
 
         #  ANALISIS KOMENTAR & BALASAN OTOMATIS: Baca komentar video viral, buat insight AI, dan balas otomatis
         try:
-            import firebase_connector
             from youtube_uploader import get_top_comments, reply_to_youtube_comments
             viral_map = firebase_connector.get_viral_video_ids(min_views=500, limit=2, channel_id=channel_id)
             if viral_map:
@@ -463,7 +459,6 @@ async def main():
                         # Simpan info publikasi ke draf agar performanya bisa dipantau
                         direct_video_id = f"video_{int(time.time())}"
                         try:
-                            import firebase_connector
                             draft_data = {
                                 "video_id": direct_video_id,
                                 "caption": caption,
@@ -532,7 +527,6 @@ async def main():
                 
                 if file_id:
                     # Simpan ke Firestore/Lokal
-                    import firebase_connector
                     draft_data = {
                         "video_id": video_id,
                         "file_id": file_id,

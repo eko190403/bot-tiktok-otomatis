@@ -147,7 +147,8 @@ def _get_whisper_model():
     if _WHISPER_MODEL is None:
         try:
             import whisper
-            _WHISPER_MODEL = whisper.load_model("tiny")
+            logger.info(" Menggunakan Whisper AI fallback untuk sinkronisasi subtitle.")
+            _WHISPER_MODEL = whisper.load_model("small")
         except Exception as e:
             logger.error("Gagal load Whisper: %s", e)
     return _WHISPER_MODEL

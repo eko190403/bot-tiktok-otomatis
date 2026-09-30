@@ -467,10 +467,10 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         chosen_profile = random.choice(duration_profiles)
         
         story_styles = [
-            f"2. 'story': {chosen_profile['desc']} WAJIB memberikan 1 contoh skenario nyata di kehidupan sehari-hari agar materi mudah dipahami dan tidak terlalu teoritis. Gunakan elipsis (...) untuk jeda dramatis.\n",
-            f"2. 'story': {chosen_profile['desc']} Gunakan format MINI STORYTELLING: Ceritakan 1 kisah singkat tentang seseorang yang mengalami tema ini dari masalah → klimaks → pelajaran. Gunakan elipsis (...) di momen klimaks.\n",
-            f"2. 'story': {chosen_profile['desc']} Gunakan format LISTICLE KILAT: Berikan 3 poin singkat yang saling terhubung. Setiap poin memberi 'aha moment'. Gunakan elipsis (...) antar poin.\n",
-            f"2. 'story': {chosen_profile['desc']} Gunakan format PERBANDINGAN KONTRAS: Bandingkan 2 sisi berlawanan dengan kontras tajam. Gunakan elipsis (...) di momen twist.\n"
+            f"2. 'story': {chosen_profile['desc']} WAJIB memberikan 1 contoh skenario nyata di kehidupan sehari-hari. Di akhir story, berikan 1 kalimat SOLUSI PRAKTIS atau langkah konkrit sebelum CTA. Gunakan elipsis (...) untuk jeda dramatis.\n",
+            f"2. 'story': {chosen_profile['desc']} Gunakan format MINI STORYTELLING: Ceritakan 1 kisah dari masalah → klimaks → pelajaran. Di akhir story, berikan 1 kalimat SOLUSI PRAKTIS sebelum CTA. Gunakan elipsis (...) di momen klimaks.\n",
+            f"2. 'story': {chosen_profile['desc']} Gunakan format LISTICLE KILAT: Berikan 3 poin singkat. Di akhir story, berikan 1 kalimat SOLUSI PRAKTIS sebelum CTA. Gunakan elipsis (...) antar poin.\n",
+            f"2. 'story': {chosen_profile['desc']} Gunakan format PERBANDINGAN KONTRAS: Bandingkan 2 sisi berlawanan. Di akhir story, berikan 1 kalimat SOLUSI PRAKTIS sebelum CTA. Gunakan elipsis (...) di momen twist.\n"
         ]
         story_rule = random.choice(story_styles)
         
@@ -543,9 +543,9 @@ async def extract_keywords_from_script(script_text: str, aesthetic_style: str = 
         prompt = (
             "You are a professional video director. Analyze the following vertical short video script and generate exactly 6 highly relevant English search terms for Pexels videos.\n\n"
             "CRITICAL GUIDELINES:\n"
-            f"1. AESTHETIC TONE: Keep the vibe matching '{aesthetic_style}', but do not let it override physical reality.\n"
-            "2. EXTREMELY LITERAL OBJECTS (MOST IMPORTANT): If the script talks about a specific physical object or subject (e.g., 'sword', 'money', 'coffee', 'laptop', 'running', 'crying'), YOU MUST include that exact object/action as a primary search term! DO NOT just return abstract terms. Show the actual physical item being discussed.\n"
-            "3. PEXELS FRIENDLY: Keep terms to 1-3 words maximum. Use highly searchable tangible nouns (e.g., 'coffee cup', 'gold coins', 'reading book', 'raining window'). Avoid complex abstract phrases.\n\n"
+            f"1. AESTHETIC TONE: The video has an aesthetic of '{aesthetic_style}'. Use this ONLY as a subtle modifier if needed.\n"
+            "2. EXTREMELY LITERAL OBJECTS (MOST IMPORTANT): Extract the core tangible nouns or physical actions from each sentence of the script. If the script mentions 'overtime', search for 'office typing'. If it mentions 'butterflies', search for 'butterfly'. NEVER search for abstract words like 'psychology', 'mindset', or 'DNA' unless it's a literal DNA strand graphic.\n"
+            "3. PEXELS FRIENDLY: Keep terms to 1-3 words maximum. Use highly searchable tangible nouns (e.g., 'coffee cup', 'tired man office', 'reading book', 'raining window'). Avoid complex abstract phrases.\n\n"
             f"SCRIPT:\n\"{script_text}\"\n\n"
             "OUTPUT FORMAT: Return only a JSON array of strings containing exactly 6 search terms.\n"
             "Example: [\"coffee cup\", \"typing laptop\", \"gold coins\", \"sad person\", \"dark abstract\", \"reading book\"].\n"

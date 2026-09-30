@@ -22,6 +22,10 @@ on:
 
 jobs:
   build-and-run:
+    strategy:
+      matrix:
+        channel: [ruangpikir, logikastoik, rahasiafinansial, misterisemesta, poladisiplin]
+      fail-fast: false
     runs-on: ubuntu-latest
     concurrency:
       group: bot-tiktok-pipeline
@@ -149,20 +153,8 @@ jobs:
             echo "🍪 Berkas ig_cookies.txt berhasil dibuat dari GitHub Secrets (IG_COOKIES)"
           fi
           
-          echo "🚀 Menjalankan pipeline untuk Ruang Pikir..."
-          python app.py --channel ruangpikir || echo "⚠️ Gagal di ruangpikir, lanjut ke channel berikutnya..."
-          
-          echo "🚀 Menjalankan pipeline untuk Logika Stoik..."
-          python app.py --channel logikastoik || echo "⚠️ Gagal di logikastoik, lanjut ke channel berikutnya..."
-          
-          echo "🚀 Menjalankan pipeline untuk Rahasia Finansial..."
-          python app.py --channel rahasiafinansial || echo "⚠️ Gagal di rahasiafinansial, lanjut ke channel berikutnya..."
-          
-          echo "🚀 Menjalankan pipeline untuk Misteri Semesta..."
-          python app.py --channel misterisemesta || echo "⚠️ Gagal di misterisemesta, lanjut ke channel berikutnya..."
-          
-          echo "🚀 Menjalankan pipeline untuk Pola Disiplin..."
-          python app.py --channel poladisiplin || echo "⚠️ Gagal di poladisiplin, selesai."
+          echo "🚀 Menjalankan pipeline untuk channel ${{ matrix.channel }}..."
+          python app.py --channel ${{ matrix.channel }} || echo "⚠️ Gagal di ${{ matrix.channel }}, selesai."
 
       - name: Jalankan Remote Control Publisher (Kirim ke Medsos)
         if: github.event.action == 'telegram_publish'

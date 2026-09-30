@@ -29,7 +29,10 @@ def extract_frame_from_video(video_path: str, output_image_path: str, timestamp_
 THUMBNAIL_THEME_COLORS = {
     "classic_yellow": (255, 204, 0),
     "neon_green": (52, 199, 89),
-    "cyberpunk_pink": (255, 45, 85)
+    "cyberpunk_pink": (255, 45, 85),
+    "sapphire_blue": (10, 132, 255),
+    "royal_purple": (175, 82, 222),
+    "crimson_red": (255, 59, 48)
 }
 
 def generate_thumbnail(hook_text: str, background_path: str, output_path: str = "output/thumbnail.jpg", brand_name: str = "Ruang Pikir", theme_color: str = "classic_yellow") -> bool:

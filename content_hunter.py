@@ -103,10 +103,8 @@ def hunt_trending_video(drive_folder_url: str, download_dir: str = "data/raw_mat
             break
             
     if not selected_filepath:
-        logger.warning(f" ⚠️ Semua {len(mp4_files)} video di folder Drive sudah pernah dipakai! Mengambil file acak pertama sebagai fallback (MUNGKIN DUPLIKAT).")
-        selected_filepath = mp4_files[0]
-        filename = os.path.basename(selected_filepath)
-        video_id = os.path.splitext(filename)[0]
+        logger.error(f" ❌ Semua {len(mp4_files)} video di folder Drive sudah pernah dipakai! Pipeline dihentikan untuk mencegah duplikat.")
+        return None
         
     # Tandai akan dipakai (masuk antrean memori)
     firebase_connector.mark_clip_used(video_id)
