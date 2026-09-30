@@ -3,21 +3,8 @@ name: Bot TikTok Auto-Pilot
 on:
   workflow_dispatch:
 
-  repository_dispatch:
-    types:
-      - run-bot
-      - telegram_trigger
-      - webhook_trigger
-      - telegram_publish
-      - run-analytics
-
   schedule:
-    # Mengkompensasi delay GitHub Actions (1-2 jam molor dari antrean server):
-    # Target Pagi (07:00 WIB)   -> Cron diset 05:00 WIB (22:00 UTC)
-    # Target Siang (12:00 WIB)  -> Cron diset 10:00 WIB (03:00 UTC)
-    # Target Malam (19:00 WIB)  -> Cron diset 17:00 WIB (10:00 UTC)
     - cron: '0 3,10,22 * * *'
-    # Cron mingguan untuk pembersihan draf lama (Senin 03:00 WIB -> 20:00 UTC)
     - cron: '0 20 * * 1'
 
 jobs:
