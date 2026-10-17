@@ -357,7 +357,8 @@ async def main():
                             background_path=raw_frame_path,
                             output_path=thumbnail_path,
                             brand_name=brand_title,
-                            theme_color=theme_c
+                            theme_color=theme_c,
+                            channel_id=channel_id
                         )
                         if success and os.path.exists(thumbnail_path):
                             has_thumbnail = True

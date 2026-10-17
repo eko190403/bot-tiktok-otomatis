@@ -82,7 +82,7 @@ async def run_ai_pipeline(
     channel_config: dict,
     performance_hints: Optional[str] = None,
     use_ai_review: bool = False,
-    use_ai_retention: bool = False,
+    use_ai_retention: bool = True,
 ) -> Optional[RenderPayload]:
     """
     Jalankan pipeline AI intelligence penuh untuk satu topik.

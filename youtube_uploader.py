@@ -38,10 +38,11 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
     # Pastikan diakhiri dengan #shorts jika belum ada
     if "#shorts" not in clean_title.lower():
         clean_title = f"{clean_title} #shorts"
-        
-    # Potong jika melebihi batas 100 karakter
+
+    # Potong jika melebihi batas 100 karakter — potong sebelum #shorts
     if len(clean_title) > 100:
-        clean_title = clean_title[:88].strip() + " ... #shorts"
+        max_title_len = 100 - len(" #shorts") - 1
+        clean_title = clean_title.replace(" #shorts", "").replace("#shorts", "")[:max_title_len].strip() + " #shorts"
         
     title = clean_title
     
@@ -245,11 +246,21 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2, channel
     cred_file = f"youtube_credentials_{channel_id}.json" if channel_id else "youtube_credentials_ruangpikir.json"
     if not os.path.exists(cred_file):
         return
-        
+
+    # Load channel config untuk persona yang tepat
+    try:
+        from config import get_channel_config
+        ch_cfg = get_channel_config(channel_id or "ruangpikir")
+        channel_name = ch_cfg.get("name", "Ruang Pikir")
+        channel_niche = ch_cfg.get("niche", "edukasi")
+    except Exception:
+        channel_name = "Ruang Pikir"
+        channel_niche = "edukasi psikologi"
+
     try:
         with open(cred_file, "r") as f:
             cred_data = json.load(f)
-            
+
         credentials = Credentials(
             token=cred_data.get("token"),
             refresh_token=cred_data.get("refresh_token"),
@@ -257,7 +268,7 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2, channel
             client_id=cred_data.get("client_id"),
             client_secret=cred_data.get("client_secret")
         )
-        
+
         youtube = build("youtube", "v3", credentials=credentials)
         request = youtube.commentThreads().list(
             part="snippet",
@@ -265,27 +276,28 @@ async def reply_to_youtube_comments(video_id: str, max_replies: int = 2, channel
             maxResults=max_replies,
             order="relevance"
         )
-        
+
         import asyncio
         response = await asyncio.to_thread(request.execute)
-        
+
         from video_builder import call_gemini_with_retry
         for item in response.get("items", []):
             top_comment = item["snippet"]["topLevelComment"]
             parent_id = top_comment["id"]
             comment_text = top_comment["snippet"]["textOriginal"]
             author_name = top_comment["snippet"].get("authorDisplayName", "Kawan")
-            
+
             total_replies = item["snippet"].get("totalReplyCount", 0)
             if total_replies > 0:
                 continue
-                
+
             prompt = (
-                "Kamu adalah pengelola kanal edukasi psikologi bernama 'Ruang Pikir'.\n"
-                "Balaslah komentar penonton berikut dengan jawaban yang ramah, sopan, mendidik, dan singkat (maks 25 kata):\n\n"
+                f"Kamu adalah pengelola kanal '{channel_name}' (niche: {channel_niche}).\n"
+                "Balaslah komentar penonton berikut dengan jawaban yang ramah, sopan, dan singkat (maks 25 kata).\n"
+                "Sesuaikan gaya bahasa dengan niche channel. Gunakan bahasa Indonesia santai Gen-Z.\n\n"
                 f"Nama Penonton: {author_name}\n"
                 f"Komentar: \"{comment_text}\"\n\n"
-                "OUTPUT: Tulis langsung teks balasannya saja dalam Bahasa Indonesia percakapan santai tapi mendidik."
+                "OUTPUT: Tulis langsung teks balasannya saja."
             )
             
             reply_text = await call_gemini_with_retry(prompt, is_json=False)

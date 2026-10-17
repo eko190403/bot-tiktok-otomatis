@@ -100,32 +100,41 @@ Channel: {channel_name}
 Topic: {topic}
 {hint_section}
 
-Write a RETENTION-OPTIMIZED short-form video script using the following storytelling structure.
-Each segment must serve a specific psychological purpose to keep viewers watching.
+Write a RETENTION-OPTIMIZED short-form video script. Your #1 goal: make viewers UNABLE to scroll away.
 
 STRUCTURE RULES:
-1. HOOK (0-3 seconds): Trigger immediate curiosity or emotion. NEVER start with "hai" or greetings.
-   Use a provocative question, shocking statement, or conflict opener.
-2. OPEN_LOOP (3-10s): Create a curiosity gap. Promise something the viewer NEEDS to know.
-3. ESCALATION (10-35s): Build tension, add layers. Deliver value piece by piece, not all at once.
-4. REVEAL (35-55s): The payoff. Deliver the insight/answer with emotional weight.
-5. CTA (55-60s): Loop closure + call to action that feels natural, not forced.
+1. HOOK (0-3 seconds): The MOST important part. MUST trigger pattern interrupt — stop the scroll.
+   Use: shocking claim, personal attack ("Lu yang lagi scroll ini..."), or impossible question.
+   NEVER start with "hai", greetings, or "tahukah kamu". Max 12 kata.
+2. OPEN_LOOP (3-8s): Create a curiosity gap SO STRONG they physically can't leave.
+   Tease the answer but DON'T give it. Use "...dan ini yang bahaya" or "tapi ada 1 hal yang bikin semuanya berubah".
+3. ESCALATION (8-30s): Build tension with SPECIFIC examples and mini-stories. Deliver value piece by piece.
+   Add pattern interrupts every 8-10 seconds ("Tapi tunggu..." / "Dan ini bagian gilanya...").
+4. REVEAL (30-45s): The payoff. Deliver with EMOTIONAL weight. Make them feel something.
+5. CTA (45-50s): Loop closure — last sentence MUST connect back to the hook's first words so the video loops seamlessly. Add engagement trigger ("Setuju? Ketik di komentar").
+
+CRITICAL RETENTION RULES:
+- Gunakan CLIFFHANGER INTERNAL setiap 8-10 detik agar penonton nggak pergi
+- Setiap kalimat harus membuat penonton INGIN DENGAR kalimat berikutnya
+- Gunakan elipsis (...) untuk jeda dramatis yang membangun tensi
+- Kalimat terakhir CTA HARUS nyambung ke kata pertama HOOK (untuk looping)
+- Setiap baris maksimal 8-10 kata agar subtitle mudah dibaca
 
 Return ONLY a valid JSON object:
 {{
   "hook_score": {{"curiosity": 8,"emotion": 7,"conflict": 6,"novelty": 7,"shareability": 8}},
   "segments": [
     {{"role": "HOOK","text": "...","emotion": "suspense","duration_hint": 3.0,"voice_emphasis": "strong"}},
-    {{"role": "OPEN_LOOP","text": "...","emotion": "tense","duration_hint": 7.0,"voice_emphasis": "normal"}},
-    {{"role": "ESCALATION","text": "...","emotion": "calm","duration_hint": 25.0,"voice_emphasis": "normal"}},
-    {{"role": "REVEAL","text": "...","emotion": "strong","duration_hint": 18.0,"voice_emphasis": "strong"}},
+    {{"role": "OPEN_LOOP","text": "...","emotion": "tense","duration_hint": 5.0,"voice_emphasis": "normal"}},
+    {{"role": "ESCALATION","text": "...","emotion": "calm","duration_hint": 22.0,"voice_emphasis": "normal"}},
+    {{"role": "REVEAL","text": "...","emotion": "strong","duration_hint": 15.0,"voice_emphasis": "strong"}},
     {{"role": "CTA","text": "...","emotion": "warm","duration_hint": 5.0,"voice_emphasis": "soft"}}
   ]
 }}
 
 IMPORTANT:
-- Write ALL text in Bahasa Indonesia (conversational, Gen-Z friendly)
-- Total script target: 55-65 seconds when spoken naturally
+- Write ALL text in Bahasa Indonesia (conversational, Gen-Z friendly, like talking to a friend)
+- Total script target: 40-55 seconds when spoken naturally
 - Do NOT use emojis in the text field
 - Return only valid JSON, no markdown fences"""
 

@@ -168,65 +168,110 @@ def find_smart_crop_offset_vertical(clip, target_h: int) -> int:
     except Exception:
         return (clip.size[1] - target_h) // 2
 
-def process_background_clip(file_path: str, duration: float) -> VideoFileClip:
-    """Memotong, melakukan crop-to-fit (agar tidak gepeng/distorsi), dan meresize video."""
-    # 1. Buka klip video mentah dan matikan audionya
+CHANNEL_EFFECTS = {
+    "ruangpikir": {
+        "vignette": (0.35, 0.55),
+        "grain": (0.06, 0.12),
+        "zoom_speed": 0.04,
+        "color_shift": True,
+        "mood": "dark",
+    },
+    "logikastoik": {
+        "vignette": (0.25, 0.40),
+        "grain": (0.04, 0.08),
+        "zoom_speed": 0.03,
+        "color_shift": True,
+        "mood": "cinematic",
+    },
+    "rahasiafinansial": {
+        "vignette": (0.10, 0.25),
+        "grain": None,
+        "zoom_speed": 0.03,
+        "color_shift": True,
+        "mood": "clean",
+    },
+    "misterisemesta": {
+        "vignette": (0.40, 0.60),
+        "grain": (0.08, 0.14),
+        "zoom_speed": 0.05,
+        "color_shift": True,
+        "mood": "dark",
+    },
+    "poladisiplin": {
+        "vignette": (0.15, 0.30),
+        "grain": None,
+        "zoom_speed": 0.04,
+        "color_shift": True,
+        "mood": "energetic",
+    },
+    "animasi_ai": {
+        "vignette": None,
+        "grain": None,
+        "zoom_speed": 0.02,
+        "color_shift": False,
+        "mood": "vibrant",
+    },
+    "komedihunter": {
+        "vignette": None,
+        "grain": None,
+        "zoom_speed": 0.03,
+        "color_shift": True,
+        "mood": "fun",
+    },
+}
+
+
+def process_background_clip(file_path: str, duration: float, channel_id: str = "") -> VideoFileClip:
+    """Memotong, crop-to-fit, resize, dan terapkan efek visual sesuai vibe channel."""
     clip = VideoFileClip(file_path).with_audio(None)
-    
-    # PROTEKSI: Jika durasi asli video lebih pendek dari target potong, gunakan durasi asli maksimumnya
+
     actual_duration = clip.duration
     target_duration = min(duration, actual_duration)
-    
-    # 2. Potong dengan aman tanpa melampaui batas maksimum video asli
     clip = clip.subclipped(0, target_duration)
-    
-    # 3. Crop-to-fit cerdas untuk menghindari video gepeng
+
     w, h = clip.size
     target_ratio = WIDTH / HEIGHT
     current_ratio = w / h
-    
+
     x1, y1, x2, y2 = 0, 0, w, h
     if current_ratio > target_ratio:
-        # Video terlalu lebar (landscape), potong sisi kiri dan kanan secara pintar
         new_w = int(h * target_ratio)
         x_offset = find_smart_crop_offset(clip, new_w)
         x1 = x_offset
         x2 = x_offset + new_w
     elif current_ratio < target_ratio:
-        # Video terlalu tinggi, potong atas dan bawah secara pintar
         new_h = int(w / target_ratio)
         y_offset = find_smart_crop_offset_vertical(clip, new_h)
         y1 = y_offset
         y2 = y_offset + new_h
-        
+
     clip = clip.cropped(x1=x1, y1=y1, x2=x2, y2=y2)
-    
-    # 4. Lakukan resize dimensi dasar video ke tepat (WIDTH, HEIGHT)
     resized_clip = clip.resized((WIDTH, HEIGHT))
-    
+
     import random
     from moviepy.video.fx import MirrorX, MultiplyColor
-    
-    # 5. Flip Horizontal (Peluang 50% untuk merusak hash)
+
+    fx_profile = CHANNEL_EFFECTS.get(channel_id, CHANNEL_EFFECTS["ruangpikir"])
+
     if random.random() < 0.5:
         resized_clip = resized_clip.with_effects([MirrorX()])
-        
-    # 6. Color Shifter (Ubah warna secara asimetris untuk manipulasi piksel total)
-    r_factor = random.uniform(0.95, 1.05)
-    g_factor = random.uniform(0.95, 1.05)
-    b_factor = random.uniform(0.95, 1.05)
-    # MultiplyColor bisa menerima array/list untuk tiap channel warna
-    resized_clip = resized_clip.with_effects([MultiplyColor([r_factor, g_factor, b_factor])])
-    
-    # 7. Terapkan efek slow zoom dengan arah acak (sudah memuat base_zoom 1.05 - 1.10)
+
+    if fx_profile["color_shift"]:
+        r_factor = random.uniform(0.95, 1.05)
+        g_factor = random.uniform(0.95, 1.05)
+        b_factor = random.uniform(0.95, 1.05)
+        resized_clip = resized_clip.with_effects([MultiplyColor([r_factor, g_factor, b_factor])])
+
     zoom_dir = random.choice([True, False])
     base_zoom = random.uniform(1.05, 1.10)
-    final_clip = apply_slow_zoom(resized_clip, speed=0.04, zoom_in=zoom_dir, base_zoom=base_zoom)
-    
-    # 8. Terapkan Vignette untuk memfokuskan pandangan ke subjek
-    final_clip = apply_vignette(final_clip, intensity=random.uniform(0.3, 0.5))
-    
-    # 9. Terapkan Film Grain untuk visual premium (Retensi)
-    final_clip = apply_film_grain(final_clip, intensity=random.uniform(0.06, 0.12))
-    
+    final_clip = apply_slow_zoom(resized_clip, speed=fx_profile["zoom_speed"], zoom_in=zoom_dir, base_zoom=base_zoom)
+
+    if fx_profile["vignette"]:
+        lo, hi = fx_profile["vignette"]
+        final_clip = apply_vignette(final_clip, intensity=random.uniform(lo, hi))
+
+    if fx_profile["grain"]:
+        lo, hi = fx_profile["grain"]
+        final_clip = apply_film_grain(final_clip, intensity=random.uniform(lo, hi))
+
     return final_clip

@@ -5,6 +5,8 @@ on:
   repository_dispatch:
     types:
       - run-analytics
+  schedule:
+    - cron: '0 1,13 * * *'
 
 jobs:
   build-and-run:

@@ -35,7 +35,17 @@ THUMBNAIL_THEME_COLORS = {
     "crimson_red": (255, 59, 48)
 }
 
-def generate_thumbnail(hook_text: str, background_path: str, output_path: str = "output/thumbnail.jpg", brand_name: str = "Ruang Pikir", theme_color: str = "classic_yellow") -> bool:
+CHANNEL_BADGES = {
+    "ruangpikir": ["FAKTA GELAP", "PSIKOLOGI", "DARK TRUTH"],
+    "logikastoik": ["STOIC WISDOM", "MINDSET", "MENTAL KUAT"],
+    "rahasiafinansial": ["RAHASIA UANG", "FINANSIAL", "MONEY HACK"],
+    "misterisemesta": ["MISTERI", "BELUM TERPECAHKAN", "RAHASIA ALAM"],
+    "poladisiplin": ["DISIPLIN", "PRODUKTIF", "LEVEL UP"],
+    "komedihunter": ["NGAKAK", "KOMEDI", "VIRAL"],
+    "animasi_ai": ["QUIZ", "TEBAK", "AI VISUAL"],
+}
+
+def generate_thumbnail(hook_text: str, background_path: str, output_path: str = "output/thumbnail.jpg", brand_name: str = "Ruang Pikir", theme_color: str = "classic_yellow", channel_id: str = None) -> bool:
     """
     Menghasilkan gambar thumbnail 1280x720 (16:9) dengan overlay teks hook.
     """
@@ -85,10 +95,11 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
         # 3. Cari font (Bebas Neue / Arial / Sans-serif)
         # Mencoba memuat font sistem tebal
         font_paths = [
-            "arialbd.ttf",       # Windows Bold
-            "HelveticaNeue-Bold.otf", # macOS Bold
-            "DejaVuSans-Bold.ttf", # Linux Bold
-            "Arial.ttf"
+            os.path.join("assets", "fonts", "font.ttf"),
+            os.path.join("assets", "fonts", "Oswald-Bold.ttf"),
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "arialbd.ttf",
+            "Arial.ttf",
         ]
         
         font = None
@@ -137,14 +148,19 @@ def generate_thumbnail(hook_text: str, background_path: str, output_path: str = 
         # Batasi maksimal 3 baris
         lines = lines[:3]
         
-        # 5. Gambar Badge High-CTR di pojok kiri atas
-        badges = ["🔥 VIRAL", "🧠 RAHASIA", "💡 FAKTA GELAP", "⚡ MUST WATCH", "👁️ TAHUKAH KAMU"]
+        # 5. Gambar Badge High-CTR di pojok kiri atas (per-channel)
         import random
-        badge_text = random.choice(badges)
+        ch_badges = CHANNEL_BADGES.get(channel_id, ["VIRAL", "MUST WATCH", "FAKTA"])
+        badge_text = f"🔥 {random.choice(ch_badges)}"
         
-        try:
-            badge_font = ImageFont.truetype("arialbd.ttf", 30)
-        except Exception:
+        badge_font = None
+        for path in font_paths:
+            try:
+                badge_font = ImageFont.truetype(path, 30)
+                break
+            except Exception:
+                continue
+        if badge_font is None:
             badge_font = font
             
         try:

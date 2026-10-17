@@ -478,18 +478,52 @@ def get_last_upload_timestamp(channel_id: str) -> int:
 # THEME PERFORMANCE (Visual A/B Analytics helpers)
 # ─────────────────────────────────────────────
 
+def _aggregate_stat_rankings(docs, name_key: str, limit: int = 5) -> list:
+    """Akumulasikan total views/likes per tema atau hook dari dokumen mentah."""
+    aggregated = {}
+
+    for doc in docs:
+        if hasattr(doc, "to_dict"):
+            data = doc.to_dict() or {}
+            document_id = getattr(doc, "id", None)
+        elif isinstance(doc, dict):
+            data = doc
+            document_id = None
+        else:
+            continue
+
+        if not isinstance(data, dict):
+            continue
+
+        name = data.get(name_key) or data.get("name") or document_id
+        if not name:
+            continue
+
+        entry = aggregated.setdefault(name, {
+            name_key: name,
+            "views": 0,
+            "likes": 0,
+        })
+        entry["views"] += int(data.get("views", 0) or 0)
+        entry["likes"] += int(data.get("likes", 0) or 0)
+
+        for key, value in data.items():
+            if key not in {"views", "likes", name_key, "name"} and key not in entry:
+                entry[key] = value
+
+    return sorted(aggregated.values(), key=lambda item: item.get("views", 0), reverse=True)[:limit]
+
+
 def get_top_themes(limit: int = 5) -> list:
-    """Ambil top theme berdasarkan total views dari koleksi 'theme_stats' (sudah diagregasi oleh Increment)."""
+    """Ambil top theme berdasarkan total views dari koleksi 'theme_stats'.
+    Fungsi ini menangani dua format data: dokumen yang sudah teragregasi per theme,
+    maupun data mentah yang perlu dijumlahkan di memori.
+    """
     if not _require_firestore("get_top_themes"):
         return []
     try:
-        docs = (
-            db.collection("theme_stats")
-            .order_by("views", direction=firestore.Query.DESCENDING)
-            .limit(limit)
-            .stream()
-        )
-        return [{"theme": d.id, **d.to_dict()} for d in docs]
+        docs = db.collection("theme_stats").stream()
+        return _aggregate_stat_rankings(docs, "theme", limit=limit)
     except Exception as e:
         logger.warning(f" Gagal mengambil theme performance dari Firestore: {e}")
         return []
@@ -500,13 +534,8 @@ def get_top_hooks(limit: int = 3) -> list:
     if not _require_firestore("get_top_hooks"):
         return []
     try:
-        docs = (
-            db.collection("hook_stats")
-            .order_by("views", direction=firestore.Query.DESCENDING)
-            .limit(limit)
-            .stream()
-        )
-        return [{"hook": d.id, **d.to_dict()} for d in docs]
+        docs = db.collection("hook_stats").stream()
+        return _aggregate_stat_rankings(docs, "hook", limit=limit)
     except Exception as e:
         logger.warning(f" Gagal mengambil hook performance dari Firestore: {e}")
         return []

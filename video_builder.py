@@ -292,13 +292,15 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
     
     # Pilih gaya hook secara acak dari config channel (mencegah hook repetitif)
     default_hook_styles = [
-        "Pertanyaan retoris yang sangat personal (Contoh: 'PERNAH NGERASA CAPEK TAPI NGGAK TAU CAPEK KENAPA?')",
+        "Pattern interrupt — langsung serang asumsi penonton (Contoh: 'BERHENTI SCROLL... LU LAGI NGELAKUIN KEBIASAAN YANG BIKIN HIDUP LU STUCK')",
         "Fakta mengejutkan yang kontra-intuitif (Contoh: 'ORANG PALING SABAR TERNYATA YANG PALING BERBAHAYA')",
-        "Skenario imajinatif yang relatable (Contoh: 'BAYANGIN LU BANGUN TIDUR DAN SEMUA ORANG LUPA SIAPA LU')",
-        "Perbandingan absurd yang bikin mikir (Contoh: 'BEDANYA ORANG SUKSES DAN GAGAL CUMA 1 KEBIASAAN INI')",
-        "Cerita mini 1 kalimat yang bikin penasaran (Contoh: 'GUE PERNAH KEHILANGAN SAHABAT GARA-GARA 1 KATA INI')",
+        "Open loop yang HARUS ditonton sampai habis (Contoh: 'ADA 1 HAL YANG DILAKUIN 97% ORANG TIAP HARI... DAN ITU MENGHANCURKAN MEREKA')",
+        "Confession/pengakuan personal (Contoh: 'GUE BARU SADAR SETELAH 5 TAHUN... TERNYATA INI YANG BIKIN GUE GAK BERKEMBANG')",
         "Konfrontasi langsung ke penonton (Contoh: 'LU YANG SCROLL INI PASTI LAGI NGALAMIN HAL YANG SAMA')",
-        "Pengungkapan rahasia yang jarang diketahui (Contoh: 'INI YANG NGGAK PERNAH DICERITAIN GURU LU DI SEKOLAH')"
+        "Pengungkapan rahasia yang bikin paranoid (Contoh: 'DIAM-DIAM ORANG TERDEKAT LU NGELAKUIN INI KE LU')",
+        "Pernyataan kontroversial yang memecah belah (Contoh: 'ORANG BAIK ITU SEBENARNYA YANG PALING EGOIS')",
+        "Countdown/urgency hook (Contoh: '3 TANDA LU LAGI DIMANIPULASI... NOMOR 2 PALING SERING KEJADIAN')",
+        "Cerita mini yang langsung bikin penasaran (Contoh: 'KEMARIN GUE LIAT SESUATU YANG BIKIN GUE NGGAK BISA TIDUR')"
     ]
     hook_styles = config.get("hook_styles", default_hook_styles)
     chosen_hook_style = random.choice(hook_styles)
@@ -449,7 +451,7 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
             "4. 'caption': Judul TikTok ultra-viral untuk FYP. Gunakan hook clickbait sarkas yang memancing rasa penasaran penonton, ditambah hashtag trending. Maks 150 karakter.\n"
             f"5. 'tags': Array berisi 8-12 kata kunci SEO (Search Engine Optimization) bervolume tinggi (misal {config.get('tags_example', ['lucu', 'prank'])}).\n"
             "6. 'category_id': ID kategori YouTube (gunakan '22' untuk People & Blogs, atau '23' untuk Comedy).\n"
-            "7. 'interactive_comment': Satu kalimat pancingan (pinned comment) bergaya tongkrongan sarkas untuk memaksa penonton membalas di komentar. Maks 15 kata.\n"
+            "7. 'interactive_comment': Pinned comment WAJIB pakai formula: polling ('1 atau 2?'), provokasi ('Yang setuju like'), pengalaman ('Ceritain pengalaman lu'), atau tag teman ('Tag temen lu yang kayak gini'). Sarkas, maks 15 kata.\n"
             "8. 'yt_title': Judul YouTube Shorts yang memicu klik (High CTR). Gunakan kata kunci pencarian utama di awal kalimat. Sarkas dan provokatif tanpa hashtag. Maks 90 karakter.\n"
             "9. 'yt_description': Deskripsi YouTube SUPER SEO. Paragraf pertama WAJIB mengandung kata kunci utama secara natural. Berisi ringkasan lucu, ajakan subscribe, dan 5 hashtag relevan.\n"
             f"{ab_test_instruction}\n"
@@ -460,11 +462,12 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
                 # VARIASI STRUKTUR NARASI & DURASI — mencegah video terasa template-an dan membosankan
         import random
         duration_profiles = [
-            {"format": "snackable_fast", "desc": "FORMAT SNACKABLE KILAT (20-30 detik): Naskah padat, cepat, dan punchy! 3-4 kalimat utama. Total kata naskah (hook + story + cta) MAKSIMAL 70 kata. Cocok untuk watch-rate 100%.\n"},
-            {"format": "standard_medium", "desc": "FORMAT STANDAR MEDIUM (35-50 detik): Penjelasan mendalam dengan 1 contoh nyata. 5-7 kalimat. Total kata naskah (hook + story + cta) MAKSIMAL 120 kata.\n"},
-            {"format": "deep_extended", "desc": "FORMAT DEEP RETENTION (60-75 detik): Pembahasan komprehensif, bertahap, dan dramatis. 7-10 kalimat. Total kata naskah (hook + story + cta) MAKSIMAL 165 kata.\n"}
+            {"format": "snackable_fast", "desc": "FORMAT SNACKABLE KILAT (25-35 detik): Naskah padat, cepat, dan punchy! 3-4 kalimat utama. Total kata naskah (hook + story + cta) MAKSIMAL 80 kata. Cocok untuk watch-rate 100% dan replay.\n", "weight": 40},
+            {"format": "standard_medium", "desc": "FORMAT STANDAR MEDIUM (35-50 detik): Penjelasan mendalam dengan 1 contoh nyata. 5-7 kalimat. Total kata naskah (hook + story + cta) MAKSIMAL 120 kata.\n", "weight": 45},
+            {"format": "deep_extended", "desc": "FORMAT DEEP RETENTION (50-65 detik): Pembahasan komprehensif, bertahap, dan dramatis. 7-10 kalimat. Total kata naskah (hook + story + cta) MAKSIMAL 150 kata.\n", "weight": 15}
         ]
-        chosen_profile = random.choice(duration_profiles)
+        weights = [p["weight"] for p in duration_profiles]
+        chosen_profile = random.choices(duration_profiles, weights=weights, k=1)[0]
         
         story_styles = [
             f"2. 'story': {chosen_profile['desc']} WAJIB memberikan 1 contoh skenario nyata di kehidupan sehari-hari. Di akhir story, berikan 1 kalimat SOLUSI PRAKTIS atau langkah konkrit sebelum CTA. Gunakan elipsis (...) untuk jeda dramatis.\n",
@@ -475,9 +478,9 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
         story_rule = random.choice(story_styles)
         
         cta_styles = [
-            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA HARUS berupa 1 pertanyaan KONTROVERSIAL yang memecah belah opini penonton untuk memaksa mereka berdebat di komentar! Syarat: ujung CTA harus nyambung logis ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n",
-            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA berupa TANTANGAN LANGSUNG ke penonton (misal: 'Coba buktiin kalo lu beda dari 90% orang!'). Syarat: ujung CTA harus nyambung logis ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n",
-            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA berupa KLAIM BERANI yang memancing sanggahan (misal: 'Dan ini yang nggak mau diterima kebanyakan orang'). Syarat: ujung CTA harus nyambung logis ke kata pertama HOOK (Looping). JANGAN taruh elipsis (...) di akhir.\n"
+            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA HARUS berupa 1 pertanyaan KONTROVERSIAL yang memecah belah opini penonton untuk memaksa mereka berdebat di komentar! Syarat LOOPING: kalimat terakhir CTA harus nyambung SEAMLESS ke kata pertama HOOK sehingga video terasa infinite loop. Contoh: jika hook dimulai 'PERNAH NGERASA...', CTA bisa diakhiri '...dan itulah kenapa'. JANGAN taruh elipsis di akhir.\n",
+            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA berupa TANTANGAN LANGSUNG yang memaksa penonton berkomentar (misal: 'Coba buktiin kalo lu beda dari 90% orang!'). Syarat LOOPING: kalimat terakhir HARUS bisa langsung disambung ke kata pertama HOOK untuk efek infinite loop. JANGAN taruh elipsis di akhir.\n",
+            "3. 'cta': Ajakan bertindak (Maks 15 kata). CTA berupa CLIFFHANGER yang bikin penonton re-watch (misal: 'Tapi yang paling bahaya dari semua ini...'). Syarat LOOPING: akhir CTA HARUS terasa belum selesai sehingga penonton otomatis nonton ulang dari awal. JANGAN taruh elipsis di akhir.\n"
         ]
         cta_rule = random.choice(cta_styles)
         
@@ -495,9 +498,9 @@ async def generate_structured_script(channel_cfg: dict) -> dict:
             "4. 'caption': Judul TikTok yang dirancang KHUSUS UNTUK FYP (For You Page). Gunakan teknik clickbait halus yang memancing rasa penasaran, ditambah 3-5 hashtag trending/viral yang spesifik (contoh: #ruangpikir #psikologi #fyp). Maks 150 karakter.\n"
             f"5. 'tags': Array berisi 8-12 kata kunci SEO (Search Engine Optimization) bervolume pencarian tinggi (high-volume keywords) yang relevan, baik Inggris maupun Indonesia, untuk memaksimalkan penemuan video (misal {config.get('tags_example', [])}).\n"
             "6. 'category_id': ID kategori YouTube yang paling cocok untuk jenis konten ini dalam bentuk string (gunakan '22' untuk People & Blogs, atau '27' untuk Education).\n"
-            "7. 'interactive_comment': Satu kalimat pancingan (pinned comment) bergaya tongkrongan Gen-Z untuk memancing algoritma engagement. Buat pertanyaan kontroversial yang memaksa orang berdebat atau membagikan pengalaman pribadinya. Maks 15 kata.\n"
-            "8. 'yt_title': Judul video YouTube Shorts yang SANGAT dioptimasi untuk CTR (Click-Through Rate) dan SEO. Wajib mengandung kata kunci pencarian utama di 50 karakter pertama. Kuat, provokatif, TIDAK mengandung hashtag. Maks 90 karakter. Contoh: 'Terbongkar! Fakta Gelap Psikologi yang Bikin Kamu Sering Dimanfaatkan'\n"
-            "9. 'yt_description': Deskripsi video YouTube yang SUPER OPTIMASI SEO. Struktur wajib: (a) Paragraf pertama mengandung 2-3 kata kunci utama secara natural (sangat penting untuk algoritma), (b) Ringkasan singkat yang memancing penasaran, (c) Bullet point berisi kata kunci turunan (LSI keywords), (d) CTA subscribe, (e) 5-7 hashtag yang sangat relevan. Total 300-500 karakter.\n"
+            "7. 'interactive_comment': Pinned comment WAJIB pakai salah satu formula engagement tinggi: (a) polling '1 atau 2? Tulis di bawah!', (b) provokasi 'Yang setuju like, yang nggak setuju komen alasannya', (c) pengalaman 'Ceritain pengalaman lu yang mirip', (d) tag teman 'Tag temen lu yang kayak gini'. Bergaya Gen-Z, maks 15 kata.\n"
+            "8. 'yt_title': Judul YouTube Shorts WAJIB mengikuti formula viral: [POWER WORD] + [TOPIK SPESIFIK] + [TRIGGER EMOSI]. Kata kunci pencarian utama HARUS di 40 karakter pertama. GUNAKAN power words: Ternyata, Terbongkar, Rahasia, Diam-diam, Jangan Sampai, Fakta Gelap, dll. TANPA hashtag. Maks 85 karakter. Contoh baik: 'Ternyata Ini Alasan Orang Baik Sering Dimanfaatkan' atau 'Diam-diam 90% Orang Melakukan Kesalahan Fatal Ini'\n"
+            "9. 'yt_description': Deskripsi YouTube SEO. PARAGRAF 1 (WAJIB): Kalimat pembuka yang mengandung 2-3 kata kunci utama secara natural — ini yang muncul di hasil pencarian. PARAGRAF 2: Ringkasan singkat dan CTA subscribe. AKHIR: 5-7 hashtag relevan termasuk #shorts. Total 300-500 karakter.\n"
             f"{ab_test_instruction}\n"
             "GAYA BAHASA: Gunakan gaya bahasa Gen-Z yang blak-blakan (seperti teman nongkrong), realistis, dan tegas. Gunakan slang tongkrongan yang wajar (lu, gue, banget, sih). DILARANG KERAS menggunakan kata kotor, kasar, makian, atau merendahkan. JANGAN pakai bahasa baku, sastra kuno, atau sok puitis. Jadilah seperti mentor yang sedang menyadarkan penonton dengan tamparan realita yang sopan. Pastikan kalimat pembuka (hook) dan sambungan looping-nya tetap nyambung secara gramatikal.\n"
             f"OUTPUT: Hanya JSON murni dengan key 'hook', 'story', 'cta', 'caption', 'tags', 'category_id', 'interactive_comment', 'yt_title', dan 'yt_description'. Jika diinstruksikan A/B test, sertakan key 'hook_b'. Tidak ada teks lain di luar JSON.{exclude_prompt}{performance_prompt}{comment_insight_prompt}{trends_prompt}"
@@ -722,6 +725,48 @@ async def kill_zombie_ffmpeg_processes(target_file: str):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
+async def _generate_seo_metadata(hook: str, story: str, channel_cfg: dict, topic: str) -> dict:
+    """Generate optimized SEO metadata (title, description, tags, caption) via Gemini."""
+    channel_name = channel_cfg.get("name", "")
+    niche = channel_cfg.get("niche", "")
+    tags_example = channel_cfg.get("tags_example", "")
+
+    prompt = (
+        f"Kamu adalah spesialis SEO YouTube Shorts dan TikTok untuk channel '{channel_name}' (niche: {niche}).\n"
+        f"Topik video: {topic}\n"
+        f"Hook: {hook}\n"
+        f"Story (ringkas): {story[:300]}\n\n"
+        "Buat metadata SEO yang SANGAT dioptimasi untuk algoritma. Return ONLY valid JSON:\n"
+        "{\n"
+        '  "yt_title": "Judul YouTube Shorts High CTR, kata kunci utama di 50 char pertama, maks 90 char, TANPA hashtag",\n'
+        '  "yt_description": "Deskripsi YouTube SEO 300-500 char: paragraf pertama wajib mengandung 2-3 kata kunci utama, ringkasan memancing penasaran, CTA subscribe, 5-7 hashtag relevan",\n'
+        f'  "tags": ["8-12 kata kunci SEO high-volume, misal: {tags_example}"],\n'
+        '  "caption": "Judul TikTok FYP clickbait halus + 3-5 hashtag viral spesifik, maks 150 char",\n'
+        '  "category_id": "22 atau 27",\n'
+        '  "interactive_comment": "Pertanyaan kontroversial Gen-Z yang memaksa debat di komentar, maks 15 kata"\n'
+        "}\n"
+        "PENTING: Semua dalam Bahasa Indonesia. Return ONLY JSON."
+    )
+
+    try:
+        raw = await call_gemini_with_retry(prompt, is_json=True, temperature=0.7)
+        data = clean_and_parse_json(raw)
+        if isinstance(data, dict):
+            logger.info(" SEO metadata berhasil di-generate via Gemini.")
+            return data
+    except Exception as e:
+        logger.warning(" Gagal generate SEO metadata: %s. Menggunakan fallback.", e)
+
+    return {
+        "yt_title": f"{hook[:70]} #shorts",
+        "yt_description": f"{story[:200]}\n\n#shorts #{channel_cfg.get('watermark', '').replace('@', '')} #fyp",
+        "tags": channel_cfg.get("tags_fallback", ["shorts", "fyp"]),
+        "caption": f"{hook} #{channel_cfg.get('watermark', '').replace('@', '')} #shorts #fyp",
+        "category_id": "22",
+        "interactive_comment": "Gimana menurut lu? Tulis di komentar!",
+    }
+
+
 async def create_video(channel_id: str = "ruangpikir") -> bool:
     start_total = time.time()
     moviepy_resources = {"audio_clip": None, "processed_clips": [], "raw_combined_bg": None, "looped_bg": None, "combined_bg": None, "final_video": None}
@@ -820,20 +865,29 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
             payload = await run_ai_pipeline(topic=topic, channel_config=channel_cfg, performance_hints=hints)
             
             if payload:
+                # Generate SEO metadata via Gemini (critical for discoverability)
+                seo_meta = await _generate_seo_metadata(
+                    payload.hook_text,
+                    payload.full_narration_text,
+                    channel_cfg,
+                    payload.topic,
+                )
+
                 # Format ulang agar kompatibel dengan sisa pipeline video_builder
                 script_data = {
                     "hook": payload.hook_text,
-                    # Hapus hook dari story agar tidak diucap dua kali saat digabung
                     "story": payload.full_narration_text.replace(payload.hook_text, "", 1).strip(),
-                    "cta": "",  # CTA sudah tergabung di full_narration_text
-                    "caption": f"{payload.topic} #{channel_id} #fyp",
-                    "tags": [channel_id, "psikologi", "fakta"],
-                    "category_id": "22",
-                    "interactive_comment": "Bagaimana pendapatmu tentang ini?"
+                    "cta": "",
+                    "caption": seo_meta.get("caption", f"{payload.topic} #{channel_id} #shorts #fyp"),
+                    "tags": seo_meta.get("tags", channel_cfg.get("tags_fallback", [channel_id, "shorts", "fyp"])),
+                    "category_id": seo_meta.get("category_id", "22"),
+                    "interactive_comment": seo_meta.get("interactive_comment", "Gimana menurut lu? Tulis di komentar!"),
+                    "yt_title": seo_meta.get("yt_title", ""),
+                    "yt_description": seo_meta.get("yt_description", ""),
+                    "hook_b": getattr(payload, "hook_b", ""),
                 }
-                keywords = payload.image_prompts # Scene Director output
-                
-                # Simpan payload meta ke file untuk debugging/referensi
+                keywords = payload.image_prompts
+
                 with open(os.path.join(DIR_TEMP, "ai_payload.json"), "w", encoding="utf-8") as f:
                     json.dump(payload.to_summary(), f, indent=4)
                     
@@ -1149,8 +1203,8 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
         import random
         while current_time < total_duration:
             if current_time < hook_end:
-                # FAST PACING di Hook (Kepanikan Visual Sangat Agresif: 0.4s - 0.9s)
-                dur = random.uniform(0.4, 0.9)
+                # FAST PACING di Hook (Kepanikan Visual Sangat Agresif: 0.3s - 0.7s)
+                dur = random.uniform(0.3, 0.7)
                 dur = min(dur, hook_end - current_time)
                 # Jika segmen terakhir di hook terlalu pendek (< 0.5s), gabungkan
                 if segment_durations and current_time < hook_end and (hook_end - current_time) < 0.5:
@@ -1158,8 +1212,8 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     current_time = hook_end
                     continue
             else:
-                # RELAXED PACING di Story (Penjelasan Edukatif: 2.0s - 4.5s)
-                dur = random.uniform(2.0, 4.5)
+                # MEDIUM PACING di Story (Penjelasan Edukatif: 1.5s - 3.5s)
+                dur = random.uniform(1.5, 3.5)
                 dur = min(dur, total_duration - current_time)
                 # Jika segmen terakhir terlalu pendek (< 1.0s), gabungkan dengan sebelumnya
                 if segment_durations and (total_duration - current_time) < 1.0:
@@ -1234,23 +1288,26 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 moviepy_resources["combined_bg"] = ColorClip(size=(WIDTH, HEIGHT), color=(20, 20, 20), duration=total_duration)
         else:
             # Mode Klasik (Pexels / Pixabay)
-            from effects import apply_camera_shake, apply_flashbang
+            from effects import apply_camera_shake, apply_flashbang, CHANNEL_EFFECTS
             import random
+            fx_profile = CHANNEL_EFFECTS.get(channel_id, CHANNEL_EFFECTS["ruangpikir"])
+            mood = fx_profile.get("mood", "dark")
+            intense_channels = mood in ("dark", "cinematic", "energetic")
+
             for i, dur in enumerate(segment_durations):
                 file = video_files[i % len(video_files)]
                 try:
-                    processed_clip = process_background_clip(file, dur)
-                    
-                    # Pattern Interrupts (Hanya berlaku di tengah-tengah video agar hook awal tetap bersih)
-                    if i > 0:
-                        if random.random() < 0.25:
-                            # 25% peluang klip ini akan bergetar (Camera Shake) selama 1-2 detik
+                    processed_clip = process_background_clip(file, dur, channel_id=channel_id)
+
+                    if i == 0 and intense_channels:
+                        processed_clip = apply_flashbang(processed_clip, duration=0.12)
+                    elif i > 0:
+                        shake_chance = 0.30 if intense_channels else 0.12
+                        flash_chance = 0.18 if intense_channels else 0.0
+                        if random.random() < shake_chance:
                             processed_clip = apply_camera_shake(processed_clip, intensity=random.randint(4, 7), limit_duration=random.uniform(1.0, 2.0))
-                            logger.info(" Efek Camera Shake diterapkan pada klip %d", i)
-                        if random.random() < 0.15:
-                            # 15% peluang flashbang di awal klip
+                        if flash_chance > 0 and random.random() < flash_chance:
                             processed_clip = apply_flashbang(processed_clip, duration=0.1)
-                            logger.info(" Efek Flashbang diterapkan pada klip %d", i)
                             
                     moviepy_resources["processed_clips"].append(processed_clip)
                 except Exception as ce:
@@ -1365,7 +1422,28 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                         except Exception as c_err:
                             logger.warning(" Gagal memproses klip emoji NER: %s", c_err)
 
-        moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips + ner_clips, use_bgclip=True)
+        # ================= HOOK TEXT OVERLAY (FIRST 1.5s) =================
+        hook_overlay_clips = []
+        try:
+            hook_text_raw = script_data.get("hook", "")
+            if hook_text_raw and len(hook_text_raw) > 5:
+                from overlay import _create_hook_overlay_frame
+                hook_frame = _create_hook_overlay_frame(
+                    hook_text_raw.upper(), WIDTH, HEIGHT,
+                    theme_color=script_data.get("theme", "classic_yellow")
+                )
+                hook_overlay = (
+                    ImageClip(hook_frame)
+                    .with_start(0)
+                    .with_duration(min(1.5, total_duration * 0.1))
+                    .with_position(("center", "center"))
+                )
+                hook_overlay_clips.append(hook_overlay)
+                logger.info(" Hook overlay teks ditambahkan di 1.5 detik pertama.")
+        except Exception as ho_err:
+            logger.warning(" Hook overlay gagal: %s", ho_err)
+
+        moviepy_resources["final_video"] = CompositeVideoClip([moviepy_resources["combined_bg"]] + all_text_clips + ner_clips + hook_overlay_clips, use_bgclip=True)
 
         # ================= INTELLIGENT AUDIO DUCKING & SWELL =================
         import numpy as np
@@ -1459,10 +1537,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     frame = get_frame(t)
                     is_array = isinstance(t, np.ndarray)
                     t_val = t if is_array else np.array([t])
-                    vol = np.full_like(t_val, 0.15, dtype=float)
+                    vol = np.full_like(t_val, 0.22, dtype=float)
                     for (s_start, s_end) in swells:
                         mask = (t_val >= s_start) & (t_val <= s_end)
-                        vol[mask] = 0.50
+                        vol[mask] = 0.55
                     
                     # PROACTIVE AUDIT: Anti-click fadeout di ujung video (0.2s)
                     fade_duration = 0.2
@@ -1571,9 +1649,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
             except Exception as e:
                 logger.warning(" Gagal memuat Soft Tick: %s", e)
 
-        # 5. Rain Noise (Ambience pad)
+        # 5. Rain Noise (Ambience pad — hanya untuk channel gelap/misterius)
+        rain_channels = ["ruangpikir", "misterisemesta", "logikastoik"]
         rain_path = os.path.join(music_dir, "rain_noise.wav")
-        if os.path.exists(rain_path):
+        if os.path.exists(rain_path) and channel_id in rain_channels:
             try:
                 rain_base = AudioFileClip(rain_path)
                 moviepy_resources["rain_base"] = rain_base
@@ -1661,7 +1740,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                 _theme_color_map = {
                     "classic_yellow": (255, 204, 0, 255),
                     "neon_green": (52, 199, 89, 255),
-                    "cyberpunk_pink": (255, 45, 85, 255)
+                    "cyberpunk_pink": (255, 45, 85, 255),
+                    "sapphire_blue": (10, 132, 255, 255),
+                    "royal_purple": (191, 90, 242, 255),
+                    "crimson_red": (255, 59, 48, 255),
                 }
                 _outline_color = _theme_color_map.get(channel_cfg.get("theme_color", "classic_yellow"), (255, 204, 0, 255))
                 moviepy_resources["final_video"] = apply_visual_cta(
@@ -1695,21 +1777,23 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
             # --- VISUAL POST-PROCESSING (Unsharp Mask & Color Grading) ---
             # eq=contrast=1.1:saturation=1.15:gamma=0.95 -> Membuat warna lebih pop dan shadow sedikit lebih gelap
             # unsharp=5:5:1.0 -> Mempertajam gambar AI agar tidak blur (premium look)
-            base_cinematic = "unsharp=5:5:1.0,eq=contrast=1.1:saturation=1.15:gamma=0.95"
-            
+            base_cinematic = "unsharp=5:5:0.8,eq=contrast=1.08:saturation=1.12:gamma=0.97"
+
             if bg_type in ["pexels", "ai_video"]:
                 if channel_id in ["ruangpikir", "misterisemesta"]:
-                    # Efek sangat gelap, kotor, dan misterius
-                    params.extend(["-vf", f"{base_cinematic},noise=alls=8:allf=t+u,vignette=PI/3"])
+                    params.extend(["-vf", f"{base_cinematic},vignette=PI/4"])
+                elif channel_id == "logikastoik":
+                    params.extend(["-vf", f"{base_cinematic},vignette=PI/8"])
                 elif channel_id == "poladisiplin":
-                    # Efek bersih, fokus intens, tanpa noise kotor, vignette tipis di ujung
-                    params.extend(["-vf", f"{base_cinematic},vignette=PI/10"])
-                elif channel_id in ["logikastoik", "rahasiafinansial"]:
-                    # Efek sangat bersih, tanpa noise, vignette sangat tipis untuk ruang kontemplasi
-                    params.extend(["-vf", f"{base_cinematic},vignette=PI/15"])
+                    params.extend(["-vf", f"{base_cinematic},vignette=PI/12"])
+                elif channel_id == "rahasiafinansial":
+                    # Bersih dan cerah — saturasi sedikit lebih tinggi, tanpa vignette
+                    params.extend(["-vf", "unsharp=5:5:0.8,eq=contrast=1.05:saturation=1.18:gamma=1.0"])
+                elif channel_id == "animasi_ai":
+                    # Gambar AI harus tajam dan vibrant — no darkening
+                    params.extend(["-vf", "unsharp=5:5:1.0,eq=contrast=1.05:saturation=1.25:gamma=1.0"])
                 else:
-                    # Default untuk channel lain
-                    params.extend(["-vf", f"{base_cinematic},vignette=PI/5"])
+                    params.extend(["-vf", f"{base_cinematic},vignette=PI/8"])
             else:
                 params.extend(["-vf", base_cinematic])
             moviepy_resources["final_video"].write_videofile(

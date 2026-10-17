@@ -173,6 +173,85 @@ def apply_visual_cta(video_clip, cta_title: str = None, cta_desc: str = None, ou
         logging.getLogger("video_pipeline").warning(" Visual CTA gagal: %s", e)
         return video_clip
 
+HOOK_THEME_COLORS = {
+    "classic_yellow": (255, 204, 0),
+    "neon_green": (52, 199, 89),
+    "cyberpunk_pink": (255, 45, 85),
+    "sapphire_blue": (10, 132, 255),
+    "royal_purple": (175, 82, 222),
+    "crimson_red": (255, 59, 48),
+}
+
+def _create_hook_overlay_frame(text: str, width: int, height: int, theme_color: str = "classic_yellow") -> np.ndarray:
+    """Big bold hook text overlay for the first 1-1.5 seconds — stops the swipe."""
+    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    # Semi-transparent dark backdrop behind text area
+    backdrop_h = int(height * 0.35)
+    backdrop_y = (height - backdrop_h) // 2
+    draw.rectangle(
+        [(0, backdrop_y), (width, backdrop_y + backdrop_h)],
+        fill=(0, 0, 0, 160)
+    )
+
+    font_paths = [
+        os.path.join(os.path.dirname(__file__), "assets", "fonts", "font.ttf"),
+        os.path.join(os.path.dirname(__file__), "assets", "fonts", "Oswald-Bold.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "arialbd.ttf",
+    ]
+
+    font_size = 82
+    font = None
+    for path in font_paths:
+        try:
+            font = ImageFont.truetype(path, font_size)
+            break
+        except Exception:
+            continue
+    if font is None:
+        font = ImageFont.load_default()
+
+    # Word-wrap to max 2 lines
+    words = text.split()
+    max_w = int(width * 0.85)
+    lines = []
+    current = []
+    for word in words:
+        current.append(word)
+        test = " ".join(current)
+        try:
+            lw = draw.textlength(test, font=font)
+        except AttributeError:
+            lw = draw.textsize(test, font=font)[0]
+        if lw > max_w and len(current) > 1:
+            current.pop()
+            lines.append(" ".join(current))
+            current = [word]
+    if current:
+        lines.append(" ".join(current))
+    lines = lines[:2]
+
+    color = HOOK_THEME_COLORS.get(theme_color, (255, 204, 0))
+    line_h = font_size + 12
+    total_h = len(lines) * line_h
+    start_y = (height - total_h) // 2
+
+    for i, line in enumerate(lines):
+        try:
+            lw = draw.textlength(line, font=font)
+        except AttributeError:
+            lw = draw.textsize(line, font=font)[0]
+        x = (width - lw) // 2
+        y = start_y + i * line_h
+        for ox, oy in [(-3, -3), (3, -3), (-3, 3), (3, 3), (0, 5)]:
+            draw.text((x + ox, y + oy), line, fill=(0, 0, 0, 255), font=font)
+        draw.text((x, y), line, fill=color + (255,), font=font)
+
+    return np.array(img)
+
+
 def apply_cinematic_overlay(video_clip):
     """
     (DEPRECATED in Python)

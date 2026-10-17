@@ -30,6 +30,21 @@ class SubtitleStyles:
             "hook": {"default_color": "#FF2D55", "active_color": "#FFFFFF", "glow_color": (255, 45, 85)},
             "body": {"default_color": "#FFFFFF", "active_color": "#FF375F", "glow_color": (255, 55, 95)},
             "cta": {"default_color": "#BF5AF2", "active_color": "#FFFFFF", "glow_color": (191, 90, 242)}
+        },
+        "sapphire_blue": {
+            "hook": {"default_color": "#0A84FF", "active_color": "#FFFFFF", "glow_color": (10, 132, 255)},
+            "body": {"default_color": "#FFFFFF", "active_color": "#64D2FF", "glow_color": (100, 210, 255)},
+            "cta": {"default_color": "#FFD60A", "active_color": "#FFFFFF", "glow_color": (255, 214, 10)}
+        },
+        "royal_purple": {
+            "hook": {"default_color": "#BF5AF2", "active_color": "#FFFFFF", "glow_color": (191, 90, 242)},
+            "body": {"default_color": "#FFFFFF", "active_color": "#DA8FFF", "glow_color": (218, 143, 255)},
+            "cta": {"default_color": "#FF9F0A", "active_color": "#FFFFFF", "glow_color": (255, 159, 10)}
+        },
+        "crimson_red": {
+            "hook": {"default_color": "#FF3B30", "active_color": "#FFFFFF", "glow_color": (255, 59, 48)},
+            "body": {"default_color": "#FFFFFF", "active_color": "#FF6961", "glow_color": (255, 105, 97)},
+            "cta": {"default_color": "#FFD60A", "active_color": "#FFFFFF", "glow_color": (255, 214, 10)}
         }
     }
 
