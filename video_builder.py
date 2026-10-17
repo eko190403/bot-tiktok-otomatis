@@ -611,10 +611,16 @@ async def generate_voiceover_resilient(hook: str, story: str, cta: str, path: st
             if voice_idx < len(voices) - 1:
                 logger.warning(" Voice '%s' gagal semua percobaan. Beralih ke voice cadangan...", voice)
                 continue
-    # Semua voice sudah dicoba
-    if last_exception:
-        raise last_exception
-    raise RuntimeError("Semua voice Edge-TTS gagal menghasilkan voiceover.")
+    # Semua voice Edge-TTS gagal — fallback ke gTTS
+    logger.warning(" Semua voice Edge-TTS gagal. Beralih ke Google TTS (gTTS) sebagai fallback...")
+    try:
+        from audio import generate_voiceover_gtts_fallback
+        return await generate_voiceover_gtts_fallback(hook, story, cta, path)
+    except Exception as gtts_err:
+        logger.error(" gTTS fallback juga gagal: %s", gtts_err)
+        if last_exception:
+            raise last_exception
+        raise RuntimeError("Semua TTS engine (Edge-TTS + gTTS) gagal menghasilkan voiceover.")
 
 
 

@@ -3,6 +3,7 @@ moviepy
 
 # Pin versi stabil edge-tts — update token untuk mengatasi error 403 handshake
 edge-tts==7.3.1
+gTTS
 praw==7.7.1
 
 librosa==0.10.2.post1

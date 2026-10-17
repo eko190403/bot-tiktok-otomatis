@@ -10,6 +10,7 @@ import librosa
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional
+from io import BytesIO
 
 logger = logging.getLogger("video_pipeline")
 TICKS_PER_SECOND = 10_000_000
@@ -171,6 +172,7 @@ class SyncMetadata:
     accuracy: float
     missed: int
     failed_tokens: list
+    engine: str = "edge_tts"
 
 
 # --- TOKENIZATION & NORMALIZATION HELPERS ---
@@ -545,6 +547,76 @@ def build_clean_text(hook_tokens: List[Dict], story_tokens: List[Dict], cta_toke
     # Bersihkan spasi ganda
     full_text = " ".join(full_text.split())
     return full_text
+
+async def generate_voiceover_gtts_fallback(
+    hook: str, story: str, cta: str, audio_path: str
+) -> Tuple[List[WordTimestamp], SyncMetadata]:
+    """Fallback TTS menggunakan Google TTS (gTTS) saat Edge-TTS 403."""
+    from gtts import gTTS
+
+    hook_tokens = tokenize_section(hook, "hook")
+    story_tokens = tokenize_section(story, "story")
+    cta_tokens = tokenize_section(cta, "cta")
+    target_tokens = hook_tokens + story_tokens + cta_tokens
+
+    clean_text = build_clean_text(hook_tokens, story_tokens, cta_tokens)
+
+    tts = gTTS(text=clean_text, lang="id", slow=False)
+    mp3_buf = BytesIO()
+    tts.write_to_fp(mp3_buf)
+    mp3_buf.seek(0)
+
+    with open(audio_path, "wb") as f:
+        f.write(mp3_buf.read())
+
+    # Studio post-processing
+    import subprocess
+    try:
+        temp_path = audio_path + ".temp.mp3"
+        subprocess.run([
+            "ffmpeg", "-y", "-i", audio_path,
+            "-af", "bass=g=6:f=110,treble=g=2,acompressor=threshold=-21dB:ratio=4:attack=5:release=50:makeup=3",
+            temp_path
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        if os.path.exists(temp_path):
+            os.replace(temp_path, audio_path)
+    except Exception:
+        pass
+
+    audio_duration = librosa.get_duration(path=audio_path)
+
+    # Estimate timestamps using Whisper if available, else evenly distribute
+    raw_boundaries = []
+    try:
+        model = _get_whisper_model()
+        if model:
+            whisper_result = model.transcribe(audio_path, language="id", word_timestamps=True)
+            for seg in whisper_result.get("segments", []):
+                for w in seg.get("words", []):
+                    raw_boundaries.append({
+                        "word": w["word"].strip(),
+                        "start": w["start"],
+                        "duration": w["end"] - w["start"],
+                    })
+    except Exception as we:
+        logger.warning(" Whisper fallback gagal di gTTS path: %s", we)
+
+    if not raw_boundaries:
+        total_words = len(target_tokens)
+        avg_dur = audio_duration / max(total_words, 1)
+        for i, tok in enumerate(target_tokens):
+            raw_boundaries.append({
+                "word": tok.display,
+                "start": i * avg_dur,
+                "duration": avg_dur * 0.8,
+            })
+
+    timestamps, meta = align_words_dp(target_tokens, raw_boundaries, audio_duration)
+    meta.engine = "gtts_fallback"
+    logger.info(" gTTS fallback berhasil: %d kata, durasi %.1fs, akurasi %.0f%%",
+                len(timestamps), audio_duration, meta.accuracy * 100)
+    return timestamps, meta
+
 
 async def generate_voiceover_with_timestamps(
     hook: str, story: str, cta: str, audio_path: str, voice: str = "id-ID-ArdiNeural", rate: str = "+0%", pitch: str = "+0Hz"
