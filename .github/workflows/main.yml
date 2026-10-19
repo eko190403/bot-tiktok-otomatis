@@ -9,10 +9,13 @@ on:
 
 jobs:
   build-and-run:
+    strategy:
+      matrix:
+        channel: [ruangpikir, logikastoik, rahasiafinansial, misterisemesta, poladisiplin]
+      fail-fast: false
+      max-parallel: 2
     runs-on: ubuntu-latest
-    concurrency:
-      group: bot-tiktok-pipeline
-      cancel-in-progress: false
+    timeout-minutes: 30
     permissions:
       contents: write
     env:
@@ -46,13 +49,13 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Kirim Notifikasi Proses Dimulai ke Telegram
-        if: github.event.action != 'telegram_publish'
+        if: github.event.action != 'telegram_publish' && matrix.channel == 'ruangpikir'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "text=Pipeline dimulai! Memproses 5 channel secara bergiliran. Mohon tunggu..."
+            -d "text=Pipeline dimulai! Memproses 5 channel (2 paralel). Mohon tunggu..."
 
       - name: Siapkan Cookies TikTok dari Secret
         env:
@@ -86,7 +89,7 @@ jobs:
             echo "$FIREBASE_SERVICE_ACCOUNT" > firebase_service_account.json
           fi
 
-      - name: Jalankan Bot (Sequential per Channel)
+      - name: Jalankan Bot (${{ matrix.channel }})
         if: github.event.action != 'telegram_publish' && github.event.action != 'run-analytics'
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -117,32 +120,11 @@ jobs:
             echo "$IG_COOKIES" > ig_cookies.txt
           fi
 
-          CHANNELS="ruangpikir logikastoik rahasiafinansial misterisemesta poladisiplin"
-          FAILED=""
-          for CH in $CHANNELS; do
-            echo ""
-            echo "=========================================="
-            echo "  Channel: $CH"
-            echo "=========================================="
+          rm -rf temp/* output/*
+          mkdir -p temp output
 
-            rm -rf temp/* output/*
-            mkdir -p temp output
-
-            if python app.py --channel "$CH"; then
-              echo "  $CH selesai."
-            else
-              echo "  $CH GAGAL."
-              FAILED="$FAILED $CH"
-            fi
-          done
-
-          if [ -n "$FAILED" ]; then
-            echo ""
-            echo "Channel yang gagal:$FAILED"
-          else
-            echo ""
-            echo "Semua channel berhasil diproses!"
-          fi
+          echo "Menjalankan pipeline untuk channel ${{ matrix.channel }}..."
+          python app.py --channel ${{ matrix.channel }}
 
       - name: Jalankan Remote Control Publisher (Kirim ke Medsos)
         if: github.event.action == 'telegram_publish'
@@ -173,11 +155,6 @@ jobs:
           echo "Isi folder output:"
           ls -lah output || true
 
-      - name: Firestore single source reminder
-        if: success() && github.event.action != 'telegram_publish'
-        run: |
-          echo "Menggunakan Firestore sebagai single source of truth."
-
       - name: Kirim Notifikasi GAGAL ke Telegram
         if: failure()
         env:
@@ -186,4 +163,4 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=<b>PIPELINE GAGAL!</b>%0A%0A🔗 Cek log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -d "text=<b>GAGAL: ${{ matrix.channel }}</b>%0A%0A🔗 Log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
