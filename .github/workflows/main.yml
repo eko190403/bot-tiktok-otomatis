@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
     permissions:
       contents: write
     env:
@@ -127,7 +127,7 @@ jobs:
             rm -rf temp/* output/*
             mkdir -p temp output
 
-            if timeout 1200 python app.py --channel "$CH"; then
+            if timeout 2700 python app.py --channel "$CH"; then
               echo "  $CH selesai."
               SUCCESS=$((SUCCESS + 1))
             else
