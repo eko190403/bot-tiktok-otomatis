@@ -2,7 +2,11 @@ name: Run TikTok Bot Auto-Pilot
 
 on:
   schedule:
-    # Menggunakan format Cron Job. Contoh ini diatur jalan otomatis setiap jam 18:00 WIB (11:00 UTC)
+    # Pagi 06:00 WIB (23:00 UTC) — menangkap morning scrollers sebelum kerja/kuliah
+    - cron: '0 23 * * *'
+    # Siang 12:00 WIB (05:00 UTC) — jam istirahat kantor
+    - cron: '0 5 * * *'
+    # Malam 18:00 WIB (11:00 UTC) — prime time setelah pulang kerja
     - cron: '0 11 * * *'
   workflow_dispatch: # Tombol rahasia agar kamu bisa klik "Jalankan Sekarang" secara manual
 
