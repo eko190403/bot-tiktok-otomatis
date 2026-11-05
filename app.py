@@ -521,8 +521,8 @@ async def main():
             else:
                 print(" Pengunggahan otomatis ke YouTube Shorts dinonaktifkan (ENABLE_YOUTUBE_UPLOAD=false).")
 
-            # Mode Draf A/B (Telegram Control Panel) jika kedua upload mati
-            if not enable_upload and not enable_yt_upload and latest_video:
+            # Mode Draf A/B (Telegram Control Panel) — selalu jalan jika ada video
+            if latest_video:
                 print(" Mode Draf A/B Aktif: Mengirim video ke Telegram dengan dual hook...")
                 video_id = f"video_{int(time.time())}"
 

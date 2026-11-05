@@ -83,6 +83,7 @@ async def run_ai_pipeline(
     performance_hints: Optional[str] = None,
     use_ai_review: bool = False,
     use_ai_retention: bool = True,
+    trending_keywords: Optional[list] = None,
 ) -> Optional[RenderPayload]:
     """
     Jalankan pipeline AI intelligence penuh untuk satu topik.
@@ -122,6 +123,7 @@ async def run_ai_pipeline(
             channel_niche=channel_niche,
             channel_name=channel_name,
             performance_hints=performance_hints,
+            trending_keywords=trending_keywords,
         )
         if not script:
             logger.error(f"[Pipeline] Script Director gagal (attempt {attempt})")

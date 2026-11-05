@@ -103,7 +103,7 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
     
     response = None
     while response is None:
-        status, response = request.next_chunk()
+        status, response = await asyncio.to_thread(request.next_chunk)
         if status:
             print(f" Mengunggah video ke YouTube API: {int(status.progress() * 100)}% selesai...")
             
@@ -125,7 +125,9 @@ async def upload_to_youtube(video_path: str, caption: str, tags: list = None, ca
                     }
                 }
             }
-            youtube.commentThreads().insert(part="snippet", body=comment_body).execute()
+            await asyncio.to_thread(
+                youtube.commentThreads().insert(part="snippet", body=comment_body).execute
+            )
             print(" Sukses mempublikasikan komentar pertama di YouTube!")
         except Exception as comm_err:
             print(f" Gagal memposting komentar otomatis pertama: {comm_err}")

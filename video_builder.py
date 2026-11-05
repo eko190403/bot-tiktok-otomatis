@@ -160,8 +160,9 @@ async def call_groq_fallback(prompt: str, is_json: bool = True) -> str:
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 1.0,
-        "response_format": {"type": "json_object"} if is_json else None
     }
+    if is_json:
+        payload["response_format"] = {"type": "json_object"}
     
     loop = asyncio.get_running_loop()
     try:
@@ -861,14 +862,18 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
             # --- INTEGRASI AI INTELLIGENCE LAYER ---
             from ai.pipeline import run_ai_pipeline
             from ai.analytics_brain import synthesize_performance_hints
-            from video_builder import get_indonesia_trending_searches
-            
+
             logger.info(" Memulai AI Intelligence Pipeline...")
             hints = await synthesize_performance_hints(channel_id, niche_description)
             trends = get_indonesia_trending_searches()
             topic = trends[0] if trends else "Fakta Psikologi Menarik"
-            
-            payload = await run_ai_pipeline(topic=topic, channel_config=channel_cfg, performance_hints=hints)
+
+            payload = await run_ai_pipeline(
+                topic=topic,
+                channel_config=channel_cfg,
+                performance_hints=hints,
+                trending_keywords=trends,
+            )
             
             if payload:
                 # Generate SEO metadata via Gemini (critical for discoverability)
@@ -1084,6 +1089,10 @@ Output must be pure JSON format without markdown: {{"caption": "funny caption te
                     if is_fallback:
                         bg_type = "pexels"
                 elif bg_type in ["retention", "ai_video"]:
+                    video_files, is_fallback = results[0]
+                    if is_fallback:
+                        bg_type = "pexels"
+                elif bg_type == "quiz_ai":
                     video_files, is_fallback = results[0]
                     if is_fallback:
                         bg_type = "pexels"

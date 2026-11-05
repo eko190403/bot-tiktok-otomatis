@@ -86,7 +86,8 @@ class DirectedScript:
 # ---------------------------------------------------------------------------
 
 def _build_prompt(topic: str, channel_niche: str, channel_name: str,
-                   performance_hints: Optional[str] = None) -> str:
+                   performance_hints: Optional[str] = None,
+                   trending_keywords: Optional[list] = None) -> str:
     hint_section = ""
     if performance_hints:
         hint_section = f"""
@@ -95,10 +96,21 @@ LEARNING FROM PAST PERFORMANCE:
 Apply these insights when writing this new script.
 """
 
+    trend_section = ""
+    if trending_keywords:
+        kw_list = ", ".join(f'"{k}"' for k in trending_keywords[:5])
+        trend_section = f"""
+TREND JACKING — WAJIB DIPAKAI:
+Topik yang sedang viral di Indonesia hari ini: {kw_list}
+Jika ada yang relevan dengan niche "{channel_niche}", masukkan ke dalam HOOK atau OPEN_LOOP
+(bukan body) untuk memanfaatkan momentum viral. Contoh: jika trending "pinjol", hook bisa
+"JUTAAN ORANG BARU SADAR TERJEBAK PINJOL — DAN PSIKOLOGINYA GELAP BANGET".
+"""
+
     return f"""You are an elite TikTok/YouTube Shorts script writer specializing in "{channel_niche}" content.
 Channel: {channel_name}
 Topic: {topic}
-{hint_section}
+{hint_section}{trend_section}
 
 Write a RETENTION-OPTIMIZED short-form video script. Your #1 goal: make viewers UNABLE to scroll away.
 
@@ -148,6 +160,7 @@ async def direct_script(
     channel_niche: str = "dark psychology and human behavior",
     channel_name: str = "Ruang Pikir",
     performance_hints: Optional[str] = None,
+    trending_keywords: Optional[list] = None,
 ) -> Optional[DirectedScript]:
     """
     Entry point utama: Hasilkan script terstruktur untuk satu topik.
@@ -163,7 +176,7 @@ async def direct_script(
     """
     from video_builder import call_gemini_with_retry, clean_and_parse_json
 
-    prompt = _build_prompt(topic, channel_niche, channel_name, performance_hints)
+    prompt = _build_prompt(topic, channel_niche, channel_name, performance_hints, trending_keywords)
 
     try:
         raw_text = await call_gemini_with_retry(prompt, is_json=True, temperature=0.85)
