@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 75
     strategy:
       matrix:
-        channel: [ruangpikir, misterisemesta]
+        channel: [ruangpikir, misterisemesta, rahasiafinansial, logikastoik]
       fail-fast: false
       max-parallel: 1   # Jalankan satu per satu agar tidak bentrok di storage
 
