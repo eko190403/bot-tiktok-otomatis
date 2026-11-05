@@ -174,7 +174,7 @@ async def main():
         
         # Jalankan pembersihan draf lama (> 7 hari) untuk menghemat limit database
         try:
-            firebase_connector.cleanup_old_drafts(days=7)
+            firebase_connector.cleanup_old_drafts(days=30)
         except Exception as clean_err:
             print(f" Gagal menjalankan pembersihan draf otomatis: {clean_err}")
             
